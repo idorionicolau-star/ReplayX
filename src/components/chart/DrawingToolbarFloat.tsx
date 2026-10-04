@@ -1,0 +1,107 @@
+'use client';
+import { useRef, useState } from 'react';
+import { Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus } from 'lucide-react';
+import { useDrawings } from '@/store/drawings';
+import { useUi } from '@/store/ui';
+import { toolDef } from '@/chart/drawings/tools';
+import type { Drawing, DrawingStyle } from '@/chart/drawings/types';
+import { ColorPicker } from '@/components/ui/ColorPicker';
+import { Popover } from '@/components/ui/Popover';
+import { IconButton } from '@/components/ui/Button';
+import { uid } from '@/lib/uid';
+import { submitOrder } from '@/trading/actions';
+import { useTrading, specFor } from '@/store/trading';
+import { tradingMode } from '@/trading/actions';
+import { qtyForRisk } from '@/core/trading/engine';
+import { resolveSymbol } from '@/core/symbols';
+import { toast } from '@/components/ui/Toast';
+
+const DASH_ICONS = ['—', '- -', '···'];
+
+export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
+  const sel = useDrawings((s) => (s.selected?.symbolId === symbolId ? s.selected.id : null));
+  const d = useDrawings((s) => (sel ? s.bySymbol[symbolId]?.find((x) => x.id === sel) : undefined));
+  const widthRef = useRef<HTMLButtonElement>(null);
+  const [widthOpen, setWidthOpen] = useState(false);
+  if (!d) return null;
+  const def = toolDef(d.type);
+  const st = useDrawings.getState();
+  const setStyle = (patch: Partial<DrawingStyle>) => {
+    st.update(symbolId, d.id, { style: { ...d.style, ...patch } });
+    st.rememberStyle(d.type, patch);
+  };
+  const clone = () => {
+    const shift = (d.points[1]?.time ?? d.points[0].time) - d.points[0].time || 0;
+    const copy: Drawing = { ...structuredClone(d), id: uid('d'), createdAt: Date.now(), points: d.points.map((p) => ({ ...p, time: p.time + Math.abs(shift) * 0.25 })) };
+    st.add(symbolId, copy);
+    st.select({ symbolId, id: copy.id });
+  };
+  const isPosition = d.type === 'long' || d.type === 'short';
+  const textTool = d.type === 'text' || d.type === 'note';
+  const hasFill = d.style.fill !== undefined && d.type !== 'fib' && d.type !== 'fibext' && !isPosition;
+
+  const toOrder = () => {
+    if (!d.data) return;
+    const sym = resolveSymbol(symbolId);
+    const entry = d.points[0].price;
+    const acc = useTrading.getState()[tradingMode()];
+    const qty = qtyForRisk((acc.balance * d.data.riskPct) / 100, entry, d.data.stop, specFor(sym));
+    const side = d.type === 'long' ? 'long' : 'short';
+    const ok = submitOrder({ symbolId, side, type: 'limit', qty: +qty.toFixed(sym.contractSize && sym.contractSize >= 1000 ? 2 : 4), price: entry, sl: d.data.stop, tp: d.data.target });
+    if (ok) toast('Ordem criada a partir da ferramenta de posição', { kind: 'success' });
+  };
+
+  return (
+    <div className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
+      <span className="px-1.5 text-[11px] whitespace-nowrap text-muted">{def?.label}</span>
+      {!isPosition && <ColorPicker value={d.style.color} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
+      {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
+      {textTool && <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label="Cor do texto" />}
+      {!isPosition && !textTool && (
+        <>
+          <button ref={widthRef} type="button" title="Espessura" onClick={() => setWidthOpen((o) => !o)} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs hover:bg-hover">
+            <Minus size={14} strokeWidth={d.style.width + 1} /> {d.style.width}px
+          </button>
+          <Popover anchor={widthRef} open={widthOpen} onClose={() => setWidthOpen(false)} className="p-1">
+            {[1, 2, 3, 4].map((w) => (
+              <button
+                key={w}
+                type="button"
+                onClick={() => {
+                  setStyle({ width: w });
+                  setWidthOpen(false);
+                }}
+                className="flex h-8 w-28 items-center gap-2 rounded px-2 text-xs hover:bg-hover"
+              >
+                <span className="block w-12 rounded bg-text" style={{ height: w }} /> {w}px
+              </button>
+            ))}
+          </Popover>
+          <button type="button" title="Estilo da linha" onClick={() => setStyle({ dash: ((d.style.dash + 1) % 3) as 0 | 1 | 2 })} className="h-7 rounded-md px-2 font-mono text-xs hover:bg-hover">
+            {DASH_ICONS[d.style.dash]}
+          </button>
+        </>
+      )}
+      {isPosition && (
+        <IconButton size="sm" label="Criar ordem com esta posição" onClick={toOrder}>
+          <Send size={15} />
+        </IconButton>
+      )}
+      <IconButton size="sm" label="Definições" onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id } })}>
+        <Settings2 size={15} />
+      </IconButton>
+      <IconButton size="sm" label={d.locked ? 'Desbloquear' : 'Bloquear'} active={d.locked} onClick={() => st.update(symbolId, d.id, { locked: !d.locked })}>
+        {d.locked ? <Lock size={15} /> : <LockOpen size={15} />}
+      </IconButton>
+      <IconButton size="sm" label="Ocultar" onClick={() => st.update(symbolId, d.id, { hidden: true })}>
+        <Eye size={15} />
+      </IconButton>
+      <IconButton size="sm" label="Clonar" onClick={clone}>
+        <Copy size={15} />
+      </IconButton>
+      <IconButton size="sm" label="Remover (Delete)" onClick={() => st.remove(symbolId, d.id)} className="hover:text-down">
+        <Trash2 size={15} />
+      </IconButton>
+    </div>
+  );
+}

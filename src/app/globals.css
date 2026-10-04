@@ -1,0 +1,166 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  --c-bg: #ffffff;
+  --c-panel: #ffffff;
+  --c-elev: #ffffff;
+  --c-sunken: #f8f9fd;
+  --c-border: #e0e3eb;
+  --c-hover: #f0f3fa;
+  --c-active: #e3effd;
+  --c-text: #131722;
+  --c-muted: #6a6d78;
+  --c-faint: #b2b5be;
+  --c-accent: #2962ff;
+  --c-accent-hover: #1e53e5;
+  --c-accent-soft: rgba(41, 98, 255, 0.12);
+  --c-up: #089981;
+  --c-down: #f23645;
+  --c-warn: #ff9800;
+  --c-input: #ffffff;
+  --c-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12);
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --c-bg: #131722;
+  --c-panel: #131722;
+  --c-elev: #1e222d;
+  --c-sunken: #0f121a;
+  --c-border: #2a2e39;
+  --c-hover: #2a2e39;
+  --c-active: #142e61;
+  --c-text: #d1d4dc;
+  --c-muted: #868993;
+  --c-faint: #50535e;
+  --c-accent: #2962ff;
+  --c-accent-hover: #1e53e5;
+  --c-accent-soft: rgba(41, 98, 255, 0.2);
+  --c-up: #089981;
+  --c-down: #f23645;
+  --c-warn: #ff9800;
+  --c-input: #1e222d;
+  --c-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-panel: var(--c-panel);
+  --color-elev: var(--c-elev);
+  --color-sunken: var(--c-sunken);
+  --color-line: var(--c-border);
+  --color-hover: var(--c-hover);
+  --color-active: var(--c-active);
+  --color-text: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+  --color-accent: var(--c-accent);
+  --color-accent-hover: var(--c-accent-hover);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-up: var(--c-up);
+  --color-down: var(--c-down);
+  --color-warn: var(--c-warn);
+  --color-input: var(--c-input);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --shadow-pop: var(--c-shadow);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-faint) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--c-faint);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input,
+select,
+textarea {
+  background: var(--c-input);
+  color: var(--c-text);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@keyframes rx-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: rx-fade-in 0.12s ease-out;
+}
+
+@keyframes rx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: rx-spin 0.9s linear infinite;
+}
+
+@keyframes rx-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.animate-pulse-soft {
+  animation: rx-pulse 1.4s ease-in-out infinite;
+}
+
+/* CodeMirror ocupa o espaço todo */
+.cm-editor {
+  height: 100%;
+  font-size: 13px;
+}
+.cm-editor.cm-focused {
+  outline: none !important;
+}
