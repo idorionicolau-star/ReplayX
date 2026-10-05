@@ -91,6 +91,7 @@ export class Interaction {
     this.disposed = true;
     this.stopEdge();
     window.removeEventListener('pointerup', this.onPickTap);
+    window.removeEventListener('pointerup', this.onSelectTap);
     this.loupe.dispose();
     const el = this.c.container;
     el.removeEventListener('pointerdown', this.onDown, true);
@@ -326,6 +327,16 @@ export class Interaction {
     this.edgeDir = 0;
   }
 
+  private selectTap: { id: string; x: number; y: number; t: number } | null = null;
+
+  private onSelectTap = (e: PointerEvent) => {
+    const t = this.selectTap;
+    this.selectTap = null;
+    if (!t || this.touches.size > 1 || e.type === 'pointercancel') return;
+    const p = this.local(e);
+    if (Math.hypot(p.x - t.x, p.y - t.y) < 10 && performance.now() - t.t < 500) this.cb.select(t.id);
+  };
+
   private onPickTap = (e: PointerEvent) => {
     const t = this.tap;
     this.tap = null;
@@ -505,6 +516,12 @@ export class Interaction {
     }
 
     const hit = this.hitDrawing(p.x, p.y);
+    if (hit && e.pointerType === 'touch' && hit.d.id !== this.c.selectedId) {
+      // dedo: primeiro toca-se para selecionar; só depois se arrasta. Arrastar por cima de um objeto não selecionado desloca o gráfico
+      this.selectTap = { id: hit.d.id, x: p.x, y: p.y, t: performance.now() };
+      window.addEventListener('pointerup', this.onSelectTap, { once: true });
+      return;
+    }
     if (hit) {
       this.consume(e);
       this.cb.select(hit.d.id);

@@ -87,6 +87,19 @@ test('no dedo, a ferramenta volta ao cursor depois de criar: arrastar/editar nã
   await send('touchStart', [{ x: 300, y: 150 }]);
   await send('touchEnd', []);
   expect(await count()).toBe(1);
+  // objeto não selecionado: arrastar por cima dele não o move; só um toque o seleciona
+  const midOf = () => page.evaluate(`(() => { const c = ${ctl}; const d = c.drawings[0]; const a = d.points[0], b = d.points[1]; return { x: (c.timeToX(a.time) + c.timeToX(b.time)) / 2, y: (c.priceToY(a.price) + c.priceToY(b.price)) / 2 }; })()`) as Promise<{ x: number; y: number }>;
+  const mid = await midOf();
+  const pts = () => page.evaluate(`JSON.stringify(${ctl}.drawings[0].points)`);
+  const before = await pts();
+  await send('touchStart', [{ x: mid.x, y: mid.y }]);
+  for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: mid.x - i * 6, y: mid.y }]);
+  await send('touchEnd', []);
+  expect(await pts()).toBe(before);
+  const mid2 = await midOf(); // o gráfico andou com o dedo
+  await send('touchStart', [{ x: mid2.x, y: mid2.y }]);
+  await send('touchEnd', []);
+  expect(await page.evaluate(`${ctl}.selectedId`)).not.toBeNull();
 });
 
 test('zoom com dois dedos é rápido: afastar os dedos 2× aproxima mais de 2,5×', async ({ page }) => {
