@@ -90,15 +90,16 @@ npm start
 
 ### Publicar na Vercel
 1. Importa este repositório na Vercel (framework: Next.js; não precisa de variáveis de ambiente).
-2. No [Firebase Console](https://console.firebase.google.com/) → projeto **atrevamoneytracker** → *Authentication* → *Settings* → *Authorized domains*, adiciona o domínio da Vercel (ex.: `replayx.vercel.app`). Sem isto o login com Google mostra "domínio não autorizado" (o login por e-mail e o modo convidado funcionam na mesma).
-3. As regras do Firestore para o ReplayX estão no repositório **MajorDocs** (`firestore.rules`, coleção `replayx_users`). Publica-as a partir desse repositório:
+2. No [Firebase Console](https://console.firebase.google.com/) → projeto **gen-lang-client-0528145915** → *Authentication* → *Settings* → *Authorized domains*, adiciona o domínio da Vercel (ex.: `replayx.vercel.app`). Sem isto o login com Google mostra "domínio não autorizado" (o login por e-mail e o modo convidado funcionam na mesma).
+3. As regras do Firestore estão neste repositório (`firestore.rules`). Publica-as a partir daqui (precisa do [Firebase CLI](https://firebase.google.com/docs/cli) e de `firebase login`):
    ```bash
    firebase deploy --only firestore:rules
    ```
+   Ou, sem instalar nada: copia o conteúdo de `firestore.rules` para *Firestore Database* → *Rules* na consola e carrega em *Publish*.
    Até lá a sincronização na nuvem falha com "permissão negada" e a app continua a guardar tudo localmente.
 
 ### Outro projeto Firebase (opcional)
-Por omissão usa o mesmo projeto Firebase do MajorDocs. Para usar outro, copia `.env.example` para `.env.local` e preenche as variáveis `NEXT_PUBLIC_FIREBASE_*`. Nesse caso, copia também o bloco `replayx_users` das regras.
+Por omissão usa o projeto Firebase próprio do ReplayX (`gen-lang-client-0528145915`). Para usar outro, copia `.env.example` para `.env.local`, preenche as variáveis `NEXT_PUBLIC_FIREBASE_*`, muda o projeto em `.firebaserc` e publica as regras nesse projeto.
 
 ---
 

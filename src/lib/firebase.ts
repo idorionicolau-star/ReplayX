@@ -4,15 +4,15 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 
 /**
  * Configuração pública do Firebase (não é segredo: identifica o projeto no navegador).
- * Usa o mesmo projeto do MajorDocs por omissão; pode ser trocado com variáveis NEXT_PUBLIC_FIREBASE_*.
+ * Projeto próprio do ReplayX; pode ser trocado com variáveis NEXT_PUBLIC_FIREBASE_*.
  */
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyB4HFV5VZ9FU3vQ3bu04KV_sHhioECJqNo',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'atrevamoneytracker.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'atrevamoneytracker',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'atrevamoneytracker.firebasestorage.app',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '882443102074',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:882443102074:web:17ba3de56b34350bd718c3',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDFMtEHY7Q7WviObXc7aGszso_G8N6jVVQ',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'gen-lang-client-0528145915.firebaseapp.com',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'gen-lang-client-0528145915',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0528145915.firebasestorage.app',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '370161060176',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:370161060176:web:203288ac0ae9a157900455',
 };
 
 let app: FirebaseApp | null = null;
