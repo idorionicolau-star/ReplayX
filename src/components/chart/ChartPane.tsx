@@ -90,6 +90,7 @@ export function ChartPane({ index }: { index: number }) {
       magnet: () => useSettings.getState().magnet,
       angleSnap: () => useSettings.getState().angleSnap,
       loupe: () => useSettings.getState().loupe,
+      loupePos: () => useSettings.getState().loupePos,
       stayInDrawing: () => useSettings.getState().stayInDrawingMode,
       globalLocked: () => useDrawings.getState().locked,
       lastStyle: (t) => useDrawings.getState().lastStyle[t] ?? {},
@@ -302,6 +303,7 @@ export function ChartPane({ index }: { index: number }) {
   // cursor de desenho
   useEffect(() => {
     ctrl?.setCursorStyle(tool !== 'cross' && tool !== 'cursor' ? 'crosshair' : '');
+    ctrl?.clearAim();
   }, [ctrl, tool]);
 
   if (!cfg || !symbol) return null;

@@ -20,6 +20,8 @@ export interface TradingSettings {
   confirmOrders: boolean;
 }
 
+export type LoupePos = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'follow';
+
 export interface DrawingTemplate {
   id: string;
   name: string;
@@ -48,6 +50,8 @@ export interface SettingsState {
   angleSnap: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
+  /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
+  loupePos: LoupePos;
   /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
   hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
@@ -95,6 +99,7 @@ export const useSettings = create<SettingsState>()(
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       loupe: true,
+      loupePos: 'top-right',
       hideBottomBars: false,
       appearance: DEFAULT_APPEARANCE,
       customColors: [],

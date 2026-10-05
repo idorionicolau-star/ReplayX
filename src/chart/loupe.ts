@@ -5,13 +5,19 @@
 const SIZE = 132;
 const ZOOM = 2;
 const GAP = 34;
+const MARGIN = 8;
+
+export type LoupePlace = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'follow';
 
 export class Loupe {
   private readonly canvas: HTMLCanvasElement;
   private raf = 0;
   private at: { x: number; y: number } | null = null;
 
-  constructor(private readonly container: HTMLElement) {
+  constructor(
+    private readonly container: HTMLElement,
+    private readonly place: () => LoupePlace = () => 'follow',
+  ) {
     const c = document.createElement('canvas');
     c.setAttribute('data-testid', 'loupe');
     c.style.cssText = `position:absolute;width:${SIZE}px;height:${SIZE}px;pointer-events:none;z-index:30;display:none;border-radius:50%;box-shadow:0 6px 24px rgba(0,0,0,.45);`;
@@ -58,10 +64,27 @@ export class Loupe {
       c.width = SIZE * dpr;
       c.height = SIZE * dpr;
     }
-    // posição: acima do dedo; se não couber, abaixo; sempre dentro do gráfico
-    let left = at.x - box.left - SIZE / 2;
-    let top = at.y - box.top - SIZE - GAP;
-    if (top < 4) top = at.y - box.top + GAP;
+    // posição: num canto fixo (por defeito em cima à direita) ou junto ao dedo
+    const pos = this.place();
+    let left: number;
+    let top: number;
+    if (pos === 'follow') {
+      left = at.x - box.left - SIZE / 2;
+      top = at.y - box.top - SIZE - GAP;
+      if (top < 4) top = at.y - box.top + GAP;
+    } else {
+      const fx = at.x - box.left;
+      const fy = at.y - box.top;
+      let right = pos.endsWith('right');
+      const bottom = pos.startsWith('bottom');
+      left = right ? box.width - SIZE - MARGIN : MARGIN;
+      top = bottom ? box.height - SIZE - MARGIN : MARGIN;
+      // se o dedo está mesmo em cima da lupa, passa para o outro lado
+      if (fx > left - 30 && fx < left + SIZE + 30 && fy > top - 30 && fy < top + SIZE + 30) {
+        right = !right;
+        left = right ? box.width - SIZE - MARGIN : MARGIN;
+      }
+    }
     left = Math.max(4, Math.min(box.width - SIZE - 4, left));
     top = Math.max(4, Math.min(box.height - SIZE - 4, top));
     c.style.left = `${left}px`;

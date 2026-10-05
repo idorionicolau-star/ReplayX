@@ -93,11 +93,26 @@ test.describe('telemóvel', () => {
     const box = (await page.getByTestId('chart-0').boundingBox())!;
     const cdp = await page.context().newCDPSession(page);
     const pt = (x: number, y: number) => [{ x: box.x + x, y: box.y + y }];
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(80, 400) });
-    for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(80 + i * 20, 400 - i * 15) });
+    const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', pts: { x: number; y: number }[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.length ? pt(pts[0].x, pts[0].y) : [] });
+    // 1.º toque posiciona o cursor; arrastar a partir dele mostra a lupa
+    await send('touchStart', [{ x: 80, y: 400 }]);
+    await send('touchEnd', []);
+    await send('touchStart', [{ x: 80, y: 400 }]);
+    for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 80 + i * 20, y: 400 - i * 15 }]);
     await expect(page.getByTestId('loupe')).toBeVisible();
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    // por defeito a lupa fica no canto superior direito do gráfico
+    const lb = (await page.getByTestId('loupe').boundingBox())!;
+    expect(lb.x + lb.width).toBeGreaterThan(box.x + box.width - 20);
+    expect(lb.y).toBeLessThan(box.y + 20);
+    await send('touchEnd', []);
     await expect(page.getByTestId('loupe')).toBeHidden();
+    // toca no cursor (marca o 1.º ponto), move-o e toca (2.º ponto)
+    await send('touchStart', [{ x: 240, y: 280 }]);
+    await send('touchEnd', []);
+    await send('touchStart', [{ x: 120, y: 300 }]);
+    await send('touchEnd', []);
+    await send('touchStart', [{ x: 120, y: 300 }]);
+    await send('touchEnd', []);
     const d = await firstDrawing(page);
     expect(d?.type).toBe('trendline');
   });

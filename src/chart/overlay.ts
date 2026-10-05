@@ -54,6 +54,8 @@ export interface OverlayHost {
   hint(): { x: number; y: number; text: string } | null;
   /** Círculo no ponto onde o íman prendeu. */
   snapMark(): { x: number; y: number } | null;
+  /** Cursor de pontaria (dedo). */
+  aimMark(): { x: number; y: number } | null;
   /** Ecrã tátil: pegas maiores. */
   coarse(): boolean;
   /** Tempo até fechar a vela (debaixo da etiqueta do último preço). */
@@ -191,6 +193,29 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
           ctx.fillStyle = color;
           ctx.fillText('⚡', x, y + 0.5);
         }
+        ctx.restore();
+      }
+
+      const aim = host.aimMark();
+      if (aim) {
+        ctx.save();
+        ctx.strokeStyle = '#2962ff';
+        ctx.fillStyle = '#2962ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(aim.x, aim.y, 11, 0, Math.PI * 2);
+        ctx.moveTo(aim.x - 18, aim.y);
+        ctx.lineTo(aim.x - 5, aim.y);
+        ctx.moveTo(aim.x + 5, aim.y);
+        ctx.lineTo(aim.x + 18, aim.y);
+        ctx.moveTo(aim.x, aim.y - 18);
+        ctx.lineTo(aim.x, aim.y - 5);
+        ctx.moveTo(aim.x, aim.y + 5);
+        ctx.lineTo(aim.x, aim.y + 18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(aim.x, aim.y, 2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 

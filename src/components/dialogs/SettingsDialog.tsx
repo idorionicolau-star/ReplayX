@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useUi } from '@/store/ui';
-import { useSettings, TIMEZONES, DEFAULT_TRADING } from '@/store/settings';
+import { useSettings, TIMEZONES, DEFAULT_TRADING, type LoupePos } from '@/store/settings';
 import { useTrading } from '@/store/trading';
 import { useReplay } from '@/replay/engine';
 import { Dialog } from '@/components/ui/Dialog';
@@ -64,6 +64,18 @@ export function SettingsDialog() {
           </Row>
           <Row label="Sons">
             <Switch checked={s.sound} onChange={(v) => s.set({ sound: v })} />
+          </Row>
+          <Row label="Lupa ao desenhar com o dedo">
+            <Switch checked={s.loupe} onChange={(v) => s.set({ loupe: v })} />
+          </Row>
+          <Row label="Posição da lupa">
+            <Select className="w-52" value={s.loupePos} onChange={(e) => s.set({ loupePos: e.target.value as LoupePos })} data-testid="loupe-pos">
+              <option value="top-right">Canto superior direito</option>
+              <option value="top-left">Canto superior esquerdo</option>
+              <option value="bottom-right">Canto inferior direito</option>
+              <option value="bottom-left">Canto inferior esquerdo</option>
+              <option value="follow">Junto ao dedo</option>
+            </Select>
           </Row>
           <div className="pt-3">
             <Button

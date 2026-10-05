@@ -166,6 +166,13 @@ export class ChartController {
   hint: { x: number; y: number; text: string } | null = null;
   /** Ponto onde o íman prendeu (círculo no ecrã). */
   snapMark: { x: number; y: number } | null = null;
+  /** Cursor de pontaria no ecrã tátil (posiciona-se primeiro, toca-se nele para marcar o ponto). */
+  aimMark: { x: number; y: number } | null = null;
+  clearAim() {
+    if (!this.aimMark) return;
+    this.aimMark = null;
+    this.redraw();
+  }
   events: ChartEvent[] = [];
   replayPickX: number | null = null;
   /** Barra escolhida para começar o replay (modo de arrastar, no telemóvel) e posição livre do dedo. */
@@ -200,6 +207,7 @@ export class ChartController {
       dark: () => this.theme.dark,
       hint: () => this.hint,
       snapMark: () => this.snapMark,
+      aimMark: () => this.aimMark,
       coarse: () => coarsePointer(),
       countdown: () => this.countdownLabel(),
       events: () => this.events,

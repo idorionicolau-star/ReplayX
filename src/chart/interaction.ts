@@ -2,7 +2,7 @@ import type { PricePoint } from '@/core/types';
 import type { ChartController } from './controller';
 import type { Drawing, DrawingStyle, ToolId } from './drawings/types';
 import { setHitTolerance, toolDef, type ToolDef } from './drawings/tools';
-import { Loupe } from './loupe';
+import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
@@ -22,6 +22,8 @@ export interface InteractionCallbacks {
   angleSnap(): boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe(): boolean;
+  /** Onde fica a lupa. */
+  loupePos(): LoupePlace;
   stayInDrawing(): boolean;
   globalLocked(): boolean;
   lastStyle(tool: ToolId): Partial<DrawingStyle>;
@@ -69,7 +71,7 @@ export class Interaction {
     private readonly cb: InteractionCallbacks,
   ) {
     const el = c.container;
-    this.loupe = new Loupe(el);
+    this.loupe = new Loupe(el, () => cb.loupePos());
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', this.onPinchDown, true);
     window.addEventListener('pointermove', this.onPinchMove);
@@ -447,6 +449,10 @@ export class Interaction {
     }
 
     const m = this.mode;
+    if (m.kind === 'create' && e.pointerType === 'touch') {
+      this.aimDown(e, p);
+      return;
+    }
     if (m.kind === 'create') {
       this.consume(e);
       m.downAt = { x: p.x, y: p.y };
@@ -469,6 +475,11 @@ export class Interaction {
         this.mode = { kind: 'drag', id: own.d.id, handle: own.handle, start, orig: own.d, moved: false };
         this.beginDrag();
         if (own.handle !== null) this.updateLoupe(e);
+        return;
+      }
+      if (e.pointerType === 'touch' && def.points !== 0) {
+        // dedo (como no TradingView): primeiro posiciona-se o cursor, depois toca-se nele para marcar o ponto
+        this.aimDown(e, p);
         return;
       }
       this.consume(e);
@@ -508,6 +519,84 @@ export class Interaction {
     if (this.c.selectedId) this.cb.select(null);
   };
 
+  // ---------------------------------------------------------------- pontaria com o dedo
+
+  private aimTouch: { downAt: { x: number; y: number }; offset: { x: number; y: number }; confirm: boolean; moved: boolean } | null = null;
+
+  private aimDown(e: PointerEvent, p: { x: number; y: number }) {
+    this.consume(e);
+    const aim = this.c.aimMark;
+    const near = !!aim && Math.hypot(p.x - aim.x, p.y - aim.y) <= 44;
+    this.aimTouch = { downAt: { x: p.x, y: p.y }, offset: near && aim ? { x: aim.x - p.x, y: aim.y - p.y } : { x: 0, y: 0 }, confirm: near, moved: false };
+    this.setScroll(false);
+    window.addEventListener('pointermove', this.onAimMove);
+    window.addEventListener('pointerup', this.onAimUp);
+    window.addEventListener('pointercancel', this.onAimUp);
+    // o 1.º toque (longe do cursor) só o posiciona
+    if (!near) this.moveAim(p.x, p.y, e);
+    else this.showAimLoupe(e);
+  }
+
+  private showAimLoupe(e: { clientX: number; clientY: number }) {
+    if (this.cb.loupe() && this.c.aimMark) {
+      const r = (this.c.paneElement() ?? this.c.container).getBoundingClientRect();
+      this.loupe.show(r.left + this.c.aimMark.x, r.top + this.c.aimMark.y);
+    } else void e;
+  }
+
+  private moveAim(x: number, y: number, e: { clientX: number; clientY: number }) {
+    const size = this.c.paneSize();
+    const ax = Math.max(0, Math.min(size.width, x));
+    const ay = Math.max(0, Math.min(size.height, y));
+    this.c.aimMark = { x: ax, y: ay };
+    const m = this.mode;
+    if (m.kind === 'create') {
+      const pts = m.drawing.points;
+      const pt = this.linePoint(m.drawing.type, pts[pts.length - 2], ax, ay, { x: ax, y: ay });
+      if (pt) pts[pts.length - 1] = pt;
+    } else {
+      this.toPoint(ax, ay); // só para mostrar onde o íman prende
+    }
+    this.showAimLoupe(e);
+    this.c.redraw();
+  }
+
+  private onAimMove = (e: PointerEvent) => {
+    const t = this.aimTouch;
+    if (!t || e.pointerType !== 'touch') return;
+    const p = this.local(e);
+    if (Math.hypot(p.x - t.downAt.x, p.y - t.downAt.y) > DRAG_THRESHOLD) {
+      t.moved = true;
+      t.confirm = false;
+    }
+    if (t.moved || !t.confirm) this.moveAim(p.x + t.offset.x, p.y + t.offset.y, e);
+  };
+
+  private onAimUp = (e: PointerEvent) => {
+    window.removeEventListener('pointermove', this.onAimMove);
+    window.removeEventListener('pointerup', this.onAimUp);
+    window.removeEventListener('pointercancel', this.onAimUp);
+    this.loupe.hide();
+    const t = this.aimTouch;
+    this.aimTouch = null;
+    this.capturing = false;
+    const a = this.c.aimMark;
+    if (e.type === 'pointercancel' || !t || !t.confirm || t.moved || !a) {
+      if (this.mode.kind === 'idle') this.setScroll(true);
+      return;
+    }
+    // toque no cursor: marca o ponto
+    if (this.mode.kind === 'create') {
+      this.addCreationPoint(a.x, a.y);
+      return;
+    }
+    const tool = this.cb.tool();
+    const def = tool === 'cross' || tool === 'cursor' ? undefined : toolDef(tool);
+    if (!def) return;
+    this.startCreation(def, a.x, a.y, true);
+    if (this.mode.kind === 'idle') this.setScroll(true);
+  };
+
   private beginDrag() {
     this.setScroll(false);
     window.addEventListener('pointermove', this.onDragMove);
@@ -537,7 +626,7 @@ export class Interaction {
     return { id: uid('d'), type: def.id, points: [pt], style, createdAt: Date.now() };
   }
 
-  private startCreation(def: ToolDef, x: number, y: number) {
+  private startCreation(def: ToolDef, x: number, y: number, aimed = false) {
     const pt = this.toPoint(x, y);
     if (!pt) return;
     if (def.points === 0) {
@@ -559,8 +648,9 @@ export class Interaction {
     this.c.preview = d;
     this.mode = { kind: 'create', def, drawing: d, downAt: { x, y }, moved: false };
     this.c.redraw();
-    // permite também criar arrastando
-    this.beginDrag();
+    // permite também criar arrastando (no dedo é o cursor de pontaria que se arrasta)
+    if (aimed) this.setScroll(false);
+    else this.beginDrag();
   }
 
   private addCreationPoint(x: number, y: number) {
@@ -580,6 +670,7 @@ export class Interaction {
   }
 
   private finish(d: Drawing) {
+    this.c.aimMark = null;
     this.c.preview = null;
     this.c.hint = null;
     this.mode = { kind: 'idle' };
@@ -602,6 +693,10 @@ export class Interaction {
   }
 
   cancel() {
+    if (this.c.aimMark) {
+      this.c.aimMark = null;
+      this.c.redraw();
+    }
     if (this.mode.kind === 'create' || this.mode.kind === 'brush') {
       this.c.preview = null;
       this.mode = { kind: 'idle' };
@@ -744,7 +839,7 @@ export class Interaction {
 
   private onHover = (e: PointerEvent) => {
     if (this.mode.kind !== 'idle' || e.buttons) {
-      if (this.mode.kind === 'create') this.onDragMove(e);
+      if (this.mode.kind === 'create' && e.pointerType !== 'touch') this.onDragMove(e);
       return;
     }
     const p = this.local(e);

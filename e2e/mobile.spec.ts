@@ -50,9 +50,21 @@ test('no dedo, a ferramenta volta ao cursor depois de criar: arrastar/editar nã
   const { send } = await touch(page);
   const count = () => page.evaluate(`${ctl}.drawings.length`) as Promise<number>;
   await page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' }).click();
+  // como no TradingView: 1.º toque posiciona o cursor, 2.º toque nele marca o ponto; o mesmo para o 2.º ponto
+  const tap = async (x: number, y: number) => {
+    await send('touchStart', [{ x, y }]);
+    await send('touchEnd', []);
+  };
+  await tap(80, 420);
+  expect(await count()).toBe(0);
+  await tap(80, 420);
+  expect(await count()).toBe(0);
+  // arrastar move o cursor (sem marcar nada)
   await send('touchStart', [{ x: 80, y: 420 }]);
   for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 80 + i * 25, y: 420 - i * 15 }]);
   await send('touchEnd', []);
+  expect(await count()).toBe(0);
+  await tap(280, 300);
   expect(await count()).toBe(1);
   // a ferramenta já não está ativa (o botão deixou de estar marcado)
   await expect(page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' })).not.toHaveClass(/text-accent/);
