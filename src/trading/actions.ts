@@ -1,4 +1,5 @@
 'use client';
+import { allCharts } from '@/chart/registry';
 import { cloneAccount, closePosition, placeOrder, processBar, type Fill, type OrderType, type Side } from '@/core/trading/engine';
 import { useTrading, specFor } from '@/store/trading';
 import { replay, useReplay } from '@/replay/engine';
@@ -24,7 +25,11 @@ export function setLivePrice(symbolId: string, price: number) {
 }
 
 export function currentPrice(symbolId: string): number | undefined {
-  return tradingMode() === 'replay' ? useReplay.getState().prices[symbolId] : livePrices[symbolId];
+  const p = tradingMode() === 'replay' ? useReplay.getState().prices[symbolId] : livePrices[symbolId];
+  if (p !== undefined) return p;
+  // ainda sem cotação: o último fecho de um gráfico aberto com o símbolo
+  for (const [, c] of allCharts()) if (c.symbol?.id === symbolId && c.bars.length) return c.bars[c.bars.length - 1].close;
+  return undefined;
 }
 
 export function currentTime(): number {

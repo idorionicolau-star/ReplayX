@@ -17,6 +17,7 @@ export function MenuItem({
   submenu,
   onClick,
   active,
+  trailing,
 }: {
   icon?: ReactNode;
   label: ReactNode;
@@ -26,6 +27,8 @@ export function MenuItem({
   disabled?: boolean;
   submenu?: boolean;
   active?: boolean;
+  /** Elemento à direita (ex.: estrela de favorito). */
+  trailing?: ReactNode;
   onClick?: () => void;
 }) {
   return (
@@ -44,6 +47,7 @@ export function MenuItem({
       <span className="flex-1 truncate">{label}</span>
       {hint && <span className="text-[11px] text-muted">{hint}</span>}
       {submenu && <ChevronRight size={14} className="text-muted" />}
+      {trailing}
     </button>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus } from 'lucide-react';
+import { Bell, Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus } from 'lucide-react';
+import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
 import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { toolDef } from '@/chart/drawings/tools';
@@ -52,7 +53,7 @@ export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
   };
 
   return (
-    <div className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
       <span className="px-1.5 text-[11px] whitespace-nowrap text-muted">{def?.label}</span>
       {!isPosition && <ColorPicker value={d.style.color} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
       {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
@@ -85,6 +86,11 @@ export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
       {isPosition && (
         <IconButton size="sm" label="Criar ordem com esta posição" onClick={toOrder}>
           <Send size={15} />
+        </IconButton>
+      )}
+      {(LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
+        <IconButton size="sm" label="Adicionar alerta neste desenho" onClick={() => useUi.getState().set({ alertDraft: { symbolId, drawingId: d.id } })}>
+          <Bell size={15} />
         </IconButton>
       )}
       <IconButton size="sm" label="Definições" onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id } })}>

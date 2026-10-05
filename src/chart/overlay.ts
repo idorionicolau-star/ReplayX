@@ -42,6 +42,10 @@ export interface OverlayHost {
   replayPick(): { x: number } | null;
   alerts(): { price: number; label: string }[];
   dark(): boolean;
+  /** Etiqueta temporária junto ao dedo/rato (ex.: ângulo da linha). */
+  hint(): { x: number; y: number; text: string } | null;
+  /** Ecrã tátil: pegas maiores. */
+  coarse(): boolean;
 }
 
 class AxisLabel implements ISeriesPrimitiveAxisView {
@@ -119,7 +123,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         ctx.save();
         for (const h of hs) {
           ctx.beginPath();
-          ctx.arc(h.x, h.y, 5, 0, Math.PI * 2);
+          ctx.arc(h.x, h.y, host.coarse() ? 7.5 : 5, 0, Math.PI * 2);
           ctx.fillStyle = host.dark() ? '#131722' : '#ffffff';
           ctx.fill();
           ctx.lineWidth = 1.5;
@@ -146,6 +150,13 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       }
 
       this.owner.regions = this.drawTrading(ctx, view);
+
+      const hint = host.hint();
+      if (hint) {
+        ctx.save();
+        labelBox(ctx, [hint.text], hint.x + 14, hint.y - 14, { bg: host.dark() ? '#363a45' : '#131722', fg: '#fff', align: 'left', font: FONT, pad: 4, radius: 3 });
+        ctx.restore();
+      }
 
       const pick = host.replayPick();
       if (pick) {

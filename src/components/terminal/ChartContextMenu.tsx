@@ -14,6 +14,7 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { fmtPrice } from '@/lib/format';
 import { uid } from '@/lib/uid';
+import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
 
 export function ChartContextMenu() {
   const menu = useUi((s) => s.contextMenu);
@@ -44,6 +45,9 @@ export function ChartContextMenu() {
         {d ? (
           <>
             <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))} />
+            {(LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
+              <MenuItem icon={<Bell size={15} />} label="Adicionar alerta neste desenho" onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, drawingId: d.id } }))} />
+            )}
             <MenuItem icon={<CopyPlus size={15} />} label="Clonar" onClick={cloneDrawing} />
             <MenuItem icon={d.locked ? <LockOpen size={15} /> : <Lock size={15} />} label={d.locked ? 'Desbloquear' : 'Bloquear'} onClick={act(() => st.update(cfg.symbolId, d.id, { locked: !d.locked }))} />
             <MenuItem icon={<Eye size={15} />} label="Ocultar" onClick={act(() => st.update(cfg.symbolId, d.id, { hidden: true }))} />

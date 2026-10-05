@@ -85,6 +85,8 @@ export function ChartPane({ index }: { index: number }) {
       tool: () => useDrawings.getState().tool,
       setTool: (t) => useDrawings.getState().setTool(t),
       magnet: () => useSettings.getState().magnet,
+      angleSnap: () => useSettings.getState().angleSnap,
+      loupe: () => useSettings.getState().loupe,
       stayInDrawing: () => useSettings.getState().stayInDrawingMode,
       globalLocked: () => useDrawings.getState().locked,
       lastStyle: (t) => useDrawings.getState().lastStyle[t] ?? {},
@@ -243,8 +245,17 @@ export function ChartPane({ index }: { index: number }) {
       ctrl.setAlerts(
         useAlerts
           .getState()
-          .alerts.filter((a) => a.symbolId === symbolId && a.active)
-          .map((a) => ({ price: a.price, label: a.message || `Alerta ${a.price.toFixed(symbol.precision)}` })),
+          .alerts.filter((a) => a.symbolId === symbolId && a.active && a.source.kind === 'price')
+          .flatMap((a) => {
+            const name = a.name || 'Alerta';
+            if (a.target.kind === 'value') return [{ price: a.target.value, label: `${name} ${a.target.value.toFixed(symbol.precision)}` }];
+            if (a.target.kind === 'range')
+              return [
+                { price: a.target.high, label: `${name} ↑ ${a.target.high.toFixed(symbol.precision)}` },
+                { price: a.target.low, label: `${name} ↓ ${a.target.low.toFixed(symbol.precision)}` },
+              ];
+            return [];
+          }),
       );
     };
     apply();

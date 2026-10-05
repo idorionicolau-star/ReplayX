@@ -112,6 +112,12 @@ const MORE_COUNT = 1500;
 
 let chartSeq = 0;
 
+
+/** Ecrã tátil como meio principal (telemóvel, tablet). */
+export function coarsePointer(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+}
+
 export class ChartController {
   readonly id: string;
   chart: IChartApi;
@@ -151,6 +157,7 @@ export class ChartController {
   preview: Drawing | null = null;
   trading: TradingOverlay | null = null;
   alerts: { price: number; label: string }[] = [];
+  hint: { x: number; y: number; text: string } | null = null;
   replayPickX: number | null = null;
   private resizeObs: ResizeObserver | null = null;
 
@@ -172,6 +179,8 @@ export class ChartController {
       replayPick: () => (this.replayPickX === null ? null : { x: this.replayPickX }),
       alerts: () => this.alerts,
       dark: () => this.theme.dark,
+      hint: () => this.hint,
+      coarse: () => coarsePointer(),
     };
     this.overlay = new OverlayPrimitive(host);
     this.overlay.fmtTime = (t) => fmtDateTime(t, this.theme.timezone);

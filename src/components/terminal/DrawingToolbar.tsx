@@ -35,6 +35,10 @@ import {
   Rows3,
   ChevronRight,
   ListTree,
+  Star,
+  Compass,
+  ZoomIn,
+  PanelTop,
 } from 'lucide-react';
 import { useDrawings } from '@/store/drawings';
 import { useSettings } from '@/store/settings';
@@ -117,7 +121,40 @@ export const TOOL_ICONS: Record<ToolId, Icon> = {
   measure: Ruler,
 };
 
+export function toggleFavoriteTool(t: ToolId) {
+  const st = useSettings.getState();
+  const favs = st.favoriteTools;
+  st.set({ favoriteTools: favs.includes(t) ? favs.filter((x) => x !== t) : [...favs, t] });
+}
+
+/** Estrela para marcar/desmarcar uma ferramenta como favorita (dentro de um item de menu). */
+export function FavStar({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={on ? `Tirar ${label} dos favoritos` : `Adicionar ${label} aos favoritos`}
+      title={on ? 'Tirar dos favoritos' : 'Adicionar aos favoritos'}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggle();
+        }
+      }}
+      className={cn('-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded', on ? 'text-warn' : 'text-faint hover:text-text')}
+    >
+      <Star size={14} fill={on ? 'currentColor' : 'none'} />
+    </span>
+  );
+}
+
 function GroupButton({ group }: { group: (typeof TOOL_GROUPS)[number] }) {
+  const favs = useSettings((s) => s.favoriteTools);
   const tool = useDrawings((s) => s.tool);
   const setTool = useDrawings((s) => s.setTool);
   const [last, setLast] = useState<ToolId>(group.tools[0]);
@@ -159,6 +196,7 @@ function GroupButton({ group }: { group: (typeof TOOL_GROUPS)[number] }) {
                 label={def?.label ?? t}
                 hint={def?.shortcut}
                 active={tool === t}
+                trailing={<FavStar on={favs.includes(t)} onToggle={() => toggleFavoriteTool(t)} label={def?.label ?? t} />}
                 onClick={() => {
                   setLast(t);
                   setTool(t);
@@ -183,6 +221,10 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const clear = useDrawings((s) => s.clear);
   const magnet = useSettings((s) => s.magnet);
   const stay = useSettings((s) => s.stayInDrawingMode);
+  const favs = useSettings((s) => s.favoriteTools);
+  const angleSnap = useSettings((s) => s.angleSnap);
+  const loupe = useSettings((s) => s.loupe);
+  const favBar = useSettings((s) => s.favoritesBar);
   const setSettings = useSettings((s) => s.set);
   const symbolId = useWorkspace((s) => s.charts[s.active]?.symbolId);
   const ref = useRef<HTMLButtonElement>(null);
@@ -209,6 +251,29 @@ export function DrawingToolbar({ className }: { className?: string }) {
         </MenuList>
       </Popover>
       <span className="my-0.5 h-px w-7 bg-line" />
+      {favs.length > 0 && (
+        <>
+          {favs.map((t) => {
+            const I = TOOL_ICONS[t];
+            const def = toolDef(t);
+            if (!I || !def) return null;
+            return (
+              <button
+                key={t}
+                type="button"
+                title={`${def.label} (favorito)`}
+                aria-label={def.label}
+                onClick={() => setTool(tool === t ? 'cross' : t)}
+                className={cn('flex h-8 w-9 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
+                data-testid={`fav-tool-${t}`}
+              >
+                <I size={17} />
+              </button>
+            );
+          })}
+          <span className="my-0.5 h-px w-7 bg-line" />
+        </>
+      )}
       {TOOL_GROUPS.map((g) => (
         <GroupButton key={g.id} group={g} />
       ))}
@@ -229,6 +294,34 @@ export function DrawingToolbar({ className }: { className?: string }) {
           <MenuItem label="Íman forte (sempre OHLC)" checked={magnet === 'strong'} onClick={() => (setSettings({ magnet: 'strong' }), setMagOpen(false))} />
         </MenuList>
       </Popover>
+      <button
+        type="button"
+        title={angleSnap ? 'Alinhar ângulo: ligado (linhas encaixam de 15 em 15°)' : 'Alinhar ângulo (também com Shift)'}
+        aria-label="Alinhar ângulo"
+        onClick={() => setSettings({ angleSnap: !angleSnap })}
+        className={cn('flex h-9 w-9 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        data-testid="angle-snap"
+      >
+        <Compass size={18} />
+      </button>
+      <button
+        type="button"
+        title={loupe ? 'Lupa ao desenhar com o dedo: ligada' : 'Lupa ao desenhar com o dedo: desligada'}
+        aria-label="Lupa"
+        onClick={() => setSettings({ loupe: !loupe })}
+        className={cn('flex h-9 w-9 items-center justify-center rounded-md', loupe ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+      >
+        <ZoomIn size={18} />
+      </button>
+      <button
+        type="button"
+        title={favBar ? 'Esconder a barra de favoritos' : 'Mostrar a barra de favoritos'}
+        aria-label="Barra de favoritos"
+        onClick={() => setSettings({ favoritesBar: !favBar })}
+        className={cn('flex h-9 w-9 items-center justify-center rounded-md', favBar ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+      >
+        <PanelTop size={18} />
+      </button>
       <button
         type="button"
         title="Manter modo de desenho"

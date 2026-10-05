@@ -9,6 +9,9 @@ import { startSync, stopSync } from '@/lib/cloud';
 import { setChartTf } from '@/lib/gates';
 import { startBilling, usePlan } from '@/lib/billing';
 import { UpgradeDialog } from '@/components/dialogs/UpgradeDialog';
+import { FavoritesBar } from '@/components/chart/FavoritesBar';
+import { AlertPopups } from '@/components/dialogs/AlertPopups';
+import { PwaPrompts } from './PwaPrompts';
 import { replay, useReplay } from '@/replay/engine';
 import { getChart } from '@/chart/registry';
 import { isValidTf, normalizeTf } from '@/core/timeframes';
@@ -173,6 +176,12 @@ export function Terminal() {
     const r = useReplay.getState();
     if (r.active && r.cursor === null) useReplay.setState({ active: false });
     if (r.selecting) useReplay.setState({ selecting: false, active: r.cursor !== null });
+    // atalhos da app instalada (manifesto): ?action=replay, ?tab=alerts
+    const q = new URLSearchParams(window.location.search);
+    const tab = q.get('tab');
+    if (tab === 'alerts' || tab === 'watchlist' || tab === 'trade' || tab === 'news') useWorkspace.getState().setRightTab(tab);
+    if (q.get('action') === 'replay' && !useReplay.getState().active) replay.enter();
+    if (q.has('tab') || q.has('action') || q.has('source')) window.history.replaceState(null, '', window.location.pathname);
     return off;
   }, []);
 
@@ -192,6 +201,7 @@ export function Terminal() {
         <div className="flex min-w-0 flex-1 flex-col">
           <div className={cn('relative min-h-0 flex-1')}>
             <ChartGrid />
+            <FavoritesBar />
             <ReplayBar />
             <TfQuickInput />
           </div>
@@ -211,6 +221,8 @@ export function Terminal() {
       <AlertDialog />
       <ChartContextMenu />
       <UpgradeDialog />
+      <AlertPopups />
+      <PwaPrompts />
       <Toaster />
     </div>
   );
@@ -222,7 +234,7 @@ function MobileNav() {
   const setTab = useWorkspace((s) => s.setRightTab);
   return (
     <nav className="flex h-12 shrink-0 items-center justify-around border-t border-line bg-panel sm:hidden">
-      {RIGHT_TABS.slice(0, 5).map((t) => (
+      {RIGHT_TABS.map((t) => (
         <button key={t.id} type="button" aria-label={t.label} onClick={() => setTab(tab === t.id ? null : t.id)} className={cn('flex h-10 w-12 items-center justify-center rounded-md', tab === t.id ? 'text-accent' : 'text-muted')}>
           <t.icon size={20} />
         </button>

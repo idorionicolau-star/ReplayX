@@ -1,7 +1,8 @@
 'use client';
 import { canAddIndicator } from '@/lib/billing';
 import { useMemo, useState } from 'react';
-import { Search, Code2, Plus } from 'lucide-react';
+import { Search, Code2, Plus, Star } from 'lucide-react';
+import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { useWorkspace } from '@/store/workspace';
 import { useStrategies } from '@/store/strategies';
@@ -11,9 +12,15 @@ import { cn } from '@/components/ui/cn';
 import { uid } from '@/lib/uid';
 import { toast } from '@/components/ui/Toast';
 
-const CATS = ['Todos', 'Médias móveis', 'Tendência', 'Osciladores', 'Volatilidade', 'Volume', 'Outros', 'Os meus scripts'] as const;
+const CATS = ['Favoritos', 'Todos', 'Médias móveis', 'Tendência', 'Osciladores', 'Volatilidade', 'Volume', 'Outros', 'Os meus scripts'] as const;
 
 const EMPTY: never[] = [];
+
+export function toggleFavoriteIndicator(id: string) {
+  const st = useSettings.getState();
+  const f = st.favoriteIndicators;
+  st.set({ favoriteIndicators: f.includes(id) ? f.filter((x) => x !== id) : [...f, id] });
+}
 
 export function IndicatorsDialog() {
   const open = useUi((s) => s.indicators);
@@ -23,13 +30,17 @@ export function IndicatorsDialog() {
   const update = useWorkspace((s) => s.updateChart);
   const scripts = useStrategies((s) => s.scripts);
   const [q, setQ] = useState('');
-  const [cat, setCat] = useState<(typeof CATS)[number]>('Todos');
+  const favs = useSettings((s) => s.favoriteIndicators);
+  const [cat, setCat] = useState<(typeof CATS)[number]>(() => (useSettings.getState().favoriteIndicators.length ? 'Favoritos' : 'Todos'));
   const close = () => useUi.getState().set({ indicators: false });
 
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return INDICATORS.filter((d) => (cat === 'Todos' || d.category === cat) && (!t || `${d.name} ${d.short} ${d.description}`.toLowerCase().includes(t)));
-  }, [q, cat]);
+    // ao escrever procura-se em todos, com os favoritos primeiro
+    const inCat = (d: (typeof INDICATORS)[number]) => (t ? true : cat === 'Todos' || (cat === 'Favoritos' ? favs.includes(d.id) : d.category === cat));
+    const found = INDICATORS.filter((d) => inCat(d) && (!t || `${d.name} ${d.short} ${d.description}`.toLowerCase().includes(t)));
+    return found.sort((a, b) => Number(favs.includes(b.id)) - Number(favs.includes(a.id)));
+  }, [q, cat, favs]);
 
   const scriptList = scripts.filter((s) => (!q || s.name.toLowerCase().includes(q.toLowerCase())) && /indicator\s*\(/.test(s.code));
 
@@ -75,9 +86,24 @@ export function IndicatorsDialog() {
                       <span className="block text-xs text-muted">{d.description}</span>
                     </span>
                     {count > 0 && <span className="rounded bg-accent-soft px-1.5 text-[11px] text-accent">{count}</span>}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={favs.includes(d.id) ? 'Tirar dos favoritos' : 'Adicionar aos favoritos'}
+                      title={favs.includes(d.id) ? 'Tirar dos favoritos' : 'Adicionar aos favoritos'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteIndicator(d.id);
+                      }}
+                      className={cn('-my-1 flex h-7 w-7 shrink-0 items-center justify-center rounded', favs.includes(d.id) ? 'text-warn' : 'text-faint hover:text-text')}
+                      data-testid={`fav-indicator-${d.id}`}
+                    >
+                      <Star size={15} fill={favs.includes(d.id) ? 'currentColor' : 'none'} />
+                    </span>
                   </button>
                 );
               })}
+            {cat === 'Favoritos' && !q && !list.length && <div className="px-4 py-8 text-center text-xs text-muted">Toque na estrela ☆ de um indicador para o pôr nos favoritos.</div>}
             {(cat === 'Os meus scripts' || (cat === 'Todos' && q)) && (
               <>
                 {cat === 'Os meus scripts' && !scriptList.length && <div className="px-4 py-8 text-center text-xs text-muted">Ainda não tem scripts de indicador. Crie um no separador “Scripts” em baixo.</div>}

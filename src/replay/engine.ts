@@ -10,6 +10,7 @@ import { lowerBound } from '@/core/bars';
 import { useTrading, specFor } from '@/store/trading';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
+import { useAlerts } from '@/store/alerts';
 import { uid } from '@/lib/uid';
 import { isPro, openUpgrade, replayTfAllowed } from '@/lib/billing';
 import { FREE_LIMITS, freeReplayTfOk } from '@/core/plans';
@@ -354,7 +355,13 @@ class ReplayEngine {
     const feed = dataFeed();
     const acc = useTrading.getState().replay;
     const ws = useWorkspace.getState();
-    const ids = new Set<string>([...ws.charts.map((c) => c.symbolId), ...acc.positions.map((p) => p.symbolId), ...acc.orders.map((o) => o.symbolId)]);
+    const ids = new Set<string>([
+      ...ws.charts.map((c) => c.symbolId),
+      ...acc.positions.map((p) => p.symbolId),
+      ...acc.orders.map((o) => o.symbolId),
+      // os alertas também são vigiados durante o replay
+      ...useAlerts.getState().alerts.filter((a) => a.active).map((a) => a.symbolId),
+    ]);
     const prices: Record<string, number> = {};
     for (const id of ids) {
       const sym = resolveSymbol(id);

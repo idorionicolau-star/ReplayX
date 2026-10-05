@@ -1,7 +1,11 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Cloud, CloudOff, Crown, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
+import { BellRing, Cloud, CloudOff, Crown, Download, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
+import { promptInstall, usePwa } from '@/lib/pwa';
+import { notifyDevice, notifyPermission, requestNotifyPermission } from '@/lib/notify';
+import { IosInstallHelp } from './PwaPrompts';
+import { toast } from '@/components/ui/Toast';
 import { openUpgrade } from '@/lib/billing';
 import { logout, useAuth } from '@/lib/auth';
 import { flushSync, stopSync, useSync } from '@/lib/cloud';
@@ -16,6 +20,8 @@ export function UserMenu() {
   const router = useRouter();
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [iosHelp, setIosHelp] = useState(false);
+  const pwa = usePwa();
   if (!user) return null;
   const initials = user.name
     .split(/\s+/)
@@ -71,6 +77,30 @@ export function UserMenu() {
               openUpgrade();
             }}
           />
+          {!pwa.standalone && (pwa.canInstall || pwa.ios) && (
+            <MenuItem
+              icon={<Download size={15} />}
+              label="Instalar a app"
+              onClick={async () => {
+                setOpen(false);
+                if (pwa.canInstall) await promptInstall();
+                else setIosHelp(true);
+              }}
+            />
+          )}
+          <MenuItem
+            icon={<BellRing size={15} />}
+            label={notifyPermission() === 'granted' ? 'Testar notificação' : 'Ativar notificações'}
+            onClick={async () => {
+              setOpen(false);
+              const p = await requestNotifyPermission();
+              if (p === 'granted') {
+                const ok = await notifyDevice('ReplayX', 'As notificações dos alertas estão a funcionar.', 'rx-test');
+                if (!ok) toast('Não foi possível mostrar a notificação', { kind: 'error' });
+              } else if (p === 'denied') toast('Notificações bloqueadas', { kind: 'error', body: 'Ative-as nas definições do site no navegador.' });
+              else if (p === 'unsupported') toast('Este navegador não suporta notificações', { kind: 'warning', body: pwa.ios ? 'No iPhone, instale primeiro a app no ecrã principal.' : undefined });
+            }}
+          />
           <MenuItem icon={<Keyboard size={15} />} label="Atalhos de teclado" onClick={() => useUi.getState().set({ shortcuts: true })} />
           <MenuSeparator />
           <MenuItem
@@ -86,6 +116,7 @@ export function UserMenu() {
           />
         </MenuList>
       </Popover>
+      <IosInstallHelp open={iosHelp} onClose={() => setIosHelp(false)} />
     </>
   );
 }

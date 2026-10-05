@@ -48,7 +48,8 @@ import { AssetIcon } from '@/components/chart/AssetIcon';
 import { UserMenu } from './UserMenu';
 import { toast } from '@/components/ui/Toast';
 import { setChartTf, setLayoutGated } from '@/lib/gates';
-import { openUpgrade, usePlan } from '@/lib/billing';
+import { canAddIndicator, openUpgrade, usePlan } from '@/lib/billing';
+import { getIndicator } from '@/core/indicators/registry';
 
 const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
   { id: 'candles', label: 'Velas', icon: CandlestickChart },
@@ -283,6 +284,7 @@ export function TopBar() {
         <FunctionSquare size={18} />
         <span className="hidden lg:inline">Indicadores</span>
       </button>
+      <FavIndicatorsMenu />
       <Divider />
       <button
         type="button"
@@ -343,5 +345,47 @@ function PlanBadge() {
       <Crown size={13} />
       {label}
     </button>
+  );
+}
+
+/** Atalho para os indicadores favoritos: um toque adiciona ao gráfico ativo. */
+function FavIndicatorsMenu() {
+  const favs = useSettings((s) => s.favoriteIndicators);
+  const active = useWorkspace((s) => s.active);
+  const ref = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  if (!favs.length) return null;
+  return (
+    <>
+      <button ref={ref} type="button" aria-label="Indicadores favoritos" title="Indicadores favoritos" onClick={() => setOpen((o) => !o)} className="-ml-1 flex h-8 w-5 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text">
+        <ChevronDown size={14} />
+      </button>
+      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-start">
+        <MenuList className="w-[240px]">
+          <MenuHeader>Indicadores favoritos</MenuHeader>
+          {favs.map((id) => {
+            const def = getIndicator(id);
+            if (!def) return null;
+            return (
+              <MenuItem
+                key={id}
+                icon={<Star size={14} className="text-warn" fill="currentColor" />}
+                label={def.name}
+                hint={def.short}
+                onClick={() => {
+                  setOpen(false);
+                  const ws = useWorkspace.getState();
+                  if (!canAddIndicator(ws.charts[active]?.indicators.length ?? 0)) return;
+                  ws.addIndicator(id, active);
+                  toast(`${def.name} adicionado`, { kind: 'success', duration: 1800 });
+                }}
+              />
+            );
+          })}
+          <MenuSeparator />
+          <MenuItem icon={<FunctionSquare size={15} />} label="Todos os indicadores…" onClick={() => (setOpen(false), useUi.getState().set({ indicators: true }))} />
+        </MenuList>
+      </Popover>
+    </>
   );
 }

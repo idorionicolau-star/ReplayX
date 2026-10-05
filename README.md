@@ -17,7 +17,11 @@ Funciona sem configuração: `npm install && npm run dev` e abre `http://localho
 
 ### Ferramentas de desenho (28)
 Linha de tendência, raio, linha de informação, linha estendida, linha com seta, linha horizontal / raio horizontal / vertical / cruz, canal paralelo, retração e extensão de Fibonacci, forquilha de Andrews, retângulo, elipse, triângulo, caminho, pincel, texto, nota, etiqueta de preço, setas, **posição longa e curta** (com resultado calculado), intervalo de preço, intervalo de datas e régua.
-Íman (OHLC), bloquear/ocultar, desfazer/refazer, árvore de objetos, estilos editáveis (cor, espessura, tracejado, níveis de Fibonacci). Os desenhos ficam ancorados ao tempo e preço, por isso **mantêm-se ao mudar de intervalo**.
+Íman (OHLC, também com Ctrl), bloquear/ocultar, desfazer/refazer, árvore de objetos, estilos editáveis (cor, espessura, tracejado, níveis de Fibonacci). Os desenhos ficam ancorados ao tempo e preço, por isso **mantêm-se ao mudar de intervalo**.
+
+- **Favoritos:** estrela nas ferramentas e nos indicadores; barra flutuante de favoritos (arrasta-se) e menu rápido de indicadores favoritos.
+- **Alinhar ângulo:** com Shift ou pelo botão da bússola, as linhas encaixam de 15 em 15° (horizontal, 45°, vertical…) e mostram os graus.
+- **Telemóvel:** toque mais tolerante, pegas maiores e uma **lupa** (como no MT5) que mostra ampliado o ponto debaixo do dedo.
 
 ### Indicadores (36)
 Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner, Donchian, VWAP, Supertrend, Parabolic SAR, Ichimoku, ZigZag, Regressão linear, Pivots, Fractais, Volume, RSI, MACD, Estocástico, Stoch RSI, CCI, Williams %R, ADX/DMI, ATR, Desvio padrão, Largura de Bollinger, Momentum, ROC, Awesome Oscillator, TRIX, Aroon, OBV, MFI, CMF e mais. Todos com parâmetros, cores e painéis próprios.
@@ -32,7 +36,19 @@ Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner,
 - Sessões guardadas: retoma um replay mais tarde exatamente onde o deixaste.
 
 ### Paper trading em tempo real
-A mesma conta de simulação a correr sobre os preços ao vivo, com alertas de preço e de cruzamento.
+A mesma conta de simulação a correr sobre os preços ao vivo.
+
+### Alertas (como no TradingView)
+- **Fonte:** preço ou qualquer indicador do gráfico (RSI, médias, MACD…).
+- **Condição:** cruza, cruza para cima/baixo, maior/menor que, entra/sai do canal, dentro/fora do canal.
+- **Alvo:** valor, canal entre dois valores, desenho (linha de tendência, raio, linha estendida, horizontal, canal paralelo, retângulo), outro indicador ou o preço.
+- **Frequência:** só uma vez, uma vez por barra, uma vez por barra no fecho, sempre. Validade opcional, nome e mensagem com `{{ticker}}`, `{{close}}`, `{{value}}`, `{{time}}`, `{{interval}}`.
+- **Aviso:** janela no ecrã até ser fechada, som e notificação no telemóvel/computador. Funcionam também durante o replay.
+- Criar pelo painel de alertas, pelo botão direito no gráfico, pelo sino de um desenho ou de um indicador na legenda.
+- Os alertas são verificados no navegador: precisam da app aberta (no telemóvel o sistema pode pausá-la em segundo plano).
+
+### App instalável (PWA)
+Instala-se no telemóvel e no computador (Android/Chrome: botão "Instalar"; iPhone: Partilhar → Adicionar ao ecrã principal). Abre em ecrã inteiro, funciona sem internet com a última versão guardada, avisa quando há versão nova e tem atalhos para o Replay e os Alertas. As notificações dos alertas usam o service worker; no iPhone precisam da app instalada (iOS 16.4+).
 
 ### Diário e estatísticas
 Lista de operações com notas e etiquetas, curva de capital, lucro líquido, taxa de acerto, fator de lucro, expectativa, múltiplos R, MAE/MFE, drawdown máximo, sequências, análise por dia da semana, hora e direção e **simulação de Monte Carlo**.

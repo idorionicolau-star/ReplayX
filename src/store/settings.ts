@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ToolId } from '@/chart/drawings/types';
 
 export type Theme = 'dark' | 'light';
 export type Magnet = 'off' | 'weak' | 'strong';
@@ -28,6 +29,18 @@ export interface SettingsState {
   logScale: boolean;
   magnet: Magnet;
   stayInDrawingMode: boolean;
+  /** Ferramentas de desenho favoritas (barra flutuante e topo da barra lateral). */
+  favoriteTools: ToolId[];
+  /** Barra flutuante de favoritos visível. */
+  favoritesBar: boolean;
+  /** Posição da barra flutuante (px a partir do canto superior esquerdo da área dos gráficos). */
+  favoritesBarPos: { x: number; y: number } | null;
+  /** Indicadores favoritos (id). */
+  favoriteIndicators: string[];
+  /** Linhas encaixam em ângulos de 15° (também com Shift). */
+  angleSnap: boolean;
+  /** Lupa ao desenhar com o dedo. */
+  loupe: boolean;
   sound: boolean;
   trading: TradingSettings;
   replaySpeedMs: number;
@@ -61,6 +74,12 @@ export const useSettings = create<SettingsState>()(
       logScale: false,
       magnet: 'off',
       stayInDrawingMode: false,
+      favoriteTools: ['trendline', 'hline', 'fib', 'rect', 'long', 'short'],
+      favoritesBar: true,
+      favoritesBarPos: null,
+      favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
+      angleSnap: false,
+      loupe: true,
       sound: true,
       trading: DEFAULT_TRADING,
       replaySpeedMs: 1000,

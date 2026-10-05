@@ -1,7 +1,8 @@
 import type { PricePoint } from '@/core/types';
 import type { ChartController } from './controller';
 import type { Drawing, DrawingStyle, ToolId } from './drawings/types';
-import { toolDef, type ToolDef } from './drawings/tools';
+import { setHitTolerance, toolDef, type ToolDef } from './drawings/tools';
+import { Loupe } from './loupe';
 import type { TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
@@ -17,6 +18,10 @@ export interface InteractionCallbacks {
   tool(): ToolId;
   setTool(t: ToolId): void;
   magnet(): Magnet;
+  /** Encaixar linhas de 15 em 15° (também com Shift). */
+  angleSnap(): boolean;
+  /** Lupa ao desenhar com o dedo. */
+  loupe(): boolean;
   stayInDrawing(): boolean;
   globalLocked(): boolean;
   lastStyle(tool: ToolId): Partial<DrawingStyle>;
@@ -43,17 +48,25 @@ type Mode =
   | { kind: 'trade'; region: TradeRegion; startY: number; moved: boolean; price: number };
 
 const DRAG_THRESHOLD = 4;
+/** Ferramentas de linha: o 2.º ponto pode encaixar no ângulo e mostra os graus. */
+const LINE_TOOLS = new Set<ToolId>(['trendline', 'ray', 'extended', 'infoline', 'arrowline', 'channel', 'path']);
+const ANGLE_STEP = Math.PI / 12; // 15°
 
 export class Interaction {
   private mode: Mode = { kind: 'idle' };
   private capturing = false;
   private disposed = false;
+  /** O último toque foi com o dedo (tolerâncias maiores, lupa). */
+  private touch = false;
+  private mods = { shift: false, ctrl: false };
+  private readonly loupe: Loupe;
 
   constructor(
     private readonly c: ChartController,
     private readonly cb: InteractionCallbacks,
   ) {
     const el = c.container;
+    this.loupe = new Loupe(el);
     el.addEventListener('pointerdown', this.onDown, true);
     el.addEventListener('mousedown', this.block, true);
     el.addEventListener('touchstart', this.block, { capture: true, passive: false });
@@ -66,6 +79,7 @@ export class Interaction {
 
   dispose() {
     this.disposed = true;
+    this.loupe.dispose();
     const el = this.c.container;
     el.removeEventListener('pointerdown', this.onDown, true);
     el.removeEventListener('mousedown', this.block, true);
@@ -102,7 +116,9 @@ export class Interaction {
     const li = snapTime ? Math.round(l) : l;
     const time = this.c.logicalToTime(li);
     if (time === null) return null;
-    const magnet = this.cb.magnet();
+    let magnet = this.cb.magnet();
+    // Ctrl inverte o íman enquanto está carregado (como no TradingView)
+    if (this.mods.ctrl) magnet = magnet === 'off' ? 'strong' : 'off';
     if (magnet !== 'off') {
       const bar = this.c.bars[Math.round(l)];
       if (bar) {
@@ -122,6 +138,67 @@ export class Interaction {
       }
     }
     return { time, price };
+  }
+
+  /** Ponto do 2.º extremo de uma linha, encaixado em múltiplos de 15° a partir de `anchor` (Shift ou botão). */
+  private anglePoint(anchor: PricePoint, x: number, y: number): PricePoint | null {
+    const ax = this.c.timeToX(anchor.time);
+    const ay = this.c.priceToY(anchor.price);
+    if (ax === null || ay === null) return this.toPoint(x, y);
+    const ang = Math.round(Math.atan2(y - ay, x - ax) / ANGLE_STEP) * ANGLE_STEP;
+    if (Math.abs(Math.cos(ang)) < 1e-6) {
+      // vertical: mesmo instante
+      const price = this.c.yToPrice(y);
+      return price === null ? null : { time: anchor.time, price };
+    }
+    const base = this.toPointRaw(x, y);
+    if (!base) return null;
+    const bx = this.c.timeToX(base.time);
+    if (bx === null) return base;
+    const price = this.c.yToPrice(ay + Math.tan(ang) * (bx - ax));
+    return price === null ? null : { time: base.time, price };
+  }
+
+  /** Ponto sem íman (encaixe só no tempo). */
+  private toPointRaw(x: number, y: number): PricePoint | null {
+    const l = this.c.xToLogical(x);
+    const price = this.c.yToPrice(y);
+    if (l === null || price === null) return null;
+    const time = this.c.logicalToTime(Math.round(l));
+    return time === null ? null : { time, price };
+  }
+
+  private snapAngle(): boolean {
+    return this.mods.shift || this.cb.angleSnap();
+  }
+
+  /** Graus da linha anchor→pt no ecrã (para cima = positivo). */
+  private showAngle(anchor: PricePoint, pt: PricePoint, x: number, y: number) {
+    const ax = this.c.timeToX(anchor.time);
+    const ay = this.c.priceToY(anchor.price);
+    const bx = this.c.timeToX(pt.time);
+    const by = this.c.priceToY(pt.price);
+    if (ax === null || ay === null || bx === null || by === null || (ax === bx && ay === by)) {
+      this.c.hint = null;
+      return;
+    }
+    const deg = (-Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+    this.c.hint = { x, y, text: `${deg.toFixed(1)}°${this.snapAngle() ? ' ⊾' : ''}` };
+  }
+
+  /** Ponto para o extremo que está a ser posicionado numa linha (com encaixe de ângulo se ativo). */
+  private linePoint(type: ToolId, anchor: PricePoint | undefined, x: number, y: number, screen: { x: number; y: number }): PricePoint | null {
+    const pt = anchor && LINE_TOOLS.has(type) && this.snapAngle() ? this.anglePoint(anchor, x, y) : this.toPoint(x, y);
+    if (pt && anchor && LINE_TOOLS.has(type)) this.showAngle(anchor, pt, screen.x, screen.y);
+    return pt;
+  }
+
+  private updateLoupe(e: { clientX: number; clientY: number }) {
+    if (this.touch && this.cb.loupe()) this.loupe.show(e.clientX, e.clientY);
+  }
+
+  private trackMods(e: { shiftKey: boolean; ctrlKey: boolean; metaKey?: boolean }) {
+    this.mods = { shift: e.shiftKey, ctrl: e.ctrlKey || !!e.metaKey };
   }
 
   private setScroll(enabled: boolean) {
@@ -151,7 +228,8 @@ export class Interaction {
     const sel = this.c.drawings.find((d) => d.id === this.c.selectedId);
     if (sel && !sel.hidden) {
       const def = toolDef(sel.type);
-      const h = def?.handles(sel, vp).find((hh) => Math.hypot(hh.x - x, hh.y - y) <= 8);
+      const r = this.touch ? 22 : 8;
+      const h = def?.handles(sel, vp).find((hh) => Math.hypot(hh.x - x, hh.y - y) <= r);
       if (h) return { d: sel, handle: h.id };
     }
     for (let i = this.c.drawings.length - 1; i >= 0; i--) {
@@ -168,8 +246,9 @@ export class Interaction {
   }
 
   private hitTrade(x: number, y: number): TradeRegion | null {
+    const pad = this.touch ? 8 : 0;
     for (const r of this.c.overlay.regions) {
-      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r;
+      if (x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad) return r;
     }
     return null;
   }
@@ -182,6 +261,9 @@ export class Interaction {
     focus.chartId = this.c.id;
     this.cb.onActivate();
     if (e.button !== 0) return;
+    this.touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    setHitTolerance(this.touch ? 16 : 6);
+    this.trackMods(e);
     const p = this.local(e);
     if (!p.inside) return;
 
@@ -201,6 +283,7 @@ export class Interaction {
       m.downAt = { x: p.x, y: p.y };
       m.moved = false;
       this.addCreationPoint(p.x, p.y);
+      this.updateLoupe(e);
       return;
     }
 
@@ -209,6 +292,7 @@ export class Interaction {
     if (def) {
       this.consume(e);
       this.startCreation(def, p.x, p.y);
+      if (this.mode.kind !== 'idle') this.updateLoupe(e);
       return;
     }
 
@@ -224,6 +308,7 @@ export class Interaction {
       const price = this.c.yToPrice(p.y) ?? 0;
       this.mode = { kind: 'trade', region: tr, startY: p.y, moved: false, price };
       this.beginDrag();
+      this.updateLoupe(e);
       return;
     }
 
@@ -236,6 +321,7 @@ export class Interaction {
       if (!start) return;
       this.mode = { kind: 'drag', id: hit.d.id, handle: hit.handle, start, orig: hit.d, moved: false };
       this.beginDrag();
+      if (hit.handle !== null) this.updateLoupe(e);
       return;
     }
     if (this.c.selectedId) this.cb.select(null);
@@ -248,6 +334,8 @@ export class Interaction {
   }
 
   private endDrag() {
+    this.loupe.hide();
+    this.c.hint = null;
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
     this.setScroll(true);
@@ -289,9 +377,9 @@ export class Interaction {
   private addCreationPoint(x: number, y: number) {
     const m = this.mode;
     if (m.kind !== 'create') return;
-    const pt = this.toPoint(x, y);
-    if (!pt) return;
     const d = m.drawing;
+    const pt = this.linePoint(d.type, d.points[d.points.length - 2], x, y, { x, y });
+    if (!pt) return;
     d.points[d.points.length - 1] = pt;
     const need = m.def.points;
     if (need > 0 && d.points.length >= need) {
@@ -304,6 +392,7 @@ export class Interaction {
 
   private finish(d: Drawing) {
     this.c.preview = null;
+    this.c.hint = null;
     this.mode = { kind: 'idle' };
     this.endDrag();
     // remove pontos repetidos (duplo clique no caminho)
@@ -335,9 +424,12 @@ export class Interaction {
   private onDragMove = (e: PointerEvent) => {
     const p = this.local(e);
     const m = this.mode;
+    this.trackMods(e);
+    if (m.kind !== 'idle' && e.buttons) this.updateLoupe(e);
     if (m.kind === 'create') {
       if (e.buttons && Math.hypot(p.x - m.downAt.x, p.y - m.downAt.y) > DRAG_THRESHOLD) m.moved = true;
-      const pt = this.toPoint(p.x, p.y);
+      const pts = m.drawing.points;
+      const pt = this.linePoint(m.drawing.type, pts[pts.length - 2], p.x, p.y, p);
       if (!pt) return;
       m.drawing.points[m.drawing.points.length - 1] = pt;
       this.c.redraw();
@@ -349,7 +441,10 @@ export class Interaction {
       m.last = { x: p.x, y: p.y };
       this.c.redraw();
     } else if (m.kind === 'drag') {
-      const pt = this.toPoint(p.x, p.y, m.handle !== null);
+      const def0 = toolDef(m.orig.type);
+      // extremo de uma linha simples: o outro extremo é a âncora do ângulo
+      const anchor = m.handle !== null && m.handle < 2 && !def0?.drag && m.orig.points.length >= 2 && LINE_TOOLS.has(m.orig.type) ? m.orig.points[1 - m.handle] : undefined;
+      const pt = anchor ? this.linePoint(m.orig.type, anchor, p.x, p.y, p) : this.toPoint(p.x, p.y, m.handle !== null);
       if (!pt) return;
       if (!m.moved) {
         m.moved = true;
@@ -393,6 +488,7 @@ export class Interaction {
   };
 
   private onUp = (e: PointerEvent) => {
+    this.loupe.hide();
     const m = this.mode;
     const p = this.local(e);
     if (m.kind === 'create') {

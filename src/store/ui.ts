@@ -20,7 +20,8 @@ interface UiState {
   contextMenu: ContextMenuState | null;
   tfInput: string | null;
   mobileTools: boolean;
-  alertDraft: { symbolId: string; price: number } | null;
+  /** Criar alerta (preço, desenho ou indicador) ou editar um existente (`editId`). */
+  alertDraft: { symbolId: string; price?: number; drawingId?: string; indicatorUid?: string; editId?: string } | null;
   set: (patch: Partial<UiState>) => void;
   openSymbolSearch: (initial?: string, chart?: number, mode?: UiState['symbolSearch']['mode']) => void;
 }

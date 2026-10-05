@@ -46,7 +46,11 @@ export interface ToolDef {
 }
 
 const BLUE = '#2962ff';
-const TOL = 6;
+let TOL = 6;
+/** Tolerância (px) para acertar num desenho: maior com o dedo do que com o rato. */
+export function setHitTolerance(px: number) {
+  TOL = px;
+}
 
 // ---------- utilitários de desenho ----------
 

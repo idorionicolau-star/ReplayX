@@ -1,6 +1,6 @@
 'use client';
 import { memo } from 'react';
-import { Eye, EyeOff, Settings2, X } from 'lucide-react';
+import { Bell, Eye, EyeOff, Settings2, X } from 'lucide-react';
 import type { ChartController, ChartStatus, CrosshairInfo, LegendIndicator } from '@/chart/controller';
 import type { SymbolInfo } from '@/core/types';
 import { PROVIDER_LABEL } from '@/core/symbols';
@@ -33,6 +33,18 @@ function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
       <span className="hidden items-center gap-0.5 group-hover:flex">
         <button type="button" aria-label="Mostrar/ocultar" className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => update(ind.uid, { hidden: !ind.hidden }, index)}>
           {ind.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
+        <button
+          type="button"
+          aria-label="Adicionar alerta"
+          title="Adicionar alerta"
+          className="rounded p-0.5 text-muted hover:bg-hover hover:text-text"
+          onClick={() => {
+            const c = useWorkspace.getState().charts[index];
+            if (c) useUi.getState().set({ alertDraft: { symbolId: c.symbolId, indicatorUid: ind.uid } });
+          }}
+        >
+          <Bell size={13} />
         </button>
         <button type="button" aria-label="Definições" className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } })}>
           <Settings2 size={13} />
