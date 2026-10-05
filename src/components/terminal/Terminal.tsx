@@ -217,7 +217,7 @@ export function Terminal() {
         <RightPanel />
         <RightIconBar />
       </div>
-      {!hideBottom && <MobileStrip />}
+      <MobileStrip />
       {!hideBottom && <MobileNav />}
       <SymbolSearch />
       <IndicatorsDialog />

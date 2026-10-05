@@ -257,3 +257,13 @@ test('faixa de baixo: roda de símbolo e intervalo com arrasto; toque abre a pes
   await page.locator('div.grid-cols-4 button[title="1 hora"]').tap();
   await expect.poll(tf).toBe('1h');
 });
+
+test('a faixa de símbolo e intervalo fica sempre visível, mesmo com as barras de baixo escondidas', async ({ page }) => {
+  await setup(page);
+  await expect(page.getByTestId('mobile-strip')).toBeVisible();
+  await page.getByRole('button', { name: 'Esconder as barras de baixo' }).click();
+  await expect(page.getByTestId('chart-bottom-bar')).toBeHidden();
+  await expect(page.getByTestId('mobile-strip')).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar as barras de baixo' }).click();
+  await expect(page.getByTestId('chart-bottom-bar')).toBeVisible();
+});
