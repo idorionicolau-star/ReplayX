@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Política de privacidade — ReplayX
 export default function Privacidade() {
   return (
     <LegalLayout title="Política de privacidade">
-      <p>Explicamos que dados o ReplayX recolhe, para que servem e quais são os seus direitos. O responsável pelo tratamento é {OPERATOR}.</p>
+      <p>Explicamos que dados o ReplayX recolhe, para que servem e quais são os seus direitos. O responsável pelo tratamento dos dados é {OPERATOR}, titular do ReplayX.</p>
 
       <h2>1. Que dados recolhemos</h2>
       <ul>

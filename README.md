@@ -131,7 +131,7 @@ npm start
 ### Pagamentos (ZumboPay)
 1. Na Vercel → *Settings → Environment Variables*, define `ZUMBOPAY_API_KEY`, `ZUMBOPAY_MERCHANT_ID`, `ZUMBOPAY_WALLET_ID`, `ZUMBOPAY_WEBHOOK_SECRET` e `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON da chave de serviço do Firebase: *Project settings → Service accounts → Generate new private key*).
 2. No painel da ZumboPay (*Programadores → Webhooks*) acrescenta `https://<o-teu-domínio>/api/billing/webhook` com os eventos `payment.succeeded`, `payment.failed` e `payment.refunded`. A mesma conta pode servir o MajorStockX: o ReplayX ignora os pagamentos que não são seus.
-3. Define também `NEXT_PUBLIC_OPERATOR_NAME`, `NEXT_PUBLIC_SUPPORT_EMAIL` e `NEXT_PUBLIC_SUPPORT_WHATSAPP` (aparecem nas páginas legais) e, quando tiveres, `NEXT_PUBLIC_DERIV_APP_ID`.
+3. Define também `NEXT_PUBLIC_OPERATOR_NAME` (opcional: por omissão aparece **Major Group** como titular), `NEXT_PUBLIC_SUPPORT_EMAIL` e `NEXT_PUBLIC_SUPPORT_WHATSAPP` (aparecem nas páginas legais) e, quando tiveres, `NEXT_PUBLIC_DERIV_APP_ID`.
 4. Faz uma compra de teste de 100 MT e confirma que o Pro se ativa sozinho.
 
 ### Outro projeto Firebase (opcional)

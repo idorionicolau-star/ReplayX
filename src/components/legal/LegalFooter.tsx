@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TRADINGVIEW_URL } from '@/lib/legal';
+import { OPERATOR, TRADINGVIEW_URL } from '@/lib/legal';
 import { cn } from '@/components/ui/cn';
 
 /** Ligações legais e atribuição ao TradingView (exigida pela licença do Lightweight Charts™). */
@@ -18,6 +18,9 @@ export function LegalFooter({ className }: { className?: string }) {
         </Link>
       </nav>
       <p className="mt-3">
+        <b className="text-text">ReplayX</b> é um produto de {OPERATOR}. © {new Date().getFullYear()} {OPERATOR}. Todos os direitos reservados.
+      </p>
+      <p className="mt-2">
         O ReplayX é uma ferramenta de estudo e simulação: não envia ordens a corretoras nem constitui aconselhamento financeiro. Os gráficos usam o{' '}
         <a href={TRADINGVIEW_URL} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
           Lightweight Charts™ da TradingView, Inc.

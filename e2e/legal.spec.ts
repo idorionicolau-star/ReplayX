@@ -13,6 +13,7 @@ test('páginas legais: existem, têm a atribuição ao TradingView e os preços 
     await expect(page.getByText(/não é afiliado ao TradingView/)).toBeVisible();
   }
   await page.goto('/termos');
+  await expect(page.getByText(/detido por Major Group/)).toBeVisible();
   await expect(page.getByText(/mensal 100 MT/)).toBeVisible();
   await expect(page.getByText(/não há renovação automática/i)).toBeVisible();
   await expect(page.getByText(/e-Mola/i)).toHaveCount(0);

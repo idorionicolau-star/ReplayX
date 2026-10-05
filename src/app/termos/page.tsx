@@ -12,7 +12,7 @@ export default function Termos() {
   return (
     <LegalLayout title="Termos de utilização">
       <p>
-        Estes termos aplicam-se ao uso do ReplayX (“a plataforma”), disponibilizado por {OPERATOR}. Ao criar conta, entrar como convidado ou usar a plataforma, aceita estes termos, a{' '}
+        Estes termos aplicam-se ao uso do ReplayX (“a plataforma”), disponibilizado e detido por {OPERATOR}, titular da plataforma e da marca ReplayX. Ao criar conta, entrar como convidado ou usar a plataforma, aceita estes termos, a{' '}
         <a href="/privacidade">Política de privacidade</a> e o <a href="/aviso-de-risco">Aviso de risco</a>.
       </p>
 
@@ -76,7 +76,7 @@ export default function Termos() {
 
       <h2>7. Propriedade e atribuições</h2>
       <p>
-        O software, a marca ReplayX e o conteúdo próprio são de {OPERATOR}. Os desenhos, estratégias e notas que cria continuam a ser seus. Os gráficos usam o Lightweight Charts™ da TradingView,
+        O software, a marca ReplayX e o conteúdo próprio são propriedade de {OPERATOR}, que detém todos os direitos sobre eles. Os desenhos, estratégias e notas que cria continuam a ser seus. Os gráficos usam o Lightweight Charts™ da TradingView,
         Inc. (Copyright © TradingView, Inc.). O ReplayX não é afiliado, patrocinado nem aprovado por TradingView, Inc., Deriv, Binance ou Yahoo; os nomes pertencem aos respetivos donos.
       </p>
 
