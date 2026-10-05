@@ -11,6 +11,7 @@ import { loadDerivSymbols } from '@/core/feed/deriv';
 import { AssetIcon } from '@/components/chart/AssetIcon';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/components/ui/cn';
+import { toast } from '@/components/ui/Toast';
 import { createPortal } from 'react-dom';
 
 const TABS: { id: 'all' | AssetClass; label: string }[] = [
@@ -127,8 +128,15 @@ function SymbolSearchDialog() {
 
   const close = () => useUi.getState().set({ symbolSearch: { open: false, chart, initial: '', mode: 'set' } });
   const choose = (s: SymbolInfo) => {
-    if (mode === 'watchlist') addToWatchlist(s.id);
-    else setSymbol(s.id, chart);
+    if (mode === 'watchlist') {
+      const ws = useWorkspace.getState();
+      const list = ws.watchlists.find((w) => w.id === ws.activeWatchlist) ?? ws.watchlists[0];
+      if (list?.symbols.includes(s.id)) toast(`${s.name} já está na lista`, { kind: 'info' });
+      else {
+        addToWatchlist(s.id);
+        toast(`${s.name} adicionado à lista`, { kind: 'success' });
+      }
+    } else setSymbol(s.id, chart);
     close();
   };
 

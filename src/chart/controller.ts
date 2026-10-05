@@ -125,6 +125,10 @@ export const MIN_BAR_SPACING = 0.5;
 /** Menor número de barras visíveis (zoom máximo para dentro). */
 export const MIN_VISIBLE_BARS = 5;
 
+export function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
 export function coarsePointer(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 }
@@ -613,6 +617,7 @@ export class ChartController {
         if (gen !== this.gen || this.destroyed) return;
       }
       this.applyReplay(latest ?? cursor, true);
+      if (symbolChanged) this.chart.priceScale('right').applyOptions({ autoScale: true });
     }
   }
 
@@ -629,6 +634,7 @@ export class ChartController {
       if (gen !== this.gen || this.destroyed) return;
       this.startReached = res.startReached;
       this.setBars(res.bars, true);
+      this.chart.priceScale('right').applyOptions({ autoScale: true });
       this.chart.timeScale().scrollToRealTime();
       this.setStatus(res.bars.length ? { state: 'ready' } : { state: 'error', message: 'Sem dados para este símbolo/timeframe.' });
       this.liveUnsub = dataFeed().subscribe(sym, tf, (bar) => this.onLiveBar(bar, gen));
@@ -688,7 +694,35 @@ export class ChartController {
     this.redraw();
   }
 
+  /** Mantém a escala de preços ajustada aos dados visíveis (sem mexer na posição no tempo). */
+  autoFit = true;
+
+  isAutoScale(): boolean {
+    return this.chart.priceScale('right').options().autoScale;
+  }
+
+  setAutoFit(on: boolean) {
+    this.autoFit = on;
+    if (on) this.autoScale();
+  }
+
+  /** Ajustar à tela: escala de preços aos dados que estão à vista; se não houver dados à vista, volta ao fim dos dados. */
+  fitView() {
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    if (!r || !this.bars.length || r.to < 0 || r.from > this.bars.length - 1) this.resetView();
+    else this.autoScale();
+  }
+
+  /** O gráfico mostra algo útil? (escala manual ou vista sem dados → mostra o botão de ajustar) */
+  needsFit(): boolean {
+    if (!this.bars.length) return false;
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    if (!r || r.to < 0 || r.from > this.bars.length - 1) return true;
+    return !this.isAutoScale();
+  }
+
   private onRange = (range: { from: number; to: number } | null) => {
+    if (range && this.autoFit && !this.isAutoScale()) this.chart.priceScale('right').applyOptions({ autoScale: true });
     if (!range || this.loadingMore || this.startReached || !this.symbol || !this.bars.length) return;
     if (range.from > 30) return;
     void this.loadMore();
@@ -833,8 +867,15 @@ export class ChartController {
       this.main.setData(this.toSeriesData(visible) as never);
       this.updateIndicators(true);
       if (reset || prevCursor === null) {
-        if (!keepView || !range || prevCursor === null) ts.scrollToRealTime();
-        else ts.setVisibleLogicalRange(range);
+        if (!keepView || !range || prevCursor === null) {
+          ts.scrollToRealTime();
+          // ao entrar no replay a câmara não salta: aproxima-se suavemente do ponto de partida
+          if (prevCursor === null && visible.length > 20 && !prefersReducedMotion()) {
+            const width = Math.min(400, Math.max(40, range ? range.to - range.from : 150));
+            const to = visible.length - 1 + 12;
+            this.glide({ from: to - width * 1.9, to: to + width * 0.25 }, { from: to - width, to }, 900);
+          }
+        } else ts.setVisibleLogicalRange(range);
       }
     }
     this.vpCache = null;
@@ -1325,6 +1366,41 @@ export class ChartController {
   }
 
   /** Zoom no tempo (fator < 1 aproxima), mantendo a margem direita. */
+  private glideRaf = 0;
+
+  /** Anima a vista de `from` até `to` (intervalos lógicos) com aceleração e travagem suaves. Qualquer toque no gráfico cancela. */
+  glide(start: { from: number; to: number }, end: { from: number; to: number }, ms = 800) {
+    this.cancelGlide();
+    const ts = this.chart.timeScale();
+    const t0 = performance.now();
+    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const onUser = () => {
+      this.cancelGlide();
+    };
+    const el = this.container;
+    el.addEventListener('pointerdown', onUser, { once: true, capture: true });
+    el.addEventListener('wheel', onUser, { once: true, capture: true });
+    const step = (now: number) => {
+      if (this.destroyed) return;
+      const k = Math.min(1, (now - t0) / ms);
+      const e = ease(k);
+      ts.setVisibleLogicalRange({ from: start.from + (end.from - start.from) * e, to: start.to + (end.to - start.to) * e });
+      if (k < 1) this.glideRaf = requestAnimationFrame(step);
+      else {
+        this.glideRaf = 0;
+        el.removeEventListener('pointerdown', onUser, true);
+        el.removeEventListener('wheel', onUser, true);
+      }
+    };
+    ts.setVisibleLogicalRange(start);
+    this.glideRaf = requestAnimationFrame(step);
+  }
+
+  cancelGlide() {
+    if (this.glideRaf) cancelAnimationFrame(this.glideRaf);
+    this.glideRaf = 0;
+  }
+
   zoom(factor: number) {
     const ts = this.chart.timeScale();
     const r = ts.getVisibleLogicalRange();

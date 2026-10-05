@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Minus, Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, ArrowUpToLine, ArrowDownToLine, CopyPlus, Layers } from 'lucide-react';
+import { Minus, Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, ArrowUpToLine, ArrowDownToLine, CopyPlus, Layers, ListPlus } from 'lucide-react';
 import { useUi } from '@/store/ui';
 import { useWorkspace } from '@/store/workspace';
 import { useDrawings } from '@/store/drawings';
@@ -10,6 +10,7 @@ import { getChart } from '@/chart/registry';
 import { replay, useReplay } from '@/replay/engine';
 import { barEnd } from '@/core/feed/datafeed';
 import { currentPrice, submitOrder } from '@/trading/actions';
+import { openOrderTicket } from '@/trading/ticket';
 import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { fmtPrice } from '@/lib/format';
@@ -69,6 +70,7 @@ export function ChartContextMenu() {
           <>
             {price !== null && last !== undefined && (
               <>
+                <MenuItem icon={<ListPlus size={15} />} label="Ordem com SL e TP aqui…" onClick={act(() => openOrderTicket(cfg.symbolId, { price }))} />
                 <MenuItem
                   icon={<ArrowUpToLine size={15} className="text-up" />}
                   label={`Comprar ${price < last ? 'limite' : 'stop'} ${qty} @ ${fmtPrice(price, sym.precision)}`}

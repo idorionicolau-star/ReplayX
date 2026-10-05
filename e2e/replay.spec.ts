@@ -111,3 +111,43 @@ test('a barra do replay arrasta-se e fica onde foi deixada (duplo clique repõe)
     await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('rx-settings') || '{}').state?.replayBarPos)).toBeNull();
   }
 });
+
+test('ordem no gráfico: SL à esquerda e TP à direita arrastáveis, lote com + e −, envio de ordem pendente', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 500);
+  await page.click('[data-testid=replay-button]');
+  await page.mouse.click(600, 450);
+  await expect(page.getByTestId('replay-bar')).toBeVisible();
+  await page.getByTestId('replay-order').click();
+  const sl = page.getByTestId('ticket-sl');
+  const tp = page.getByTestId('ticket-tp');
+  const entry = page.getByTestId('ticket-entry');
+  await expect(sl).toBeVisible();
+  const [bs, bt, be] = [(await sl.boundingBox())!, (await tp.boundingBox())!, (await entry.boundingBox())!];
+  expect(bs.x).toBeLessThan(be.x); // SL à esquerda
+  expect(bt.x).toBeGreaterThan(be.x); // TP à direita
+  expect(bs.y).toBeGreaterThan(be.y); // compra: SL abaixo
+  expect(bt.y).toBeLessThan(be.y); // TP acima
+  // arrastar o TP para cima aumenta o preço
+  const price = async (id: string) => parseFloat(((await page.getByTestId(id).innerText()).match(/TP\s+([\d.]+)/) ?? (await page.getByTestId(id).innerText()).match(/SL\s+([\d.]+)/))![1]);
+  const tp0 = await price('ticket-tp');
+  await page.mouse.move(bt.x + bt.width / 2, bt.y + bt.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bt.x + bt.width / 2, bt.y + bt.height / 2 - 60, { steps: 6 });
+  await page.mouse.up();
+  expect(await price('ticket-tp')).toBeGreaterThan(tp0);
+  // lote: + passa ao degrau seguinte
+  const q0 = (await page.getByTestId('qty-value').first().innerText()).trim();
+  await page.getByTestId('qty-plus').first().click();
+  expect((await page.getByTestId('qty-value').first().innerText()).trim()).not.toBe(q0);
+  // entrada mais abaixo do preço = compra limite pendente
+  await page.mouse.move(be.x + be.width / 2, be.y + be.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(be.x + be.width / 2, be.y + be.height / 2 + 70, { steps: 6 });
+  await page.mouse.up();
+  await expect(entry).toContainText('LIMITE');
+  await page.getByTestId('ticket-send').click();
+  await expect(page.getByText('Ordem pendente colocada')).toBeVisible();
+  await expect(page.getByTestId('order-ticket')).toBeHidden();
+});

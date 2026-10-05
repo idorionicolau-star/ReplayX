@@ -381,3 +381,37 @@ test('animação de abertura: aparece uma vez por sessão, salta-se com um toque
   await expect(p2.getByTestId('splash')).toBeHidden({ timeout: 6000 });
   await ctx2.close();
 });
+
+test('trocar de símbolo repõe a escala e o botão Ajustar volta a mostrar os dados', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { autoFit: false }, version: 2 })));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  type C = { chart: { priceScale(id: string): { applyOptions(o: object): void; options(): { autoScale: boolean } } } };
+  const isAuto = () => page.evaluate(() => ([...(window as unknown as { __rxCharts: Map<string, C> }).__rxCharts.values()][0].chart.priceScale('right').options().autoScale));
+  // escala manual: o botão Ajustar aparece
+  await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, C> }).__rxCharts.values()][0].chart.priceScale('right').applyOptions({ autoScale: false }));
+  await expect(page.getByTestId('fit-view')).toBeVisible({ timeout: 3000 });
+  await page.getByTestId('fit-view').click();
+  expect(await isAuto()).toBe(true);
+  await expect(page.getByTestId('fit-view')).toBeHidden();
+  // escala manual + trocar de símbolo: volta a automática
+  await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, C> }).__rxCharts.values()][0].chart.priceScale('right').applyOptions({ autoScale: false }));
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 300);
+  await expect.poll(isAuto).toBe(true);
+});
+
+test('lista de observação: símbolo adicionado fica visível na lista', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  if ((await page.getByRole('button', { name: 'Adicionar símbolo' }).count()) === 0) await page.click('[data-testid=right-tab-watchlist]');
+  await page.getByRole('button', { name: 'Adicionar símbolo' }).first().click();
+  const row = page.locator('[data-testid^=symbol-row-]').nth(40);
+  const id = ((await row.getAttribute('data-testid')) ?? '').replace('symbol-row-', '');
+  await row.scrollIntoViewIfNeeded();
+  await row.click();
+  await expect(page.getByText('adicionado à lista')).toBeVisible();
+  await expect(page.getByTestId(`watch-${id}`)).toBeInViewport();
+});

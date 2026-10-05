@@ -70,6 +70,8 @@ function fmtClock(tz: string) {
 export function ChartBottomBar() {
   const tz = useSettings((s) => s.timezone);
   const scaleMode = useSettings((s) => s.appearance.scaleMode);
+  const autoFit = useSettings((s) => s.autoFit);
+  const setSettings = useSettings((s) => s.set);
   const active = useWorkspace((s) => s.active);
   const [clock, setClock] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -144,12 +146,14 @@ export function ChartBottomBar() {
       </button>
       <button
         type="button"
-        title="Escala automática"
+        title={autoFit ? 'Escala automática: ligada (ajusta-se aos dados à vista)' : 'Escala automática: desligada. Toque para ajustar e ligar'}
         onClick={() => {
           const id = chartId();
-          if (id) getChart(id)?.autoScale();
+          setSettings({ autoFit: !autoFit });
+          if (id && !autoFit) getChart(id)?.fitView();
         }}
-        className="h-6 shrink-0 rounded px-1.5 text-muted hover:bg-hover hover:text-text"
+        className={cn('h-6 shrink-0 rounded px-1.5', autoFit ? 'text-accent' : 'text-muted hover:bg-hover hover:text-text')}
+        data-testid="auto-fit"
       >
         auto
       </button>

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEventParams, Time } from 'lightweight-charts';
-import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minus, Plus, RotateCcw } from 'lucide-react';
 import type { ChartController } from '@/chart/controller';
 import { useUi } from '@/store/ui';
 import { useReplay } from '@/replay/engine';
@@ -85,6 +85,39 @@ export function PriceAxisPlus({ ctrl, chart }: { ctrl: ChartController; chart: n
       data-testid="price-plus"
     >
       <Plus size={12} />
+    </button>
+  );
+}
+
+/**
+ * "Ajustar à tela": aparece quando o gráfico ficou numa escala em que os dados não se veem (escala manual ou vista sem dados).
+ * Um toque volta à escala certa sem mexer na posição no tempo.
+ */
+export function FitButton({ ctrl }: { ctrl: ChartController }) {
+  const [need, setNeed] = useState(false);
+  useEffect(() => {
+    const check = () => setNeed(ctrl.needsFit());
+    check();
+    const t = setInterval(check, 500);
+    ctrl.chart.timeScale().subscribeVisibleLogicalRangeChange(check);
+    return () => {
+      clearInterval(t);
+      ctrl.chart.timeScale().unsubscribeVisibleLogicalRangeChange(check);
+    };
+  }, [ctrl]);
+  if (!need) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        ctrl.fitView();
+        setNeed(false);
+      }}
+      className="absolute bottom-[34px] left-2 z-20 flex h-9 items-center gap-1.5 rounded-full border border-line bg-elev/95 px-3 text-xs font-semibold text-accent shadow-pop active:bg-hover"
+      title="Ajustar os dados à tela (sem mexer na posição)"
+      data-testid="fit-view"
+    >
+      <Maximize2 size={14} /> Ajustar
     </button>
   );
 }

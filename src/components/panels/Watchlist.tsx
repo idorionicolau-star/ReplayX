@@ -13,7 +13,7 @@ import { IconButton } from '@/components/ui/Button';
 import { fmtPrice } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
 
-function Row({ id, active, onPick, onRemove }: { id: string; active: boolean; onPick: () => void; onRemove: () => void }) {
+function Row({ id, active, fresh, onPick, onRemove }: { id: string; active: boolean; fresh?: boolean; onPick: () => void; onRemove: () => void }) {
   const sym = resolveSymbol(id);
   const [q, setQ] = useState<Quote | null>(null);
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
@@ -31,7 +31,7 @@ function Row({ id, active, onPick, onRemove }: { id: string; active: boolean; on
   }, [sym]);
   const ch = q?.changePct;
   return (
-    <div onClick={onPick} className={cn('group flex h-9 cursor-pointer items-center gap-2 px-3 text-[13px]', active ? 'bg-accent-soft' : 'hover:bg-hover')} data-testid={`watch-${id}`}>
+    <div onClick={onPick} className={cn('group flex h-9 cursor-pointer items-center gap-2 px-3 text-[13px] transition-colors duration-700', active ? 'bg-accent-soft' : fresh ? 'bg-up/20' : 'hover:bg-hover')} data-testid={`watch-${id}`}>
       <AssetIcon symbol={sym} size={18} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{sym.name}</div>
@@ -62,6 +62,29 @@ export function Watchlist() {
   const remove = useWorkspace((s) => s.removeFromWatchlist);
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [fresh, setFresh] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const known = useRef<{ list: string; symbols: string[] } | null>(null);
+
+  // símbolo novo na lista: leva a lista até ele e destaca-o um instante (antes ficava escondido no fim)
+  useEffect(() => {
+    if (!current) return;
+    const prev = known.current;
+    known.current = { list: current.id, symbols: current.symbols };
+    if (!prev || prev.list !== current.id) return;
+    const added = current.symbols.find((x) => !prev.symbols.includes(x));
+    if (!added) return;
+    const t1 = setTimeout(() => {
+      listRef.current?.querySelector(`[data-testid="watch-${CSS.escape(added)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 60);
+    setFresh(added);
+    const t2 = setTimeout(() => setFresh(null), 2200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [current]);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line px-2">
@@ -116,8 +139,8 @@ export function Watchlist() {
         <span className="w-[58px] text-right">Var. %</span>
         <span className="w-[18px]" />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {current?.symbols.map((id) => <Row key={id} id={id} active={id === activeSymbol} onPick={() => setSymbol(id)} onRemove={() => remove(id)} />)}
+      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+        {current?.symbols.map((id) => <Row key={id} id={id} active={id === activeSymbol} fresh={id === fresh} onPick={() => setSymbol(id)} onRemove={() => remove(id)} />)}
         {!current?.symbols.length && <div className="px-4 py-8 text-center text-xs text-muted">Lista vazia. Use + para adicionar símbolos.</div>}
       </div>
     </div>

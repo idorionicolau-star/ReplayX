@@ -56,6 +56,8 @@ export interface SettingsState {
   loupe: boolean;
   /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
   loupePos: LoupePos;
+  /** Escala de preços sempre ajustada aos dados à vista. */
+  autoFit: boolean;
   /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
   hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
@@ -106,6 +108,7 @@ export const useSettings = create<SettingsState>()(
       angleSnap: false,
       loupe: true,
       loupePos: 'top-right',
+      autoFit: true,
       hideBottomBars: false,
       appearance: DEFAULT_APPEARANCE,
       customColors: [],

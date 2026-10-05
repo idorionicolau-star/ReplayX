@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Pause, Play, SkipBack, SkipForward, X, Save, CalendarDays, Shuffle, MousePointerClick, Gauge, Clock3, PauseCircle, GripVertical } from 'lucide-react';
+import { ChevronDown, Pause, Play, SkipBack, SkipForward, X, Save, CalendarDays, Shuffle, MousePointerClick, Gauge, Clock3, PauseCircle, GripVertical, ListPlus } from 'lucide-react';
 import { replay, SPEEDS, useReplay } from '@/replay/engine';
 import { useWorkspace } from '@/store/workspace';
 import { useSettings } from '@/store/settings';
@@ -11,6 +11,8 @@ import { unrealized } from '@/core/trading/engine';
 import { tfLabel, tfShort, STANDARD_TFS } from '@/core/timeframes';
 import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { submitOrder } from '@/trading/actions';
+import { QtyStepper } from '@/components/ui/QtyStepper';
+import { openOrderTicket } from '@/trading/ticket';
 import { Popover } from '@/components/ui/Popover';
 import { MenuHeader, MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { Spinner } from '@/components/ui/Spinner';
@@ -37,6 +39,7 @@ export function ReplayBar() {
   const [menu, setMenu] = useState<'select' | 'speed' | 'step' | null>(null);
   const pos = useSettings((s) => s.replayBarPos);
   const setSettings = useSettings((s) => s.set);
+  const setTrading = useSettings((s) => s.setTrading);
   const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
@@ -111,7 +114,7 @@ export function ReplayBar() {
       className={cn('absolute z-30', at ? 'max-w-[calc(100%-8px)]' : 'pointer-events-none right-0 bottom-[38px] left-0 flex justify-center px-2')}
       style={at ? { left: at.x, top: at.y } : undefined}
     >
-      <div ref={barRef} className="pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-elev/97 px-1.5 py-1 shadow-pop no-select" data-testid="replay-bar">
+      <div ref={barRef} className="rx-bar-in pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-elev/97 px-1.5 py-1 shadow-pop no-select" data-testid="replay-bar">
         <span
           onPointerDown={onGrip}
           onDoubleClick={() => setSettings({ replayBarPos: null })}
@@ -183,11 +186,15 @@ export function ReplayBar() {
           </span>
         )}
         <span className="mx-0.5 h-5 w-px bg-line" />
+        <QtyStepper value={defaultQty} onChange={(v) => setTrading({ defaultQty: v })} className="shrink-0" />
         <button type="button" onClick={() => quick('long')} className="h-8 rounded-md bg-up px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Comprar ${defaultQty} a mercado`} data-testid="replay-buy">
           Comprar
         </button>
         <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Vender ${defaultQty} a mercado`} data-testid="replay-sell">
           Vender
+        </button>
+        <button type="button" onClick={() => openOrderTicket(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title="Ordem limite/stop no gráfico, com SL e TP arrastáveis" data-testid="replay-order">
+          <ListPlus size={15} /> Ordem
         </button>
         <div className="flex flex-col px-2 leading-tight" title="Saldo da conta de replay">
           <span className="text-[11px] text-muted tnum">{fmtMoney(acc.balance)}</span>

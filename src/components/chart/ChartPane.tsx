@@ -1,6 +1,7 @@
 'use client';
 import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
-import { ChartNav, PriceAxisPlus } from './ChartOverlays';
+import { ChartNav, FitButton, PriceAxisPlus } from './ChartOverlays';
+import { OrderTicket } from './OrderTicket';
 import { parseTf } from '@/core/timeframes';
 import { toolDef } from '@/chart/drawings/tools';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -304,6 +305,12 @@ export function ChartPane({ index }: { index: number }) {
     return () => ctrl.clearPick();
   }, [ctrl, pickActive, status.state, cfg?.tf, symbolId]);
 
+  // escala automática (ajustada aos dados à vista)
+  const autoFit = useSettings((s) => s.autoFit);
+  useEffect(() => {
+    ctrl?.setAutoFit(autoFit);
+  }, [ctrl, autoFit]);
+
   // cursor de desenho
   useEffect(() => {
     ctrl?.setCursorStyle(tool !== 'cross' && tool !== 'cursor' ? 'crosshair' : '');
@@ -326,7 +333,9 @@ export function ChartPane({ index }: { index: number }) {
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
       {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} ctrl={ctrl} />}
+      {ctrl && isActive && <OrderTicket ctrl={ctrl} symbolId={cfg.symbolId} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
+      {ctrl && <FitButton ctrl={ctrl} />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
       {status.state === 'loading' && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
