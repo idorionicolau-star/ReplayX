@@ -54,6 +54,17 @@ import { SavedElements } from '@/components/chart/SavedElements';
 
 type Icon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
+/** Linha de tendência: segmento inclinado com um círculo em cada ponta (como no TradingView). */
+function TrendIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+      <path d="M7.5 16.5 16.5 7.5" />
+      <circle cx="5.5" cy="18.5" r="2.2" />
+      <circle cx="18.5" cy="5.5" r="2.2" />
+    </svg>
+  );
+}
+
 function FibIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
@@ -93,7 +104,7 @@ function ChannelIcon({ size = 18 }: { size?: number }) {
 export const TOOL_ICONS: Record<ToolId, Icon> = {
   cross: Crosshair,
   cursor: MousePointer2,
-  trendline: TrendingUp,
+  trendline: TrendIcon,
   ray: MoveRight,
   infoline: Info,
   extended: PenLine,
