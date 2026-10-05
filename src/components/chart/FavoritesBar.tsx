@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Compass, GripVertical, Magnet, Star, X } from 'lucide-react';
+import { GripVertical, Magnet, Star, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
+import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
 import { toolDef } from '@/chart/drawings/tools';
 import { TOOL_ICONS } from '@/components/terminal/DrawingToolbar';
@@ -131,7 +132,7 @@ export function FavoritesBar() {
         onClick={() => set({ angleSnap: !angleSnap })}
         className={cn('flex h-8 w-8 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <Compass size={16} />
+        <AngleIcon size={16} />
       </button>
       <button type="button" title="Esconder a barra (fica uma ⭐ para a voltar a abrir)" aria-label="Esconder a barra de favoritos" onClick={() => set({ favoritesBar: false })} className="flex h-8 w-6 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text">
         <X size={13} />

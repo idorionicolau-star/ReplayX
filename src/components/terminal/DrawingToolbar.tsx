@@ -36,10 +36,10 @@ import {
   ChevronRight,
   ListTree,
   Star,
-  Compass,
   ZoomIn,
   PanelTop,
 } from 'lucide-react';
+import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
@@ -317,7 +317,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
         className={cn('flex h-9 w-9 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
         data-testid="angle-snap"
       >
-        <Compass size={18} />
+        <AngleIcon size={18} />
       </button>
       <button
         type="button"

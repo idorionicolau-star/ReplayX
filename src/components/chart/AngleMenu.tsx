@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Compass, RotateCcw, RotateCw } from 'lucide-react';
+import { RotateCcw, RotateCw } from 'lucide-react';
+import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
 import type { Drawing } from '@/chart/drawings/types';
 import { ANGLE_TOOLS, lineAngle, normDeg, setLineAngle, type Geo } from '@/chart/angle';
@@ -41,7 +42,7 @@ export function AngleMenu({ symbolId, d, ctrl }: { symbolId: string; d: Drawing;
   return (
     <>
       <IconButton ref={ref} size="sm" label="Ângulo" active={open} onClick={() => setOpen((o) => !o)} data-testid="angle-menu">
-        <Compass size={15} />
+        <AngleIcon size={15} />
       </IconButton>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-start" className="p-2">
         <div className="flex w-[232px] flex-col gap-2 text-xs">
