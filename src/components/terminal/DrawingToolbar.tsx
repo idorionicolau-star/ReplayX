@@ -74,20 +74,25 @@ function FibIcon({ size = 18 }: { size?: number }) {
   );
 }
 
+/** Risco-retorno: alvo (verde) e stop (vermelho) à volta da linha de entrada, com seta no sentido da operação. */
 function LongIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.6}>
-      <rect x="4" y="4" width="16" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
-      <rect x="4" y="12" width="16" height="7" rx="1" fill="rgba(242,54,69,0.3)" stroke="#f23645" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3.5" width="13" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
+      <rect x="3" y="11.5" width="13" height="5" rx="1" fill="rgba(242,54,69,0.32)" stroke="#f23645" />
+      <path d="M3 11.5h13" stroke="currentColor" strokeWidth={1.8} />
+      <path d="M20 19V8M17.2 10.8 20 8l2.8 2.8" stroke="#089981" strokeWidth={1.8} />
     </svg>
   );
 }
 
 function ShortIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.6}>
-      <rect x="4" y="4" width="16" height="7" rx="1" fill="rgba(242,54,69,0.3)" stroke="#f23645" />
-      <rect x="4" y="11" width="16" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="7.5" width="13" height="5" rx="1" fill="rgba(242,54,69,0.32)" stroke="#f23645" />
+      <rect x="3" y="12.5" width="13" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
+      <path d="M3 12.5h13" stroke="currentColor" strokeWidth={1.8} />
+      <path d="M20 5v11M17.2 13.2 20 16l2.8-2.8" stroke="#f23645" strokeWidth={1.8} />
     </svg>
   );
 }
