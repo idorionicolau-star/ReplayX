@@ -32,7 +32,7 @@ import { alignTime, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
 import { nowSec } from '@/core/feed/provider';
 import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance, type ParamValue } from '@/core/indicators/registry';
-import { OverlayPrimitive, type OverlayHost, type TradingOverlay } from './overlay';
+import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
 import { BandFill } from './fill';
 import type { Viewport } from './drawings/tools';
 import type { Drawing } from './drawings/types';
@@ -163,6 +163,7 @@ export class ChartController {
   trading: TradingOverlay | null = null;
   alerts: { price: number; label: string }[] = [];
   hint: { x: number; y: number; text: string } | null = null;
+  events: ChartEvent[] = [];
   replayPickX: number | null = null;
   private resizeObs: ResizeObserver | null = null;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
@@ -188,6 +189,7 @@ export class ChartController {
       hint: () => this.hint,
       coarse: () => coarsePointer(),
       countdown: () => this.countdownLabel(),
+      events: () => this.events,
     };
     this.overlay = new OverlayPrimitive(host);
     this.overlay.fmtTime = (t) => fmtDateTime(t, this.theme.timezone);
@@ -489,6 +491,11 @@ export class ChartController {
     return { y: y + a.fontSize + 9, text: fmtCountdown(left), color: last.close >= last.open ? look.bodyUp : look.bodyDown };
   }
 
+  setEvents(list: ChartEvent[]) {
+    this.events = list;
+    this.redraw();
+  }
+
   setDrawings(list: Drawing[], selectedId: string | null) {
     this.drawings = list;
     this.selectedId = selectedId;
@@ -534,8 +541,17 @@ export class ChartController {
     this.cb.onStatus(s);
   }
 
+  /** Último carregamento (para quem precisa de esperar pelos dados, ex.: botões 1D/5D…). */
+  lastLoad: Promise<void> = Promise.resolve();
+
   /** Muda de símbolo/timeframe (em replay mantém o cursor). */
-  async load(symbol: SymbolInfo, tf: string, cursor: number | null) {
+  load(symbol: SymbolInfo, tf: string, cursor: number | null): Promise<void> {
+    const p = this.loadInner(symbol, tf, cursor);
+    this.lastLoad = p.catch(() => undefined);
+    return p;
+  }
+
+  private async loadInner(symbol: SymbolInfo, tf: string, cursor: number | null) {
     const same = this.symbol?.id === symbol.id && this.tf === tf && this.cursor === cursor && this.bars.length > 0;
     if (same) return;
     const symbolChanged = this.symbol?.id !== symbol.id;
@@ -1168,6 +1184,61 @@ export class ChartController {
   }
 
   // ------------------------------------------------------------------ outros
+
+  /** Carrega histórico para trás até `t` (ou até ao início dos dados). */
+  async ensureFrom(t: number, maxRounds = 40) {
+    for (let i = 0; i < maxRounds; i++) {
+      const first = (this.cursor !== null ? this.replayBars[0] : this.bars[0])?.time;
+      if (first === undefined || first <= t || this.startReached || this.destroyed) return;
+      if (this.loadingMore) {
+        await new Promise((r) => setTimeout(r, 60));
+        continue;
+      }
+      await this.loadMore();
+    }
+  }
+
+  /** Mostra do instante `from` até à última barra (botões 1D, 5D, 1M… como no TradingView). */
+  async showRange(from: number) {
+    await this.ensureFrom(from);
+    if (!this.bars.length) return;
+    const lf = Math.max(0, this.timeToLogical(from) ?? 0);
+    const last = this.bars.length - 1;
+    const width = Math.max(10, last - lf);
+    this.chart.timeScale().setVisibleLogicalRange({ from: lf, to: last + Math.max(3, width * 0.05) });
+    this.chart.priceScale('right').applyOptions({ autoScale: true });
+  }
+
+  /** Leva o gráfico até uma data (sem replay). */
+  async goToTime(t: number) {
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    const span = r ? (r.to - r.from) * this.tfSec : 200 * this.tfSec;
+    await this.ensureFrom(t - span);
+    this.scrollToTime(t);
+  }
+
+  /** Zoom no tempo (fator < 1 aproxima), mantendo a margem direita. */
+  zoom(factor: number) {
+    const ts = this.chart.timeScale();
+    const r = ts.getVisibleLogicalRange();
+    if (!r) return;
+    const w = Math.max(10, (r.to - r.from) * factor);
+    ts.setVisibleLogicalRange({ from: r.to - w, to: r.to });
+  }
+
+  /** Desloca a vista uma fração da largura (negativo = para o passado). */
+  scrollBy(fraction: number) {
+    const ts = this.chart.timeScale();
+    const r = ts.getVisibleLogicalRange();
+    if (!r) return;
+    const d = (r.to - r.from) * fraction;
+    ts.setVisibleLogicalRange({ from: r.from + d, to: r.to + d });
+  }
+
+  /** Escala de preços automática. */
+  autoScale() {
+    this.chart.priceScale('right').applyOptions({ autoScale: true });
+  }
 
   resetView() {
     this.chart.timeScale().resetTimeScale();

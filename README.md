@@ -13,6 +13,9 @@ Funciona sem configuração: `npm install && npm run dev` e abre `http://localho
 - **Qualquer intervalo**: 1m … 12h, 1D, 1W, 1M e intervalos personalizados (ex.: `7m`, `90m`, `3h`). Escreve o número e carrega Enter.
 - Layouts de 1, 2 (horizontal/vertical), 3 e 4 gráficos com sincronização de símbolo, intervalo e cruz (no replay, todos os gráficos andam no mesmo instante).
 - **Definições do gráfico** como no TradingView: cores do corpo, borda e pavio das velas, linha/área, fundo (cor única ou gradiente), grelha, mira, texto das escalas e marca de água; escala normal, logarítmica, percentagem ou indexada a 100; etiqueta e linha do último preço; **contador de tempo até ao fecho da vela**. Seletor de cores com as tuas cores guardadas, código hex e opacidade.
+- **Barra de baixo** como no TradingView: períodos 1D, 5D, 1M, 3M, 6M, YTD, 1A, 5A e Tudo (escolhem o intervalo e o tempo à vista), ir para uma data (sem replay), relógio com o fuso horário e escalas %, log e auto.
+- Botões de navegação por cima do gráfico (afastar, aproximar, para trás, para a frente, repor) e **“+” junto à escala de preços** (alerta, ordem ou linha horizontal nesse preço).
+- **Eventos económicos** (⚡) no fundo do gráfico para forex e metais, com a descrição ao passar o rato.
 - Auto-escala, fuso horário configurável, temas claro e escuro, cores personalizáveis.
 - Lista de observação com preços em tempo real, pesquisa de símbolos (incluindo todos os pares da Binance e o pesquisador do Yahoo), símbolos recentes e favoritos.
 

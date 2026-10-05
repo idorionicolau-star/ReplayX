@@ -3,7 +3,7 @@ import type { ChartController } from './controller';
 import type { Drawing, DrawingStyle, ToolId } from './drawings/types';
 import { setHitTolerance, toolDef, type ToolDef } from './drawings/tools';
 import { Loupe } from './loupe';
-import type { TradeRegion } from './overlay';
+import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
 import type { Magnet } from '@/store/settings';
@@ -243,6 +243,16 @@ export class Interaction {
       } catch {
         /* ignora */
       }
+    }
+    return null;
+  }
+
+  private hitEvent(x: number, y: number) {
+    const ey = this.c.paneSize().height - EVENT_BOTTOM;
+    if (Math.abs(y - ey) > 10) return null;
+    for (const e of this.c.events) {
+      const ex = this.c.timeToX(e.time);
+      if (ex !== null && Math.abs(ex - x) <= 9) return e;
     }
     return null;
   }
@@ -550,6 +560,13 @@ export class Interaction {
       this.c.redraw();
     }
     if (!p.inside) return;
+    // evento económico debaixo do rato: mostra o que é
+    const ev = this.hitEvent(p.x, p.y);
+    const evHint = ev ? { x: Math.min(p.x, this.c.paneSize().width - 260), y: p.y - 18, text: ev.label } : null;
+    if (evHint || this.c.hint?.text.startsWith('⚡')) {
+      this.c.hint = evHint;
+      this.c.redraw();
+    }
     const tool = this.cb.tool();
     if (tool !== 'cross' && tool !== 'cursor') {
       this.setCursor('crosshair');

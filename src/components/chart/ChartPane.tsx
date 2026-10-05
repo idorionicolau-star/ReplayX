@@ -1,4 +1,6 @@
 'use client';
+import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
+import { ChartNav, PriceAxisPlus } from './ChartOverlays';
 import { parseTf } from '@/core/timeframes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
@@ -18,7 +20,7 @@ import { replay, useReplay } from '@/replay/engine';
 import { resolveSymbol } from '@/core/symbols';
 import { pnlFor, unrealized } from '@/core/trading/engine';
 import { applyTradeAction, setLivePrice, tradingMode } from '@/trading/actions';
-import { fmtMoney } from '@/lib/format';
+import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { Legend } from './Legend';
 import { DrawingToolbarFloat } from './DrawingToolbarFloat';
 import { ReplayPickBanner } from './ReplayPickBanner';
@@ -266,6 +268,28 @@ export function ChartPane({ index }: { index: number }) {
     return useAlerts.subscribe(apply);
   }, [ctrl, symbolId, symbol]);
 
+  // ---------- eventos económicos (⚡) ----------
+  useEffect(() => {
+    if (!ctrl || !symbol) return;
+    const cur = currenciesOf(symbol);
+    if (!cur.length) {
+      ctrl.setEvents([]);
+      return;
+    }
+    let alive = true;
+    void loadEconEvents().then((list) => {
+      if (!alive) return;
+      ctrl.setEvents(
+        list
+          .filter((e) => cur.includes(e.currency) && (e.impact === 'high' || e.impact === 'medium'))
+          .map((e) => ({ time: e.time, impact: e.impact as 'high' | 'medium', label: `⚡ ${fmtDateTime(e.time, timezone)} · ${e.currency} · ${e.title}` })),
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ctrl, symbol, timezone]);
+
   // cursor de desenho
   useEffect(() => {
     ctrl?.setCursorStyle(tool !== 'cross' && tool !== 'cursor' ? 'crosshair' : '');
@@ -275,7 +299,7 @@ export function ChartPane({ index }: { index: number }) {
 
   return (
     <div
-      className={cn('relative h-full w-full overflow-hidden', multi && 'border', multi && (isActive ? 'border-accent' : 'border-line'))}
+      className={cn('group/chart relative h-full w-full overflow-hidden', multi && 'border', multi && (isActive ? 'border-accent' : 'border-line'))}
       onPointerDownCapture={() => {
         focus.chartId = ctrl?.id ?? '';
       }}
@@ -284,6 +308,8 @@ export function ChartPane({ index }: { index: number }) {
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
       {selecting && isActive && <ReplayPickBanner />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} />}
+      {ctrl && <ChartNav ctrl={ctrl} />}
+      {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
       {status.state === 'loading' && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <div className="flex items-center gap-2 rounded-lg border border-line bg-elev/95 px-3 py-2 text-xs text-muted shadow-pop">

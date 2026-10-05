@@ -1,4 +1,6 @@
 'use client';
+import { useWorkspace } from '@/store/workspace';
+import { getChart } from '@/chart/registry';
 import { useState } from 'react';
 import { useUi } from '@/store/ui';
 import { useSettings } from '@/store/settings';
@@ -56,6 +58,22 @@ function GoToDateForm() {
           <Button variant="ghost" onClick={close}>
             Cancelar
           </Button>
+          {!(st.active && st.cursor !== null && !st.selecting) && (
+            <Button
+              variant="outline"
+              data-testid="goto-show"
+              onClick={() => {
+                const t = fromInputDateTime(value, tz);
+                if (!Number.isFinite(t)) return;
+                close();
+                const ws = useWorkspace.getState();
+                const id = ws.charts[ws.active]?.id;
+                if (id) void getChart(id)?.goToTime(Math.min(t, nowSec()));
+              }}
+            >
+              Mostrar no gráfico
+            </Button>
+          )}
           <Button variant="primary" onClick={() => void go(fromInputDateTime(value, tz))} data-testid="goto-confirm">
             {st.active && st.cursor !== null && !st.selecting ? 'Saltar' : 'Começar replay'}
           </Button>

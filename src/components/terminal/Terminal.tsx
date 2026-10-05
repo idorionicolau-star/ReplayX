@@ -12,6 +12,7 @@ import { UpgradeDialog } from '@/components/dialogs/UpgradeDialog';
 import { FavoritesBar } from '@/components/chart/FavoritesBar';
 import { AlertPopups } from '@/components/dialogs/AlertPopups';
 import { PwaPrompts } from './PwaPrompts';
+import { ChartBottomBar } from './ChartBottomBar';
 import { replay, useReplay } from '@/replay/engine';
 import { getChart } from '@/chart/registry';
 import { isValidTf, normalizeTf } from '@/core/timeframes';
@@ -205,6 +206,7 @@ export function Terminal() {
             <ReplayBar />
             <TfQuickInput />
           </div>
+          <ChartBottomBar />
           <BottomPanel />
         </div>
         <RightPanel />

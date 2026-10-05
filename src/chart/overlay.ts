@@ -32,6 +32,13 @@ export interface TradingOverlay {
   dragging?: { id: string; field: string; price: number } | null;
 }
 
+/** Evento do calendário económico mostrado no fundo do gráfico. */
+export interface ChartEvent {
+  time: number;
+  impact: 'high' | 'medium' | 'low';
+  label: string;
+}
+
 export interface OverlayHost {
   viewport(): Viewport | null;
   drawings(): Drawing[];
@@ -48,6 +55,8 @@ export interface OverlayHost {
   coarse(): boolean;
   /** Tempo até fechar a vela (debaixo da etiqueta do último preço). */
   countdown(): { y: number; text: string; color: string } | null;
+  /** Eventos económicos (⚡) junto ao eixo do tempo. */
+  events(): ChartEvent[];
 }
 
 class AxisLabel implements ISeriesPrimitiveAxisView {
@@ -76,6 +85,9 @@ class AxisLabel implements ISeriesPrimitiveAxisView {
     return true;
   }
 }
+
+/** Distância (px) dos eventos ao fundo do painel. */
+export const EVENT_BOTTOM = 12;
 
 const FONT = '11px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif';
 
@@ -152,6 +164,32 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       }
 
       this.owner.regions = this.drawTrading(ctx, view);
+
+      // eventos económicos: círculos com ⚡ no fundo do gráfico
+      const evs = host.events();
+      if (evs.length) {
+        ctx.save();
+        ctx.setLineDash([]);
+        ctx.font = '600 10px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const y = mediaSize.height - EVENT_BOTTOM;
+        for (const e of evs) {
+          const x = view.timeToX(e.time);
+          if (x === null || x < -10 || x > mediaSize.width + 10) continue;
+          const color = e.impact === 'high' ? '#f23645' : e.impact === 'medium' ? '#ff9800' : '#9598a1';
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fillStyle = host.dark() ? '#1e222d' : '#ffffff';
+          ctx.fill();
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = color;
+          ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.fillText('⚡', x, y + 0.5);
+        }
+        ctx.restore();
+      }
 
       const hint = host.hint();
       if (hint) {

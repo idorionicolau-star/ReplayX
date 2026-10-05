@@ -172,3 +172,48 @@ test('contador da vela, cores do gráfico e texto com modelo', async ({ page }) 
   expect(texts).toEqual(['Suporte forte', 'Suporte forte']);
   expect(errors).toEqual([]);
 });
+
+test('barra de baixo: períodos, navegação, "+" do preço e ir para data', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=right-tab-watchlist]');
+  type C = { tf: string; bars: { time: number }[]; chart: { timeScale(): { getVisibleLogicalRange(): { from: number; to: number } | null } }; logicalToTime(l: number): number | null };
+  const view = () =>
+    page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, C> }).__rxCharts.values()][0];
+      const r = c.chart.timeScale().getVisibleLogicalRange()!;
+      const last = c.bars[c.bars.length - 1].time;
+      return { tf: c.tf, from: c.logicalToTime(Math.max(0, r.from))!, last, width: r.to - r.from };
+    });
+
+  // 5D: velas de 5 minutos e ~5 dias à vista
+  await page.click('[data-testid=range-5D]');
+  await expect.poll(async () => (await view()).tf).toBe('5m');
+  await expect.poll(async () => { const v = await view(); return Math.round((v.last - v.from) / 86400); }, { timeout: 20_000 }).toBe(5);
+
+  // navegação: aproximar reduz a largura visível
+  const before = (await view()).width;
+  await page.getByTestId('chart-0').hover();
+  await page.getByRole('button', { name: 'Aproximar' }).click();
+  expect((await view()).width).toBeLessThan(before);
+
+  // "+" junto à escala de preços abre o menu com alerta e linha horizontal
+  const box = (await page.getByTestId('chart-0').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.getByTestId('price-plus').click();
+  await page.getByRole('button', { name: /Linha horizontal em/ }).click();
+  const n = await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, { drawings: { type: string }[] }> }).__rxCharts.values()][0].drawings.filter((d) => d.type === 'hline').length);
+  expect(n).toBe(1);
+
+  // relógio com fuso horário
+  await expect(page.getByTestId('clock')).toHaveText(/\d\d:\d\d:\d\d/);
+
+  // ir para data sem replay
+  await page.getByRole('button', { name: 'Ir para data' }).first().click();
+  await page.getByTestId('goto-show').click();
+  await expect(page.getByTestId('replay-bar')).toBeHidden();
+  expect(errors).toEqual([]);
+});

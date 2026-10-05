@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, ArrowUpToLine, ArrowDownToLine, CopyPlus, Layers } from 'lucide-react';
+import { Minus, Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, ArrowUpToLine, ArrowDownToLine, CopyPlus, Layers } from 'lucide-react';
 import { useUi } from '@/store/ui';
 import { useWorkspace } from '@/store/workspace';
 import { useDrawings } from '@/store/drawings';
@@ -15,6 +15,16 @@ import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { fmtPrice } from '@/lib/format';
 import { uid } from '@/lib/uid';
 import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
+import { toolDef } from '@/chart/drawings/tools';
+
+/** Linha horizontal num preço (menu do gráfico e "+" da escala). */
+function addHLine(symbolId: string, chartId: string, price: number) {
+  const def = toolDef('hline');
+  if (!def) return;
+  const st = useDrawings.getState();
+  const t = getChart(chartId)?.bars.at(-1)?.time ?? Math.floor(Date.now() / 1000);
+  st.add(symbolId, { id: uid('d'), type: 'hline', points: [{ time: t, price }], style: { ...def.style, ...(st.lastStyle.hline ?? {}) }, createdAt: Date.now() });
+}
 
 export function ChartContextMenu() {
   const menu = useUi((s) => s.contextMenu);
@@ -71,6 +81,13 @@ export function ChartContextMenu() {
                 />
                 <MenuSeparator />
               </>
+            )}
+            {price !== null && (
+              <MenuItem
+                icon={<Minus size={15} />}
+                label={`Linha horizontal em ${fmtPrice(price, sym.precision)}`}
+                onClick={act(() => addHLine(cfg.symbolId, cfg.id, price))}
+              />
             )}
             {price !== null && (
               <MenuItem icon={<Bell size={15} />} label={`Adicionar alerta em ${fmtPrice(price, sym.precision)}`} onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, price } }))} />
