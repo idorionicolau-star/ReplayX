@@ -557,7 +557,9 @@ export class Interaction {
     }
     this.cb.addDrawing(d);
     this.cb.select(d.id);
-    if (!this.cb.stayInDrawing()) this.cb.setTool('cross');
+    // no dedo a ferramenta volta sempre ao cursor depois de criar (senão o toque seguinte, para arrastar ou
+    // editar, criava outro objeto); o "modo contínuo" só vale com o rato
+    if (this.touch || !this.cb.stayInDrawing()) this.cb.setTool('cross');
     if (d.type === 'text' || d.type === 'note') this.cb.onEditDrawing(d.id);
     this.c.redraw();
   }

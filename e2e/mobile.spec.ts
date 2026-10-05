@@ -43,26 +43,31 @@ test('barra de ferramentas não fecha ao mexer nas opções; fecha ao escolher u
   await expect(page.getByTestId('mobile-tools')).toBeHidden();
 });
 
-test('com uma ferramenta ativa, tocar no desenho selecionado edita-o em vez de criar outro', async ({ page }) => {
+test('no dedo, a ferramenta volta ao cursor depois de criar: arrastar/editar não cria outro objeto', async ({ page }) => {
+  // mesmo com o "modo contínuo" ligado (só vale com rato)
   await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { stayInDrawingMode: true }, version: 2 })));
   await setup(page);
-  const { send, box } = await touch(page);
+  const { send } = await touch(page);
+  const count = () => page.evaluate(`${ctl}.drawings.length`) as Promise<number>;
   await page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' }).click();
-  // cria arrastando e larga
   await send('touchStart', [{ x: 80, y: 420 }]);
   for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 80 + i * 25, y: 420 - i * 15 }]);
   await send('touchEnd', []);
-  const before = await page.evaluate(`(() => { const c = ${ctl}; return c.drawings.map((d) => ({ n: d.points.length, p: d.points.map((q) => ({ x: c.timeToX(q.time), y: c.priceToY(q.price) })) })); })()`) as { n: number; p: { x: number; y: number }[] }[];
-  expect(before).toHaveLength(1);
-  // a ferramenta continua ativa (modo manter): arrastar a pega do fim move a linha e NÃO cria outra
-  const end = before[0].p[1];
+  expect(await count()).toBe(1);
+  // a ferramenta já não está ativa (o botão deixou de estar marcado)
+  await expect(page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' })).not.toHaveClass(/text-accent/);
+  const end = (await page.evaluate(`(() => { const c = ${ctl}; const d = c.drawings[0]; return { x: c.timeToX(d.points[1].time), y: c.priceToY(d.points[1].price) }; })()`)) as { x: number; y: number };
+  // arrastar a pega do fim edita a linha e não cria outra
   await send('touchStart', [{ x: end.x, y: end.y }]);
   for (let i = 1; i <= 6; i++) await send('touchMove', [{ x: end.x - i * 8, y: end.y + i * 8 }]);
   await send('touchEnd', []);
-  const after = await page.evaluate(`(() => { const c = ${ctl}; return c.drawings.map((d) => ({ x: c.timeToX(d.points[1].time), y: c.priceToY(d.points[1].price) })); })()`) as { x: number; y: number }[];
-  expect(after).toHaveLength(1);
-  expect(after[0].y).toBeGreaterThan(end.y + 20);
-  void box;
+  expect(await count()).toBe(1);
+  const moved = (await page.evaluate(`(() => { const c = ${ctl}; const d = c.drawings[0]; return c.priceToY(d.points[1].price); })()`)) as number;
+  expect(moved).toBeGreaterThan(end.y + 20);
+  // tocar noutro sítio só deseleciona: continua a haver um objeto
+  await send('touchStart', [{ x: 300, y: 150 }]);
+  await send('touchEnd', []);
+  expect(await count()).toBe(1);
 });
 
 test('zoom com dois dedos é rápido: afastar os dedos 2× aproxima mais de 2,5×', async ({ page }) => {

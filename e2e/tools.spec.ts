@@ -248,3 +248,18 @@ test('texto antigo guardado no navegador não aparece em linhas novas', async ({
     expect(d.color).toBe('#ff0000'); // a cor continua a ser lembrada
   }
 });
+
+test('com o rato, o modo contínuo mantém a ferramenta ativa', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { stayInDrawingMode: true }, version: 2 })));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=right-tab-watchlist]');
+  await page.click('[data-testid=tool-trendline]');
+  for (let i = 0; i < 2; i++) {
+    await page.mouse.click(300, 500 - i * 100);
+    await page.mouse.click(700, 400 - i * 100);
+  }
+  const n = await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, { drawings: unknown[] }> }).__rxCharts.values()][0].drawings.length);
+  expect(n).toBe(2);
+});

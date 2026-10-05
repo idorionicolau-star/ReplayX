@@ -49,6 +49,7 @@ import type { ToolId } from '@/chart/drawings/types';
 import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuHeader } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
+import { toast } from '@/components/ui/Toast';
 
 type Icon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
@@ -336,8 +337,12 @@ export function DrawingToolbar({ className }: { className?: string }) {
       </button>
       <button
         type="button"
-        title="Manter modo de desenho"
-        onClick={() => setSettings({ stayInDrawingMode: !stay })}
+        title={stay ? 'Modo de desenho contínuo: ligado (só com rato)' : 'Manter modo de desenho (só com rato)'}
+        aria-label="Manter modo de desenho"
+        onClick={() => {
+          setSettings({ stayInDrawingMode: !stay });
+          toast(stay ? 'Cada ferramenta serve para um desenho' : 'Modo contínuo: a ferramenta fica ativa (só com rato)', { duration: 2200 });
+        }}
         className={cn('flex h-9 w-9 items-center justify-center rounded-md', stay ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
         <PenLine size={18} />
