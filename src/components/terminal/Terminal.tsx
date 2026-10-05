@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
 import { useDrawings } from '@/store/drawings';
@@ -147,6 +148,7 @@ export function Terminal() {
   const theme = useSettings((s) => s.theme);
   const user = useAuth((s) => s.user);
   const mobileTools = useUi((s) => s.mobileTools);
+  const hideBottom = useSettings((s) => s.hideBottomBars);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -194,8 +196,9 @@ export function Terminal() {
       <TopBar />
       <div className="relative flex min-h-0 flex-1">
         <DrawingToolbar className="hidden sm:flex" />
+        {/* a barra de ferramentas fica aberta enquanto se escolhem opções; fecha com ☰ ou ao escolher uma ferramenta */}
         {mobileTools && (
-          <div className="absolute inset-y-0 left-0 z-40 flex sm:hidden" onClick={() => useUi.getState().set({ mobileTools: false })}>
+          <div className="absolute inset-y-0 left-0 z-40 flex sm:hidden" data-testid="mobile-tools">
             <DrawingToolbar className="flex shadow-pop" />
           </div>
         )}
@@ -205,14 +208,15 @@ export function Terminal() {
             <FavoritesBar />
             <ReplayBar />
             <TfQuickInput />
+            <HideBottomButton hidden={hideBottom} />
           </div>
-          <ChartBottomBar />
-          <BottomPanel />
+          {!hideBottom && <ChartBottomBar />}
+          {!hideBottom && <BottomPanel />}
         </div>
         <RightPanel />
         <RightIconBar />
       </div>
-      <MobileNav />
+      {!hideBottom && <MobileNav />}
       <SymbolSearch />
       <IndicatorsDialog />
       <IndicatorSettings />
@@ -242,5 +246,23 @@ function MobileNav() {
         </button>
       ))}
     </nav>
+  );
+}
+
+/** No telemóvel: esconde/mostra as barras de baixo para ter o gráfico todo à vista. */
+function HideBottomButton({ hidden }: { hidden: boolean }) {
+  const picking = useReplay((s) => s.active && s.selecting);
+  if (picking) return null; // o painel de escolha do replay ocupa esse canto
+  return (
+    <button
+      type="button"
+      aria-label={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
+      title={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
+      onClick={() => useSettings.getState().set({ hideBottomBars: !hidden })}
+      className="absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elev/90 text-muted shadow-sm active:bg-hover sm:hidden"
+      data-testid="toggle-bottom"
+    >
+      {hidden ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+    </button>
   );
 }

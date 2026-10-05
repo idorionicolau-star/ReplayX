@@ -46,7 +46,8 @@ export interface OverlayHost {
   hoveredId(): string | null;
   preview(): Drawing | null;
   trading(): TradingOverlay | null;
-  replayPick(): { x: number } | null;
+  /** Linha de corte do replay. `label` e `handle` só no modo de arrastar (telemóvel). */
+  replayPick(): { x: number; label?: string; handle?: boolean } | null;
   alerts(): { price: number; label: string }[];
   dark(): boolean;
   /** Etiqueta temporária junto ao dedo/rato (ex.: ângulo da linha). */
@@ -210,7 +211,27 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         ctx.moveTo(pick.x, 0);
         ctx.lineTo(pick.x, mediaSize.height);
         ctx.stroke();
-        labelBox(ctx, ['✂ Clique para começar o replay aqui'], pick.x + 8, 18, { bg: '#2962ff', fg: '#fff', align: 'left', valign: 'top', font: FONT });
+        if (pick.label) {
+          // data da barra escolhida, do lado onde cabe
+          const right = pick.x < mediaSize.width - 190;
+          labelBox(ctx, [`✂ ${pick.label}`], right ? pick.x + 8 : pick.x - 8, 18, { bg: '#2962ff', fg: '#fff', align: right ? 'left' : 'right', valign: 'top', font: FONT });
+        } else labelBox(ctx, ['✂ Clique para começar o replay aqui'], pick.x + 8, 18, { bg: '#2962ff', fg: '#fff', align: 'left', valign: 'top', font: FONT });
+        if (pick.handle) {
+          // pega para arrastar, a meio da altura
+          const cy = mediaSize.height / 2;
+          ctx.beginPath();
+          ctx.arc(pick.x, cy, 17, 0, Math.PI * 2);
+          ctx.fillStyle = '#2962ff';
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+          ctx.fillStyle = '#fff';
+          ctx.font = '700 15px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('↔', pick.x, cy + 1);
+        }
         ctx.restore();
       }
       ctx.restore();

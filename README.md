@@ -29,6 +29,9 @@ Linha de tendência, raio, linha de informação, linha estendida, linha com set
 - **Modelos:** guarda o estilo e o texto de um desenho com um nome e volta a usá-lo noutros (“Modelo” → “Guardar como modelo…”).
 - **Visibilidade por intervalo:** mostrar um desenho só em minutos, horas, dias, semanas ou meses.
 - **Copiar/colar** desenhos com Ctrl+C / Ctrl+V.
+- **Replay no telemóvel:** aparece uma linha de corte (✂) com uma pega que se **arrasta livremente** até ao ponto de partida (perto das margens o gráfico desloca-se sozinho); mostra a data, tem **ajuste fino** (‹ › de barra em barra) e só começa ao tocar em "Começar aqui".
+- **Zoom com dois dedos** rápido e progressivo (quanto mais depressa abres os dedos, mais aproxima), e mover o gráfico com os dois dedos.
+- **Barra de ferramentas no telemóvel** estável: fica aberta enquanto mudas opções e fecha ao escolher uma ferramenta. Com uma ferramenta ativa, tocar no desenho selecionado edita-o em vez de criar outro. Botão para esconder as barras de baixo.
 - **Telemóvel:** toque mais tolerante, pegas maiores e uma **lupa** (como no MT5) que mostra ampliado o ponto debaixo do dedo.
 
 ### Indicadores (36)

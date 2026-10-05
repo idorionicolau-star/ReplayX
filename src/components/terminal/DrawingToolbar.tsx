@@ -121,6 +121,11 @@ export const TOOL_ICONS: Record<ToolId, Icon> = {
   measure: Ruler,
 };
 
+/** No telemóvel a barra cobre o gráfico: fecha-se ao escolher uma ferramenta (para desenhar logo), não ao mudar opções. */
+function closeMobileTools() {
+  if (typeof window !== 'undefined' && window.innerWidth < 640) useUi.getState().set({ mobileTools: false });
+}
+
 export function toggleFavoriteTool(t: ToolId) {
   const st = useSettings.getState();
   const favs = st.favoriteTools;
@@ -169,7 +174,10 @@ function GroupButton({ group }: { group: (typeof TOOL_GROUPS)[number] }) {
         type="button"
         title={toolDef(shown)?.label + (toolDef(shown)?.shortcut ? ` (${toolDef(shown)!.shortcut})` : '')}
         aria-label={toolDef(shown)?.label}
-        onClick={() => setTool(inGroup ? 'cross' : shown)}
+        onClick={() => {
+          setTool(inGroup ? 'cross' : shown);
+          if (!inGroup) closeMobileTools();
+        }}
         className={cn('flex h-9 w-9 items-center justify-center rounded-md transition-colors', inGroup ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
         data-testid={`tool-${shown}`}
       >
@@ -200,6 +208,7 @@ function GroupButton({ group }: { group: (typeof TOOL_GROUPS)[number] }) {
                 onClick={() => {
                   setLast(t);
                   setTool(t);
+                  closeMobileTools();
                   setOpen(false);
                 }}
               />
@@ -263,7 +272,10 @@ export function DrawingToolbar({ className }: { className?: string }) {
                 type="button"
                 title={`${def.label} (favorito)`}
                 aria-label={def.label}
-                onClick={() => setTool(tool === t ? 'cross' : t)}
+                onClick={() => {
+                  setTool(tool === t ? 'cross' : t);
+                  if (tool !== t) closeMobileTools();
+                }}
                 className={cn('flex h-8 w-9 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
                 data-testid={`fav-tool-${t}`}
               >

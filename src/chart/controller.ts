@@ -36,6 +36,7 @@ import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverla
 import { BandFill } from './fill';
 import type { Viewport } from './drawings/tools';
 import type { Drawing } from './drawings/types';
+import { usePick } from './pick';
 import { fmtCountdown, resolveAppearance, type Appearance, type ResolvedAppearance } from './appearance';
 import { withAlpha } from './drawings/geometry';
 import { fmtDateTime, fmtPrice, fmtTick } from '@/lib/format';
@@ -165,6 +166,9 @@ export class ChartController {
   hint: { x: number; y: number; text: string } | null = null;
   events: ChartEvent[] = [];
   replayPickX: number | null = null;
+  /** Barra escolhida para começar o replay (modo de arrastar, no telemóvel) e posição livre do dedo. */
+  pickTime: number | null = null;
+  pickDragX: number | null = null;
   private resizeObs: ResizeObserver | null = null;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -183,7 +187,13 @@ export class ChartController {
       hoveredId: () => this.hoveredId,
       preview: () => this.preview,
       trading: () => this.trading,
-      replayPick: () => (this.replayPickX === null ? null : { x: this.replayPickX }),
+      replayPick: () => {
+        if (this.pickTime !== null) {
+          const x = this.pickDragX ?? this.timeToX(this.pickTime);
+          return x === null ? null : { x, label: fmtDateTime(this.pickTime, this.theme.timezone), handle: true };
+        }
+        return this.replayPickX === null ? null : { x: this.replayPickX };
+      },
       alerts: () => this.alerts,
       dark: () => this.theme.dark,
       hint: () => this.hint,
@@ -265,6 +275,7 @@ export class ChartController {
         timeFormatter: (time: Time) => fmtDateTime(time as number, tz),
       },
       kineticScroll: { mouse: false, touch: true },
+      handleScale: { mouseWheel: true, pinch: false, axisPressedMouseMove: true },
     };
   }
 
@@ -1184,6 +1195,55 @@ export class ChartController {
   }
 
   // ------------------------------------------------------------------ outros
+
+  // ---- linha de corte do replay (arrastar até ao ponto de partida)
+
+  private setPickTime(t: number | null) {
+    this.pickTime = t;
+    usePick.setState({ chartId: t === null ? null : this.id, time: t });
+    this.redraw();
+  }
+
+  /** Mostra a linha de corte (por omissão a 2/3 do ecrã) se ainda não existir. */
+  initPick() {
+    if (this.pickTime !== null || !this.bars.length) return;
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    const last = this.bars.length - 1;
+    const l = r ? Math.min(last, Math.max(0, Math.round(r.from + (r.to - r.from) * 0.66))) : last;
+    this.setPickTime(this.bars[l]?.time ?? null);
+  }
+
+  clearPick() {
+    this.pickDragX = null;
+    if (this.pickTime !== null) this.setPickTime(null);
+  }
+
+  /** X atual da linha (livre enquanto se arrasta). */
+  pickX(): number | null {
+    return this.pickDragX ?? (this.pickTime === null ? null : this.timeToX(this.pickTime));
+  }
+
+  /** Põe a linha debaixo do dedo. `free` = segue o dedo sem saltos; ao largar encaixa na barra mais próxima. */
+  setPickAtX(x: number, free: boolean) {
+    const l = this.xToLogical(x);
+    if (l === null || !this.bars.length) return;
+    const i = Math.max(0, Math.min(this.bars.length - 1, Math.round(l)));
+    this.pickDragX = free ? x : null;
+    this.setPickTime(this.bars[i].time);
+  }
+
+  /** Ajuste fino: avança/recua barras. */
+  nudgePick(n: number) {
+    if (this.pickTime === null || !this.bars.length) return;
+    const cur = Math.max(0, Math.min(this.bars.length - 1, Math.round(this.timeToLogical(this.pickTime) ?? 0)));
+    const i = Math.max(0, Math.min(this.bars.length - 1, cur + n));
+    this.pickDragX = null;
+    this.setPickTime(this.bars[i].time);
+    // mantém a linha à vista
+    const x = this.timeToX(this.bars[i].time);
+    const w = this.paneSize().width;
+    if (x !== null && (x < 40 || x > w - 40)) this.scrollToTime(this.bars[i].time);
+  }
 
   /** Carrega histórico para trás até `t` (ou até ao início dos dados). */
   async ensureFrom(t: number, maxRounds = 40) {

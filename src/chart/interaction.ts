@@ -45,7 +45,8 @@ type Mode =
   | { kind: 'create'; def: ToolDef; drawing: Drawing; downAt: { x: number; y: number }; moved: boolean }
   | { kind: 'brush'; drawing: Drawing; last: { x: number; y: number } }
   | { kind: 'drag'; id: string; handle: number | null; start: PricePoint; orig: Drawing; moved: boolean }
-  | { kind: 'trade'; region: TradeRegion; startY: number; moved: boolean; price: number };
+  | { kind: 'trade'; region: TradeRegion; startY: number; moved: boolean; price: number }
+  | { kind: 'pick' };
 
 const DRAG_THRESHOLD = 4;
 /** Ferramentas de linha: o 2.º ponto pode encaixar no ângulo e mostra os graus. */
@@ -69,6 +70,11 @@ export class Interaction {
   ) {
     const el = c.container;
     this.loupe = new Loupe(el);
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', this.onPinchDown, true);
+    window.addEventListener('pointermove', this.onPinchMove);
+    window.addEventListener('pointerup', this.onPinchUp);
+    window.addEventListener('pointercancel', this.onPinchUp);
     el.addEventListener('pointerdown', this.onDown, true);
     el.addEventListener('mousedown', this.block, true);
     el.addEventListener('touchstart', this.block, { capture: true, passive: false });
@@ -81,6 +87,8 @@ export class Interaction {
 
   dispose() {
     this.disposed = true;
+    this.stopEdge();
+    window.removeEventListener('pointerup', this.onPickTap);
     this.loupe.dispose();
     const el = this.c.container;
     el.removeEventListener('pointerdown', this.onDown, true);
@@ -93,6 +101,11 @@ export class Interaction {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
+    el.removeEventListener('pointerdown', this.onPinchDown);
+    window.removeEventListener('pointermove', this.onPinchMove);
+    window.removeEventListener('pointerup', this.onPinchUp);
+    window.removeEventListener('pointercancel', this.onPinchUp);
   }
 
   get busy(): boolean {
@@ -204,7 +217,8 @@ export class Interaction {
   }
 
   private setScroll(enabled: boolean) {
-    this.c.chart.applyOptions({ handleScroll: enabled, handleScale: enabled });
+    // a pinça (zoom com dois dedos) é tratada aqui, mais rápida e progressiva que a da biblioteca
+    this.c.chart.applyOptions({ handleScroll: enabled, handleScale: enabled ? { mouseWheel: true, pinch: false, axisPressedMouseMove: true } : false });
   }
 
   private setCursor(cursor: string) {
@@ -267,8 +281,98 @@ export class Interaction {
 
   // ---------------------------------------------------------------- eventos
 
+  // ---------------------------------------------------------------- linha de corte do replay (dedo)
+
+  private tap: { x: number; y: number; t: number } | null = null;
+  private edgeDir = 0;
+  private edgeX = 0;
+  private edgeTimer: ReturnType<typeof setInterval> | null = null;
+
+  private stopEdge() {
+    if (this.edgeTimer) clearInterval(this.edgeTimer);
+    this.edgeTimer = null;
+    this.edgeDir = 0;
+  }
+
+  private onPickTap = (e: PointerEvent) => {
+    const t = this.tap;
+    this.tap = null;
+    if (!t || !this.cb.replaySelecting() || this.touches.size > 1) return;
+    const p = this.local(e);
+    if (Math.hypot(p.x - t.x, p.y - t.y) < 10 && performance.now() - t.t < 450 && p.inside) this.c.setPickAtX(p.x, false);
+  };
+
+  // ---------------------------------------------------------------- zoom com dois dedos
+
+  private touches = new Map<number, { x: number; y: number }>();
+  private pinch: { dist: number; cx: number; range: { from: number; to: number } | null } | null = null;
+
+  private pinchState() {
+    const [a, b] = [...this.touches.values()];
+    return { dist: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2 };
+  }
+
+  private onPinchDown = (e: PointerEvent) => {
+    if (e.pointerType !== 'touch') return;
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.touches.size !== 2) return;
+    // segundo dedo: deixa de desenhar/arrastar e passa a fazer zoom
+    this.cancel();
+    if (this.mode.kind !== 'idle') {
+      this.mode = { kind: 'idle' };
+      this.endDrag();
+    }
+    this.loupe.hide();
+    this.c.hint = null;
+    this.setScroll(false);
+    this.capturing = true;
+    // a biblioteca só aplica o intervalo no quadro seguinte: guardamos o nosso para não perder incrementos entre toques
+    this.pinch = { ...this.pinchState(), range: this.c.chart.timeScale().getVisibleLogicalRange() };
+  };
+
+  private onPinchMove = (e: PointerEvent) => {
+    if (!this.touches.has(e.pointerId)) return;
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!this.pinch || this.touches.size < 2) return;
+    const now = this.pinchState();
+    const ratio = now.dist / Math.max(1, this.pinch.dist);
+    // progressivo: quanto mais depressa se abrem/fecham os dedos, maior o ganho
+    const gain = 1.6 + Math.min(1.2, Math.abs(Math.log(ratio)) * 25);
+    const factor = Math.pow(ratio, gain);
+    const ts = this.c.chart.timeScale();
+    const r = this.pinch.range;
+    const rect = (this.c.paneElement() ?? this.c.container).getBoundingClientRect();
+    const width = this.c.paneSize().width;
+    let range = r;
+    if (r && width > 0 && Number.isFinite(factor) && factor > 0) {
+      const frac = Math.min(1, Math.max(0, (this.pinch.cx - rect.left) / width));
+      const oldW = r.to - r.from;
+      const anchor = r.from + frac * oldW;
+      const newW = Math.min(50000, Math.max(5, oldW / factor));
+      // os dois dedos a andar juntos também deslocam o gráfico
+      const shift = ((this.pinch.cx - now.cx) / width) * newW;
+      const from = anchor - frac * newW + shift;
+      range = { from, to: from + newW };
+      ts.setVisibleLogicalRange(range);
+    }
+    this.pinch = { ...now, range };
+  };
+
+  private onPinchUp = (e: PointerEvent) => {
+    this.touches.delete(e.pointerId);
+    if (this.touches.size >= 2 || !this.pinch) return;
+    this.pinch = null;
+    this.capturing = false;
+    if (this.touches.size === 0) this.setScroll(true);
+  };
+
   private onDown = (e: PointerEvent) => {
     if (this.disposed) return;
+    // com dois dedos é zoom (tratado em onPinchDown)
+    if (e.pointerType === 'touch' && this.touches.size >= 2) {
+      this.consume(e);
+      return;
+    }
     this.capturing = false;
     focus.chartId = this.c.id;
     this.cb.onActivate();
@@ -279,6 +383,23 @@ export class Interaction {
     const p = this.local(e);
     if (!p.inside) return;
 
+    if (this.cb.replaySelecting() && e.pointerType !== 'mouse') {
+      // dedo: arrasta-se a linha de corte até ao ponto de partida e confirma-se no botão (sem salto de "clicar e começar")
+      if (this.c.pickTime === null) this.c.initPick();
+      const lx = this.c.pickX();
+      if (lx !== null && Math.abs(p.x - lx) <= 44) {
+        this.consume(e);
+        this.mode = { kind: 'pick' };
+        this.c.setPickAtX(p.x, true);
+        this.beginDrag();
+        this.updateLoupe(e);
+        return;
+      }
+      // toque curto noutro sítio leva a linha para lá; arrastar fora da linha desloca o gráfico
+      this.tap = { x: p.x, y: p.y, t: performance.now() };
+      window.addEventListener('pointerup', this.onPickTap, { once: true });
+      return;
+    }
     if (this.cb.replaySelecting()) {
       const l = this.c.xToLogical(p.x);
       if (l === null) return;
@@ -302,6 +423,18 @@ export class Interaction {
     const tool = this.cb.tool();
     const def = tool === 'cross' || tool === 'cursor' ? undefined : toolDef(tool);
     if (def) {
+      // com uma ferramenta ativa, tocar no desenho que está selecionado (pegas ou corpo) edita-o em vez de criar outro
+      const own = this.hitDrawing(p.x, p.y);
+      if (own && own.d.id === this.c.selectedId) {
+        this.consume(e);
+        if (own.d.locked || this.cb.globalLocked()) return;
+        const start = this.toPoint(p.x, p.y, false);
+        if (!start) return;
+        this.mode = { kind: 'drag', id: own.d.id, handle: own.handle, start, orig: own.d, moved: false };
+        this.beginDrag();
+        if (own.handle !== null) this.updateLoupe(e);
+        return;
+      }
       this.consume(e);
       this.startCreation(def, p.x, p.y);
       if (this.mode.kind !== 'idle') this.updateLoupe(e);
@@ -343,6 +476,8 @@ export class Interaction {
     this.setScroll(false);
     window.addEventListener('pointermove', this.onDragMove);
     window.addEventListener('pointerup', this.onUp);
+    // o navegador pode interromper o toque (ex.: assume um gesto): tratar como se tivesse largado
+    window.addEventListener('pointercancel', this.onUp);
   }
 
   private endDrag() {
@@ -350,6 +485,7 @@ export class Interaction {
     this.c.hint = null;
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
     this.setScroll(true);
     this.capturing = false;
   }
@@ -492,6 +628,19 @@ export class Interaction {
         if (m.orig.data) patch.data = { ...m.orig.data, stop: m.orig.data.stop + dp, target: m.orig.data.target + dp };
       }
       this.cb.patchDrawing(m.id, patch);
+    } else if (m.kind === 'pick') {
+      this.c.setPickAtX(p.x, true);
+      // perto das margens o gráfico desloca-se sozinho, para chegar mais longe
+      const w = this.c.paneSize().width;
+      this.edgeDir = p.x < 48 ? -1 : p.x > w - 48 ? 1 : 0;
+      this.edgeX = p.x;
+      if (this.edgeDir !== 0 && !this.edgeTimer) {
+        this.edgeTimer = setInterval(() => {
+          if (!this.edgeDir) return;
+          this.c.scrollBy(this.edgeDir * 0.012);
+          this.c.setPickAtX(this.edgeX, true);
+        }, 16);
+      }
     } else if (m.kind === 'trade') {
       if (Math.abs(p.y - m.startY) > DRAG_THRESHOLD) m.moved = true;
       const price = this.c.yToPrice(p.y);
@@ -514,6 +663,13 @@ export class Interaction {
         m.downAt = { x: p.x, y: p.y };
         this.addCreationPoint(p.x, p.y);
       }
+      return;
+    }
+    if (m.kind === 'pick') {
+      this.stopEdge();
+      this.mode = { kind: 'idle' };
+      this.endDrag();
+      this.c.setPickAtX(p.x, false); // ao largar, encaixa na barra mais próxima
       return;
     }
     if (m.kind === 'brush') {
@@ -553,7 +709,7 @@ export class Interaction {
       return;
     }
     const p = this.local(e);
-    if (this.cb.replaySelecting()) {
+    if (this.cb.replaySelecting() && e.pointerType === 'mouse') {
       this.c.replayPickX = p.inside ? p.x : null;
       this.setCursor(p.inside ? 'crosshair' : '');
       this.c.redraw();

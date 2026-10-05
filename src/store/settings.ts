@@ -48,6 +48,8 @@ export interface SettingsState {
   angleSnap: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
+  /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
+  hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
   appearance: Appearance;
   /** Cores guardadas pelo utilizador no seletor de cores. */
@@ -93,6 +95,7 @@ export const useSettings = create<SettingsState>()(
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       loupe: true,
+      hideBottomBars: false,
       appearance: DEFAULT_APPEARANCE,
       customColors: [],
       drawingTemplates: {},

@@ -5,7 +5,7 @@ import { parseTf } from '@/core/timeframes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { ChartController, type ChartStatus, type CrosshairInfo } from '@/chart/controller';
+import { ChartController, type ChartStatus, type CrosshairInfo, coarsePointer } from '@/chart/controller';
 import { Interaction } from '@/chart/interaction';
 import { focus } from '@/chart/bus';
 import { registerChart, unregisterChart } from '@/chart/registry';
@@ -290,6 +290,15 @@ export function ChartPane({ index }: { index: number }) {
     };
   }, [ctrl, symbol, timezone]);
 
+  // ---------- linha de corte do replay (no dedo: arrastar e confirmar) ----------
+  const pickActive = selecting && isActive;
+  useEffect(() => {
+    if (!ctrl) return;
+    if (pickActive && coarsePointer() && status.state === 'ready') ctrl.initPick();
+    else ctrl.clearPick();
+    return () => ctrl.clearPick();
+  }, [ctrl, pickActive, status.state, cfg?.tf, symbolId]);
+
   // cursor de desenho
   useEffect(() => {
     ctrl?.setCursorStyle(tool !== 'cross' && tool !== 'cursor' ? 'crosshair' : '');
@@ -306,7 +315,7 @@ export function ChartPane({ index }: { index: number }) {
     >
       <div ref={containerRef} className="absolute inset-0" data-testid={`chart-${index}`} />
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
-      {selecting && isActive && <ReplayPickBanner />}
+      {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
