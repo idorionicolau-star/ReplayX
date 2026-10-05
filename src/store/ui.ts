@@ -13,7 +13,7 @@ interface UiState {
   symbolSearch: { open: boolean; chart: number; initial: string; mode: 'set' | 'watchlist' | 'compare' };
   indicators: boolean;
   indicatorSettings: { chart: number; uid: string } | null;
-  drawingSettings: { symbolId: string; id: string } | null;
+  drawingSettings: { symbolId: string; id: string; tab?: 'style' | 'text' | 'coords' | 'levels' | 'visibility' } | null;
   settings: boolean;
   gotoDate: boolean;
   shortcuts: boolean;

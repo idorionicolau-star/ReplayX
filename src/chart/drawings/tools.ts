@@ -150,7 +150,76 @@ function textSize(ctx: CanvasRenderingContext2D, text: string, font: string) {
 }
 
 function fontOf(s: DrawingStyle) {
-  return `${s.bold ? '600 ' : ''}${s.fontSize ?? 14}px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif`;
+  return `${s.italic ? 'italic ' : ''}${s.bold ? '600 ' : ''}${s.fontSize ?? 14}px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif`;
+}
+
+/**
+ * Texto ao longo do segmento a→b (rodado com a linha, sempre legível), com alinhamento (esquerda/centro/direita)
+ * e posição (por cima, sobre ou por baixo da linha). Suporta várias linhas.
+ */
+function segmentText(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, s: DrawingStyle, def: { align: 'left' | 'center' | 'right'; valign: 'top' | 'middle' | 'bottom'; size?: number }) {
+  if (!s.text) return;
+  const size = s.fontSize ?? def.size ?? 13;
+  let p0 = a;
+  let p1 = b;
+  // texto nunca de cabeça para baixo: escreve da esquerda para a direita
+  if (p1.x < p0.x || (p1.x === p0.x && p1.y > p0.y)) [p0, p1] = [p1, p0];
+  const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+  const len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  const align = s.textAlign ?? def.align;
+  const valign = s.textVAlign ?? def.valign;
+  const pad = 6;
+  const along = align === 'left' ? pad : align === 'right' ? len - pad : len / 2;
+  const lines = s.text.split('\n');
+  const lh = size + 3;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.font = fontOf({ ...s, fontSize: size });
+  ctx.fillStyle = s.textColor ?? s.color;
+  ctx.translate(p0.x, p0.y);
+  ctx.rotate(ang);
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  const total = lines.length * lh;
+  const top = valign === 'top' ? -4 - total + lh / 2 : valign === 'bottom' ? 4 + lh / 2 : -total / 2 + lh / 2;
+  lines.forEach((l, i) => {
+    if (valign === 'middle') {
+      // sobre a linha: contorno para se ler por cima do traço
+      ctx.save();
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(19,23,34,0.75)';
+      ctx.strokeText(l, along, top + i * lh);
+      ctx.restore();
+    }
+    ctx.fillText(l, along, top + i * lh);
+  });
+  ctx.restore();
+}
+
+/** Texto dentro de uma caixa (retângulo), com alinhamento horizontal e vertical. */
+function boxText(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, s: DrawingStyle) {
+  if (!s.text) return;
+  const size = s.fontSize ?? 12;
+  const align = s.textAlign ?? 'center';
+  const valign = s.textVAlign ?? 'middle';
+  const lines = s.text.split('\n');
+  const lh = size + 3;
+  const l = Math.min(x0, x1);
+  const r = Math.max(x0, x1);
+  const t = Math.min(y0, y1);
+  const btm = Math.max(y0, y1);
+  const x = align === 'left' ? l + 6 : align === 'right' ? r - 6 : (l + r) / 2;
+  const total = lines.length * lh;
+  const yStart = valign === 'top' ? t + 4 + lh / 2 : valign === 'bottom' ? btm - 4 - total + lh / 2 : (t + btm) / 2 - total / 2 + lh / 2;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.font = fontOf({ ...s, fontSize: size });
+  ctx.fillStyle = s.textColor ?? s.color;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  lines.forEach((ln, i) => ctx.fillText(ln, x, yStart + i * lh));
+  ctx.restore();
 }
 
 const measureCtx = (): CanvasRenderingContext2D | null => {
@@ -215,21 +284,7 @@ function trendFamily(id: ToolId, label: string, extras: Partial<DrawingStyle>, o
           { bg: vp.dark ? 'rgba(30,34,45,0.92)' : 'rgba(255,255,255,0.95)', fg: vp.dark ? '#d1d4dc' : '#131722', align: 'left', valign: 'middle', border: d.style.color },
         );
       }
-      if (d.style.text) {
-        ctx.save();
-        ctx.font = fontOf({ ...d.style, fontSize: d.style.fontSize ?? 13 });
-        ctx.fillStyle = d.style.textColor ?? d.style.color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        const mx = (a.x + b.x) / 2;
-        const my = (a.y + b.y) / 2;
-        ctx.translate(mx, my);
-        let ang = Math.atan2(b.y - a.y, b.x - a.x);
-        if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
-        ctx.rotate(ang);
-        ctx.fillText(d.style.text, 0, -4);
-        ctx.restore();
-      }
+      segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' });
     },
     hit(d, vp, p) {
       const pts = allXY(d, vp);
@@ -254,15 +309,7 @@ const hline: ToolDef = {
     if (y === null) return;
     stroke(ctx, d.style, sel);
     line(ctx, { x: 0, y }, { x: vp.width, y });
-    if (d.style.text) {
-      ctx.save();
-      ctx.font = fontOf({ ...d.style, fontSize: d.style.fontSize ?? 12 });
-      ctx.fillStyle = d.style.textColor ?? d.style.color;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(d.style.text, vp.width - 8, y - 3);
-      ctx.restore();
-    }
+    segmentText(ctx, { x: 0, y }, { x: vp.width, y }, d.style, { align: 'right', valign: 'top', size: 12 });
   },
   hit(d, vp, p) {
     const y = vp.priceToY(d.points[0].price);
@@ -289,14 +336,7 @@ const hray: ToolDef = {
     if (!p) return;
     stroke(ctx, d.style, sel);
     line(ctx, p, { x: vp.width + 10, y: p.y });
-    if (d.style.text) {
-      ctx.save();
-      ctx.font = fontOf({ ...d.style, fontSize: d.style.fontSize ?? 12 });
-      ctx.fillStyle = d.style.textColor ?? d.style.color;
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(d.style.text, p.x + 6, p.y - 3);
-      ctx.restore();
-    }
+    segmentText(ctx, p, { x: Math.max(p.x + 1, vp.width), y: p.y }, d.style, { align: 'left', valign: 'top', size: 12 });
   },
   hit(d, vp, p) {
     const a = xy(d, 0, vp);
@@ -318,15 +358,7 @@ const vline: ToolDef = {
     if (x === null) return;
     stroke(ctx, d.style, sel);
     line(ctx, { x, y: 0 }, { x, y: vp.height });
-    if (d.style.text) {
-      ctx.save();
-      ctx.font = fontOf({ ...d.style, fontSize: d.style.fontSize ?? 12 });
-      ctx.fillStyle = d.style.textColor ?? d.style.color;
-      ctx.translate(x - 4, vp.height - 10);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText(d.style.text, 0, 0);
-      ctx.restore();
-    }
+    segmentText(ctx, { x, y: vp.height }, { x, y: 0 }, d.style, { align: 'left', valign: 'top', size: 12 });
   },
   hit(d, vp, p) {
     const x = vp.timeToX(d.points[0].time);
@@ -388,6 +420,7 @@ const channel: ToolDef = {
     }
     stroke(ctx, d.style, sel);
     line(ctx, s1, e1);
+    segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' });
     if (pts[2]) {
       line(ctx, s2, e2);
       ctx.save();
@@ -609,15 +642,7 @@ const rect: ToolDef = {
     }
     stroke(ctx, d.style, sel);
     ctx.strokeRect(Math.min(a.x, x1), Math.min(a.y, b.y), Math.abs(x1 - a.x), Math.abs(b.y - a.y));
-    if (d.style.text) {
-      ctx.save();
-      ctx.font = fontOf({ ...d.style, fontSize: d.style.fontSize ?? 12 });
-      ctx.fillStyle = d.style.textColor ?? d.style.color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(d.style.text, (a.x + x1) / 2, (a.y + b.y) / 2);
-      ctx.restore();
-    }
+    boxText(ctx, a.x, a.y, x1, b.y, d.style);
   },
   hit(d, vp, p) {
     const pts = allXY(d, vp);

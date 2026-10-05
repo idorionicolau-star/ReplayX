@@ -51,6 +51,8 @@ const DRAG_THRESHOLD = 4;
 /** Ferramentas de linha: o 2.º ponto pode encaixar no ângulo e mostra os graus. */
 const LINE_TOOLS = new Set<ToolId>(['trendline', 'ray', 'extended', 'infoline', 'arrowline', 'channel', 'path']);
 const ANGLE_STEP = Math.PI / 12; // 15°
+/** Desenho copiado com Ctrl+C (partilhado por todos os gráficos). */
+let clipboard: Drawing | null = null;
 
 export class Interaction {
   private mode: Mode = { kind: 'idle' };
@@ -617,6 +619,17 @@ export class Interaction {
       if (this.cb.tool() !== 'cross') this.cb.setTool('cross');
     } else if (e.key === 'Enter' && this.mode.kind === 'create' && this.mode.def.points === -1) {
       this.finish(this.mode.drawing);
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && this.c.selectedId) {
+      const d = this.c.drawings.find((x) => x.id === this.c.selectedId);
+      if (d) clipboard = structuredClone(d);
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && clipboard) {
+      // cola um pouco ao lado (3 barras) para se ver que é outro
+      e.preventDefault();
+      const shift = this.c.tfSec * 3;
+      const copy: Drawing = { ...structuredClone(clipboard), id: uid('d'), createdAt: Date.now(), locked: false, points: clipboard.points.map((p) => ({ ...p, time: p.time + shift })) };
+      clipboard = copy;
+      this.cb.addDrawing(copy);
+      this.cb.select(copy.id);
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && this.c.selectedId) {
       const d = this.c.drawings.find((x) => x.id === this.c.selectedId);
       if (d && !d.locked) {

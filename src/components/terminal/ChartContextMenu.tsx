@@ -99,7 +99,7 @@ export function ChartContextMenu() {
                 if (confirm('Remover todos os desenhos? (Ctrl+Z desfaz)')) st.clear(cfg.symbolId);
               })}
             />
-            <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ settings: true }))} />
+            <MenuItem icon={<Settings2 size={15} />} label="Definições do gráfico…" onClick={act(() => useUi.getState().set({ settings: true }))} />
           </>
         )}
       </MenuList>

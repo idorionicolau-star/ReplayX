@@ -1,4 +1,5 @@
 'use client';
+import { parseTf } from '@/core/timeframes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -33,9 +34,8 @@ export function ChartPane({ index }: { index: number }) {
   const theme = useSettings((s) => s.theme);
   const upColor = useSettings((s) => s.upColor);
   const downColor = useSettings((s) => s.downColor);
-  const showGrid = useSettings((s) => s.showGrid);
   const timezone = useSettings((s) => s.timezone);
-  const logScale = useSettings((s) => s.logScale);
+  const appearance = useSettings((s) => s.appearance);
   const watermark = useSettings((s) => s.showWatermark);
   const replayOn = useReplay((s) => s.active && !s.selecting && s.cursor !== null);
   const selecting = useReplay((s) => s.active && s.selecting);
@@ -54,6 +54,7 @@ export function ChartPane({ index }: { index: number }) {
   const indexRef = useRef(index);
   const symbolRef = useRef(symbolId);
   const tfRef = useRef(cfg?.tf);
+  const chartTf = cfg?.tf;
   useEffect(() => {
     indexRef.current = index;
     symbolRef.current = symbolId;
@@ -67,7 +68,7 @@ export function ChartPane({ index }: { index: number }) {
     const s = useSettings.getState();
     const c = new ChartController(
       el,
-      { dark: s.theme === 'dark', upColor: s.upColor, downColor: s.downColor, showGrid: s.showGrid, timezone: s.timezone, logScale: s.logScale, watermark: s.showWatermark },
+      { dark: s.theme === 'dark', upColor: s.upColor, downColor: s.downColor, timezone: s.timezone, watermark: s.showWatermark, appearance: s.appearance },
       {
         onStatus: setStatus,
         onLegend: setLegend,
@@ -138,8 +139,8 @@ export function ChartPane({ index }: { index: number }) {
 
   // ---------- tema ----------
   useEffect(() => {
-    ctrl?.setTheme({ dark: theme === 'dark', upColor, downColor, showGrid, timezone, logScale, watermark });
-  }, [ctrl, theme, upColor, downColor, showGrid, timezone, logScale, watermark]);
+    ctrl?.setTheme({ dark: theme === 'dark', upColor, downColor, timezone, watermark, appearance });
+  }, [ctrl, theme, upColor, downColor, timezone, watermark, appearance]);
 
   // ---------- símbolo / timeframe / modo replay ----------
   useEffect(() => {
@@ -164,12 +165,15 @@ export function ChartPane({ index }: { index: number }) {
   // ---------- desenhos ----------
   useEffect(() => {
     if (!ctrl || !symbolId) return;
+    // "Visibilidade": alguns desenhos só aparecem em certos intervalos
+    const unit = parseTf(chartTf ?? '1h').unit;
     const apply = (s: ReturnType<typeof useDrawings.getState>) => {
-      ctrl.setDrawings(s.hidden ? [] : (s.bySymbol[symbolId] ?? []), s.selected?.symbolId === symbolId ? s.selected.id : null);
+      const list = s.hidden ? [] : (s.bySymbol[symbolId] ?? []).filter((d) => !d.style.visibleOn || d.style.visibleOn.includes(unit as 'm'));
+      ctrl.setDrawings(list, s.selected?.symbolId === symbolId ? s.selected.id : null);
     };
     apply(useDrawings.getState());
     return useDrawings.subscribe(apply);
-  }, [ctrl, symbolId]);
+  }, [ctrl, symbolId, chartTf]);
 
   // ---------- ordens e posições ----------
   useEffect(() => {

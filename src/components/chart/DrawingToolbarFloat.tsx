@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Bell, Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus } from 'lucide-react';
+import { Bell, Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
+import { TemplateMenu } from './TemplateMenu';
 import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
 import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
@@ -18,6 +19,7 @@ import { resolveSymbol } from '@/core/symbols';
 import { toast } from '@/components/ui/Toast';
 
 const DASH_ICONS = ['—', '- -', '···'];
+const TEXT_TOOLS = new Set(['trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowline', 'infoline', 'arrowup', 'arrowdown']);
 
 export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
   const sel = useDrawings((s) => (s.selected?.symbolId === symbolId ? s.selected.id : null));
@@ -93,6 +95,12 @@ export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
           <Bell size={15} />
         </IconButton>
       )}
+      {TEXT_TOOLS.has(d.type) && (
+        <IconButton size="sm" label="Texto na linha" active={!!d.style.text} onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id, tab: 'text' } })}>
+          <Type size={15} />
+        </IconButton>
+      )}
+      <TemplateMenu symbolId={symbolId} d={d} compact />
       <IconButton size="sm" label="Definições" onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id } })}>
         <Settings2 size={15} />
       </IconButton>

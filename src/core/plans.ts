@@ -11,9 +11,9 @@ export interface Plan {
 }
 
 export const PLANS: Plan[] = [
-  { id: 'mensal', label: 'Mensal', months: 1, amount: 450 },
-  { id: 'trimestral', label: 'Trimestral', months: 3, amount: 1200, note: 'Poupa 11%' },
-  { id: 'anual', label: 'Anual', months: 12, amount: 4500, note: 'Poupa 17%' },
+  { id: 'mensal', label: 'Mensal', months: 1, amount: 100 },
+  { id: 'trimestral', label: 'Trimestral', months: 3, amount: 270, note: 'Poupa 10%' },
+  { id: 'anual', label: 'Anual', months: 12, amount: 1000, note: 'Poupa 17%' },
 ];
 
 export const planById = (id: string): Plan | undefined => PLANS.find((p) => p.id === id);

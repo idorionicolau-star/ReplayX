@@ -113,3 +113,62 @@ test('PWA: manifesto e service worker', async ({ page, request }) => {
   const scope = await page.evaluate(async () => (await navigator.serviceWorker.ready).scope);
   expect(scope).toMatch(/\/$/);
 });
+
+test('contador da vela, cores do gráfico e texto com modelo', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=right-tab-watchlist]');
+
+  // contador até ao fecho da vela (em tempo real)
+  const cd = await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { countdownLabel(): { text: string } | null }> }).__rxCharts.values()][0];
+    return c.countdownLabel()?.text ?? null;
+  });
+  expect(cd).toMatch(/^\d\d:\d\d/);
+
+  // fundo do gráfico pelo código da cor
+  await page.getByRole('button', { name: 'Definições', exact: true }).first().click();
+  await page.getByRole('tab', { name: 'Canvas' }).click();
+  await page.getByRole('button', { name: 'Fundo (cima)' }).click();
+  await page.getByLabel('Código da cor').fill('#102030');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const c = [...(window as unknown as { __rxCharts: Map<string, { chart: { options(): { layout: { background: { color?: string } } } } }> }).__rxCharts.values()][0];
+        return c.chart.options().layout.background.color;
+      }),
+    )
+    .toBe('#102030');
+  // guardar a cor nas "minhas cores"
+  await page.getByRole('button', { name: 'Guardar esta cor' }).click();
+  await expect(page.getByTestId('custom-colors').getByRole('button', { name: '#102030', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+
+  // linha com texto → modelo → outra linha com o mesmo texto
+  await page.click('[data-testid=tool-trendline]');
+  await page.mouse.click(300, 600);
+  await page.mouse.click(700, 400);
+  await page.getByRole('button', { name: 'Texto na linha' }).click();
+  await page.getByPlaceholder('Escreva o texto…').fill('Suporte forte');
+  await page.getByRole('dialog').getByTestId('template-menu').click();
+  await page.getByRole('button', { name: 'Guardar como modelo…' }).click();
+  await page.getByTestId('template-name').fill('Suporte');
+  await page.getByRole('button', { name: 'Guardar modelo' }).click();
+  await page.getByRole('button', { name: 'Ok' }).click();
+
+  await page.click('[data-testid=tool-trendline]');
+  await page.mouse.click(300, 300);
+  await page.mouse.click(700, 250);
+  await page.getByTestId('template-menu').first().click();
+  await page.getByRole('button', { name: /^Suporte/ }).click();
+  const texts = await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { drawings: { style: { text?: string } }[] }> }).__rxCharts.values()][0];
+    return c.drawings.map((d) => d.style.text ?? '');
+  });
+  expect(texts).toEqual(['Suporte forte', 'Suporte forte']);
+  expect(errors).toEqual([]);
+});

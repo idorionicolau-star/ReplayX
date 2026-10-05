@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ToolId } from '@/chart/drawings/types';
+import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
+import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 
 export type Theme = 'dark' | 'light';
 export type Magnet = 'off' | 'weak' | 'strong';
@@ -17,6 +18,12 @@ export interface TradingSettings {
   sizing: 'qty' | 'risk';
   /** Mostrar confirmação antes de enviar ordens. */
   confirmOrders: boolean;
+}
+
+export interface DrawingTemplate {
+  id: string;
+  name: string;
+  style: DrawingStyle;
 }
 
 export interface SettingsState {
@@ -41,6 +48,12 @@ export interface SettingsState {
   angleSnap: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
+  /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
+  appearance: Appearance;
+  /** Cores guardadas pelo utilizador no seletor de cores. */
+  customColors: string[];
+  /** Modelos de estilo (cores, texto…) guardados por ferramenta. */
+  drawingTemplates: Partial<Record<ToolId, DrawingTemplate[]>>;
   sound: boolean;
   trading: TradingSettings;
   replaySpeedMs: number;
@@ -80,6 +93,9 @@ export const useSettings = create<SettingsState>()(
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       loupe: true,
+      appearance: DEFAULT_APPEARANCE,
+      customColors: [],
+      drawingTemplates: {},
       sound: true,
       trading: DEFAULT_TRADING,
       replaySpeedMs: 1000,
@@ -88,7 +104,28 @@ export const useSettings = create<SettingsState>()(
       set: (patch) => set({ ...patch, updatedAt: Date.now() }),
       setTrading: (patch) => set((s) => ({ trading: { ...s.trading, ...patch }, updatedAt: Date.now() })),
     }),
-    { name: 'rx-settings', version: 1 },
+    {
+      name: 'rx-settings',
+      version: 2,
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>;
+        if (version < 2) {
+          // a grelha e a escala log passaram para a aparência
+          p.appearance = {
+            ...DEFAULT_APPEARANCE,
+            gridVertVisible: p.showGrid !== false,
+            gridHorzVisible: p.showGrid !== false,
+            scaleMode: p.logScale ? 'log' : 'normal',
+          };
+        }
+        return p as SettingsState;
+      },
+      // campos novos da aparência ficam com o valor por omissão
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>;
+        return { ...current, ...p, appearance: { ...DEFAULT_APPEARANCE, ...(p.appearance ?? {}) } };
+      },
+    },
   ),
 );
 

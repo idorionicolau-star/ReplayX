@@ -10,6 +10,7 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
+  ColorType,
   LineType,
   PriceScaleMode,
   TickMarkType,
@@ -35,6 +36,8 @@ import { OverlayPrimitive, type OverlayHost, type TradingOverlay } from './overl
 import { BandFill } from './fill';
 import type { Viewport } from './drawings/tools';
 import type { Drawing } from './drawings/types';
+import { fmtCountdown, resolveAppearance, type Appearance, type ResolvedAppearance } from './appearance';
+import { withAlpha } from './drawings/geometry';
 import { fmtDateTime, fmtPrice, fmtTick } from '@/lib/format';
 import type { PlotOutput, ShapeOutput } from '@/core/strategy/types';
 import type { PlotStyle } from '@/core/indicators/registry';
@@ -43,11 +46,13 @@ export interface ChartTheme {
   dark: boolean;
   upColor: string;
   downColor: string;
-  showGrid: boolean;
   timezone: string;
-  logScale: boolean;
   watermark: boolean;
+  appearance: Appearance;
 }
+
+const SCALE_MODE = { normal: PriceScaleMode.Normal, log: PriceScaleMode.Logarithmic, percent: PriceScaleMode.Percentage, indexed: PriceScaleMode.IndexedTo100 } as const;
+const CROSS_STYLE = [LineStyle.Solid, LineStyle.Dotted, LineStyle.Dashed, LineStyle.LargeDashed] as const;
 
 export interface LegendValue {
   label: string;
@@ -160,6 +165,7 @@ export class ChartController {
   hint: { x: number; y: number; text: string } | null = null;
   replayPickX: number | null = null;
   private resizeObs: ResizeObserver | null = null;
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     readonly container: HTMLElement,
@@ -181,6 +187,7 @@ export class ChartController {
       dark: () => this.theme.dark,
       hint: () => this.hint,
       coarse: () => coarsePointer(),
+      countdown: () => this.countdownLabel(),
     };
     this.overlay = new OverlayPrimitive(host);
     this.overlay.fmtTime = (t) => fmtDateTime(t, this.theme.timezone);
@@ -189,36 +196,46 @@ export class ChartController {
     this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.onRange);
     this.resizeObs = new ResizeObserver(() => this.emitPanes());
     this.resizeObs.observe(container);
+    // o contador da vela anda de segundo a segundo
+    this.countdownTimer = setInterval(() => {
+      if (this.theme.appearance.countdown && this.cursor === null && this.bars.length) this.overlay.update();
+    }, 1000);
   }
 
   // ------------------------------------------------------------------ tema
 
+  /** Cores e opções de aparência já resolvidas (automáticos → cores do tema). */
+  get look(): ResolvedAppearance {
+    const t = this.theme;
+    return resolveAppearance(t.appearance, t.dark, t.upColor, t.downColor);
+  }
+
   private chartOptions(t: ChartTheme) {
-    const text = t.dark ? '#d1d4dc' : '#131722';
-    const grid = t.dark ? 'rgba(42,46,57,0.6)' : 'rgba(224,227,235,0.7)';
+    const a = resolveAppearance(t.appearance, t.dark, t.upColor, t.downColor);
     const tz = t.timezone;
+    const crossLabel = t.dark ? '#363a45' : '#131722';
     return {
       autoSize: true,
       layout: {
-        background: { color: t.dark ? '#131722' : '#ffffff' },
-        textColor: text,
-        fontSize: 12,
+        background: a.background2 ? { type: ColorType.VerticalGradient as const, topColor: a.background, bottomColor: a.background2 } : { type: ColorType.Solid as const, color: a.background },
+        textColor: a.textColor,
+        fontSize: a.fontSize,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif',
         attributionLogo: false,
-        panes: { separatorColor: t.dark ? '#2a2e39' : '#e0e3eb', separatorHoverColor: 'rgba(41,98,255,0.3)', enableResize: true },
+        panes: { separatorColor: a.border, separatorHoverColor: 'rgba(41,98,255,0.3)', enableResize: true },
       },
       grid: {
-        vertLines: { color: grid, visible: t.showGrid },
-        horzLines: { color: grid, visible: t.showGrid },
+        vertLines: { color: a.gridVert, visible: a.gridVertVisible },
+        horzLines: { color: a.gridHorz, visible: a.gridHorzVisible },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: t.dark ? '#758696' : '#9598a1', labelBackgroundColor: t.dark ? '#363a45' : '#131722', style: LineStyle.Dashed },
-        horzLine: { color: t.dark ? '#758696' : '#9598a1', labelBackgroundColor: t.dark ? '#363a45' : '#131722', style: LineStyle.Dashed },
+        vertLine: { color: a.crosshair, labelBackgroundColor: crossLabel, style: CROSS_STYLE[a.crosshairStyle] },
+        horzLine: { color: a.crosshair, labelBackgroundColor: crossLabel, style: CROSS_STYLE[a.crosshairStyle] },
       },
-      rightPriceScale: { borderColor: t.dark ? '#2a2e39' : '#e0e3eb', mode: t.logScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal, scaleMargins: { top: 0.08, bottom: 0.08 } },
+      rightPriceScale: { borderColor: a.border, mode: SCALE_MODE[a.scaleMode], scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: {
-        borderColor: t.dark ? '#2a2e39' : '#e0e3eb',
+        borderColor: a.border,
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 12,
@@ -264,33 +281,47 @@ export class ChartController {
   // ------------------------------------------------------------------ série principal
 
   private mainOptions() {
-    const { upColor: up, downColor: down } = this.theme;
+    const a = this.look;
+    const up = a.bodyUp;
+    const down = a.bodyDown;
     const precision = this.symbol?.precision ?? 2;
     const priceFormat = { type: 'price' as const, precision, minMove: Math.pow(10, -precision) };
+    const common = { priceFormat, priceLineVisible: a.priceLine, lastValueVisible: a.lastValueLabel };
+    const clear = 'rgba(0,0,0,0)';
     switch (this.chartType) {
       case 'hollow':
-        return { upColor: 'rgba(0,0,0,0)', downColor: down, borderVisible: true, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down, priceFormat };
+        return { ...common, upColor: clear, downColor: down, borderVisible: true, borderUpColor: a.borderUp, borderDownColor: a.borderDown, wickVisible: a.showWick, wickUpColor: a.wickUp, wickDownColor: a.wickDown };
       case 'bars':
-        return { upColor: up, downColor: down, thinBars: false, priceFormat };
+        return { ...common, upColor: up, downColor: down, thinBars: false };
       case 'line':
-        return { color: '#2962ff', lineWidth: 2 as const, priceFormat };
+        return { ...common, color: a.lineColor, lineWidth: a.lineWidth };
       case 'area':
-        return { lineColor: '#2962ff', topColor: 'rgba(41,98,255,0.35)', bottomColor: 'rgba(41,98,255,0.02)', lineWidth: 2 as const, priceFormat };
+        return { ...common, lineColor: a.lineColor, topColor: withAlpha(a.lineColor, 0.35), bottomColor: withAlpha(a.lineColor, 0.02), lineWidth: a.lineWidth };
       case 'baseline':
         return {
           baseValue: { type: 'price' as const, price: this.bars[0]?.close ?? 0 },
           topLineColor: up,
-          topFillColor1: 'rgba(8,153,129,0.28)',
-          topFillColor2: 'rgba(8,153,129,0.05)',
+          topFillColor1: withAlpha(up, 0.28),
+          topFillColor2: withAlpha(up, 0.05),
           bottomLineColor: down,
-          bottomFillColor1: 'rgba(242,54,69,0.05)',
-          bottomFillColor2: 'rgba(242,54,69,0.28)',
-          priceFormat,
+          bottomFillColor1: withAlpha(down, 0.05),
+          bottomFillColor2: withAlpha(down, 0.28),
+          ...common,
         };
       case 'columns':
-        return { priceFormat };
+        return { ...common };
       default:
-        return { upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down, priceFormat };
+        return {
+          ...common,
+          upColor: a.showBody ? up : clear,
+          downColor: a.showBody ? down : clear,
+          borderVisible: a.showBorder || !a.showBody,
+          borderUpColor: a.borderUp,
+          borderDownColor: a.borderDown,
+          wickVisible: a.showWick,
+          wickUpColor: a.wickUp,
+          wickDownColor: a.wickDown,
+        };
     }
   }
 
@@ -346,7 +377,7 @@ export class ChartController {
       case 'baseline':
         return bars.map((b) => ({ time: t(b), value: b.close }));
       case 'columns':
-        return bars.map((b) => ({ time: t(b), value: b.close, color: b.close >= b.open ? this.theme.upColor : this.theme.downColor }));
+        return bars.map((b) => ({ time: t(b), value: b.close, color: b.close >= b.open ? this.look.bodyUp : this.look.bodyDown }));
       default:
         return bars.map((b) => ({ time: t(b), open: b.open, high: b.high, low: b.low, close: b.close }));
     }
@@ -442,6 +473,20 @@ export class ChartController {
     }
     const size = this.paneSize();
     return Object.assign(this.vpCache, { width: size.width, height: size.height, bars: this.bars, tfSec: this.tfSec, dark: this.theme.dark, cursor: this.cursor });
+  }
+
+  /** Etiqueta "mm:ss" até fechar a vela atual (só em tempo real; no replay o tempo está parado). */
+  private countdownLabel(): { y: number; text: string; color: string } | null {
+    const a = this.theme.appearance;
+    if (!a.countdown || !a.lastValueLabel || this.cursor !== null || !this.bars.length) return null;
+    const last = this.bars[this.bars.length - 1];
+    const left = barEnd(last.time, this.tf) - Date.now() / 1000;
+    // vela já devia ter fechado (mercado fechado ou sem dados novos)
+    if (left <= 0 || left > tfSeconds(this.tf) * 1.01 + 86400 * 4) return null;
+    const y = this.main.priceToCoordinate(last.close);
+    if (y === null) return null;
+    const look = this.look;
+    return { y: y + a.fontSize + 9, text: fmtCountdown(left), color: last.close >= last.open ? look.bodyUp : look.bodyDown };
   }
 
   setDrawings(list: Drawing[], selectedId: string | null) {
@@ -1066,7 +1111,7 @@ export class ChartController {
   private updateWatermark() {
     if (!this.symbol) return;
     const text = `${this.symbol.name}, ${tfShort(this.tf)}`;
-    const color = this.theme.dark ? 'rgba(120,123,134,0.10)' : 'rgba(120,123,134,0.10)';
+    const color = this.look.watermarkColor;
     const opts = { horzAlign: 'center' as const, vertAlign: 'center' as const, lines: this.theme.watermark ? [{ text, color, fontSize: 56, fontStyle: '600' }, { text: this.symbol.description, color, fontSize: 18 }] : [] };
     try {
       if (!this.watermark) this.watermark = createTextWatermark(this.chart.panes()[0], opts);
@@ -1173,6 +1218,7 @@ export class ChartController {
     if (this.indTimer) clearTimeout(this.indTimer);
     if (this.markerTimer) clearTimeout(this.markerTimer);
     this.resizeObs?.disconnect();
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
     try {
       this.chart.remove();
     } catch {

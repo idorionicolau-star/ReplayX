@@ -118,7 +118,14 @@ export const useDrawings = create<DrawingsState>()(
           }),
         setLocked: (locked) => set({ locked }),
         setHidden: (hidden) => set({ hidden }),
-        rememberStyle: (tool, style) => set((s) => ({ lastStyle: { ...s.lastStyle, [tool]: { ...s.lastStyle[tool], ...style } } })),
+        rememberStyle: (tool, style) =>
+          set((s) => {
+            // o texto e a visibilidade são de cada desenho: não passam para os próximos
+            const { text: _t, visibleOn: _v, ...rest } = style;
+            void _t;
+            void _v;
+            return { lastStyle: { ...s.lastStyle, [tool]: { ...s.lastStyle[tool], ...rest } } };
+          }),
       };
     },
     {

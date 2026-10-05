@@ -12,7 +12,8 @@ Funciona sem configuração: `npm install && npm run dev` e abre `http://localho
 - Velas, barras OHLC, Heikin Ashi, linha, área, linha de base, colunas e "hollow candles".
 - **Qualquer intervalo**: 1m … 12h, 1D, 1W, 1M e intervalos personalizados (ex.: `7m`, `90m`, `3h`). Escreve o número e carrega Enter.
 - Layouts de 1, 2 (horizontal/vertical), 3 e 4 gráficos com sincronização de símbolo, intervalo e cruz (no replay, todos os gráficos andam no mesmo instante).
-- Escala logarítmica, auto-escala, fuso horário configurável, temas claro e escuro, cores personalizáveis.
+- **Definições do gráfico** como no TradingView: cores do corpo, borda e pavio das velas, linha/área, fundo (cor única ou gradiente), grelha, mira, texto das escalas e marca de água; escala normal, logarítmica, percentagem ou indexada a 100; etiqueta e linha do último preço; **contador de tempo até ao fecho da vela**. Seletor de cores com as tuas cores guardadas, código hex e opacidade.
+- Auto-escala, fuso horário configurável, temas claro e escuro, cores personalizáveis.
 - Lista de observação com preços em tempo real, pesquisa de símbolos (incluindo todos os pares da Binance e o pesquisador do Yahoo), símbolos recentes e favoritos.
 
 ### Ferramentas de desenho (28)
@@ -21,6 +22,10 @@ Linha de tendência, raio, linha de informação, linha estendida, linha com set
 
 - **Favoritos:** estrela nas ferramentas e nos indicadores; barra flutuante de favoritos (arrasta-se) e menu rápido de indicadores favoritos.
 - **Alinhar ângulo:** com Shift ou pelo botão da bússola, as linhas encaixam de 15 em 15° (horizontal, 45°, vertical…) e mostram os graus.
+- **Texto nas linhas:** botão “T” na barra do desenho; posição (início/centro/fim) e por cima/sobre/por baixo da linha, cor, tamanho, negrito e itálico.
+- **Modelos:** guarda o estilo e o texto de um desenho com um nome e volta a usá-lo noutros (“Modelo” → “Guardar como modelo…”).
+- **Visibilidade por intervalo:** mostrar um desenho só em minutos, horas, dias, semanas ou meses.
+- **Copiar/colar** desenhos com Ctrl+C / Ctrl+V.
 - **Telemóvel:** toque mais tolerante, pegas maiores e uma **lupa** (como no MT5) que mostra ampliado o ponto debaixo do dedo.
 
 ### Indicadores (36)
@@ -67,7 +72,7 @@ Notícias de forex, cripto, ações e matérias-primas (RSS públicos) e calend�
 
 ### Planos
 - **Grátis:** replay a partir de 15m, 1 gráfico, 3 indicadores por gráfico e 3 backtests por dia.
-- **Pro** (450 MT/mês, 1200 MT/trimestre, 4500 MT/ano): replay em todos os intervalos, até 4 gráficos, indicadores e backtests sem limite, otimizador, walk-forward e multi-mercado.
+- **Pro** (100 MT/mês, 270 MT/trimestre, 1000 MT/ano): replay em todos os intervalos, até 4 gráficos, indicadores e backtests sem limite, otimizador, walk-forward e multi-mercado.
 - Contas novas têm 7 dias de Pro grátis. Os preços e limites estão em `src/core/plans.ts`.
 - O plano vem do documento `replayx_users/{uid}` no Firestore (só o servidor o escreve). O pagamento é feito pela ZumboPay (M-Pesa, e-Mola, cartão) através das rotas `/api/billing/checkout` e `/api/billing/status`, **que ainda não estão incluídas** — o botão de pagar mostra "pagamentos ainda não estão ativos" até lá.
 

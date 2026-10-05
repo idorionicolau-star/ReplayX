@@ -46,6 +46,8 @@ export interface OverlayHost {
   hint(): { x: number; y: number; text: string } | null;
   /** Ecrã tátil: pegas maiores. */
   coarse(): boolean;
+  /** Tempo até fechar a vela (debaixo da etiqueta do último preço). */
+  countdown(): { y: number; text: string; color: string } | null;
 }
 
 class AxisLabel implements ISeriesPrimitiveAxisView {
@@ -333,6 +335,8 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
       if (t.dragging) add(t.dragging.price, '#787b86');
     }
     for (const a of this.host.alerts()) add(a.price, '#ff9800');
+    const cd = this.host.countdown();
+    if (cd) out.push(new AxisLabel(cd.y, cd.text, cd.color));
     return out;
   }
 

@@ -48,6 +48,13 @@ export interface DrawingStyle {
   textColor?: string;
   fontSize?: number;
   bold?: boolean;
+  italic?: boolean;
+  /** Posição do texto ao longo da linha (ou na caixa). */
+  textAlign?: 'left' | 'center' | 'right';
+  /** Texto por cima, sobre ou por baixo da linha. */
+  textVAlign?: 'top' | 'middle' | 'bottom';
+  /** Intervalos em que o desenho aparece (como "Visibilidade" no TradingView). Vazio/undefined = todos. */
+  visibleOn?: ('m' | 'h' | 'D' | 'W' | 'M')[];
   extendLeft?: boolean;
   extendRight?: boolean;
   showLabel?: boolean;
