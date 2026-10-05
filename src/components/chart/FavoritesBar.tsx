@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Compass, GripVertical, Magnet, X } from 'lucide-react';
+import { Compass, GripVertical, Magnet, Star, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { useDrawings } from '@/store/drawings';
 import { toolDef } from '@/chart/drawings/tools';
@@ -39,6 +39,21 @@ export function FavoritesBar() {
     return () => window.removeEventListener('resize', fit);
   }, [pos, set]);
 
+  // fechada: fica um botão pequeno à vista para a voltar a abrir
+  if (!show && favs.length) {
+    return (
+      <button
+        type="button"
+        aria-label="Mostrar a barra de favoritos"
+        title="Mostrar a barra de favoritos"
+        onClick={() => set({ favoritesBar: true })}
+        className="absolute top-2 left-1/2 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-elev/90 text-warn shadow-sm active:bg-hover"
+        data-testid="favorites-show"
+      >
+        <Star size={15} fill="currentColor" />
+      </button>
+    );
+  }
   if (!show || !favs.length) return null;
   const at = drag ?? pos;
 
@@ -116,7 +131,7 @@ export function FavoritesBar() {
       >
         <Compass size={16} />
       </button>
-      <button type="button" title="Esconder a barra" aria-label="Esconder a barra de favoritos" onClick={() => set({ favoritesBar: false })} className="flex h-8 w-6 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text">
+      <button type="button" title="Esconder a barra (fica uma ⭐ para a voltar a abrir)" aria-label="Esconder a barra de favoritos" onClick={() => set({ favoritesBar: false })} className="flex h-8 w-6 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text">
         <X size={13} />
       </button>
     </div>

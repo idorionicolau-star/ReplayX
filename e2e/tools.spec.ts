@@ -263,3 +263,13 @@ test('com o rato, o modo contínuo mantém a ferramenta ativa', async ({ page })
   const n = await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, { drawings: unknown[] }> }).__rxCharts.values()][0].drawings.length);
   expect(n).toBe(2);
 });
+
+test('fechar a barra de favoritos deixa um botão para a voltar a abrir', async ({ page }) => {
+  await enterAsGuest(page);
+  await expect(page.getByTestId('favorites-bar')).toBeVisible();
+  await page.getByRole('button', { name: 'Esconder a barra de favoritos' }).click();
+  await expect(page.getByTestId('favorites-bar')).toBeHidden();
+  await page.getByTestId('favorites-show').click();
+  await expect(page.getByTestId('favorites-bar')).toBeVisible();
+  await expect(page.getByTestId('favorites-show')).toBeHidden();
+});
