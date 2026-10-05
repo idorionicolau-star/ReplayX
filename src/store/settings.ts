@@ -58,6 +58,8 @@ export interface SettingsState {
   loupePos: LoupePos;
   /** Escala de preços sempre ajustada aos dados à vista. */
   autoFit: boolean;
+  /** Vibração ao rodar o seletor de símbolo/intervalo (Android). */
+  haptics: boolean;
   /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
   hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
@@ -109,6 +111,7 @@ export const useSettings = create<SettingsState>()(
       loupe: true,
       loupePos: 'top-right',
       autoFit: true,
+      haptics: true,
       hideBottomBars: false,
       appearance: DEFAULT_APPEARANCE,
       customColors: [],

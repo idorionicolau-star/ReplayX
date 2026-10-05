@@ -68,6 +68,9 @@ export function SettingsDialog() {
           <Row label="Lupa ao desenhar com o dedo">
             <Switch checked={s.loupe} onChange={(v) => s.set({ loupe: v })} />
           </Row>
+          <Row label="Vibração ao rodar símbolo e intervalo">
+            <Switch checked={s.haptics} onChange={(v) => s.set({ haptics: v })} />
+          </Row>
           <Row label="Posição da lupa">
             <Select className="w-52" value={s.loupePos} onChange={(e) => s.set({ loupePos: e.target.value as LoupePos })} data-testid="loupe-pos">
               <option value="top-right">Canto superior direito</option>

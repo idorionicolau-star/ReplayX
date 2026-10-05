@@ -212,3 +212,39 @@ test('zoom no mínimo: continuar a afastar os dedos não mexe no gráfico e avis
   await page.waitForTimeout(150);
   expect(await range()).toBe(at);
 });
+
+test('seletor em roda: carregar e arrastar no símbolo e no intervalo, sem arrastar abre a pesquisa', async ({ page }) => {
+  await setup(page);
+  const cdp = await page.context().newCDPSession(page);
+  const drag = async (testid: string | null, dyTotal: number) => {
+    const loc = testid ? page.getByTestId(testid) : page.getByTitle(/^Intervalo de tempo/);
+    const b = (await loc.boundingBox())!;
+    const x = b.x + b.width / 2;
+    const y = b.y + b.height / 2;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    const n = 8;
+    for (let i = 1; i <= n; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (dyTotal * i) / n }] });
+    return async () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const sym = () => page.evaluate(`${ctl}.symbol.id`) as Promise<string>;
+  const tf = () => page.evaluate(`${ctl}.tf`) as Promise<string>;
+  const s0 = await sym();
+  // símbolo: arrastar para baixo (o símbolo de teste é o último da lista) recua ~2 itens
+  let release = await drag('symbol-button', 75);
+  await expect(page.getByTestId('wheel-picker')).toBeVisible();
+  await release();
+  await expect(page.getByTestId('wheel-picker')).toBeHidden();
+  await expect.poll(sym).not.toBe(s0);
+  // a pesquisa não abriu (o clique foi suprimido)
+  await expect(page.getByPlaceholder(/Símbolo, nome ou mercado/)).toBeHidden();
+  // intervalo: arrastar para cima muda para um intervalo maior
+  const t0 = await tf();
+  release = await drag(null, -75);
+  await expect(page.getByTestId('wheel-picker')).toBeVisible();
+  await release();
+  await expect.poll(tf).not.toBe(t0);
+  // toque simples abre a pesquisa
+  await page.waitForTimeout(600);
+  await page.getByTestId('symbol-button').tap();
+  await expect(page.getByPlaceholder(/Símbolo, nome ou mercado/)).toBeVisible();
+});

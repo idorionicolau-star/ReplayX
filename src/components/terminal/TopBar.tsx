@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   CandlestickChart,
   ChevronDown,
@@ -48,6 +48,7 @@ import { AssetIcon } from '@/components/chart/AssetIcon';
 import { UserMenu } from './UserMenu';
 import { toast } from '@/components/ui/Toast';
 import { setChartTf, setLayoutGated } from '@/lib/gates';
+import { useWheelPicker, type WheelItem } from '@/components/ui/WheelPicker';
 import { canAddIndicator, openUpgrade, usePlan } from '@/lib/billing';
 import { getIndicator } from '@/core/indicators/registry';
 
@@ -84,6 +85,12 @@ function TimeframeMenu() {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState('');
   const favs = [...favorites].sort(compareTf);
+  const tfItems: WheelItem[] = useMemo(() => {
+    const list = [...STANDARD_TFS] as string[];
+    if (!list.includes(tf)) list.push(tf);
+    return list.sort(compareTf).map((t) => ({ id: t, label: tfLabel(t), hint: tfShort(t) }));
+  }, [tf]);
+  const wheel = useWheelPicker({ items: tfItems, currentId: tf, onSelect: (it) => setTf(it.id, active) });
   const groups: { label: string; items: string[] }[] = [
     { label: 'Minutos', items: STANDARD_TFS.filter((t) => t.endsWith('m')) },
     { label: 'Horas', items: STANDARD_TFS.filter((t) => t.endsWith('h')) },
@@ -108,11 +115,13 @@ function TimeframeMenu() {
           </button>
         ))}
       </div>
+      {wheel.overlay}
       <button
         ref={ref}
         type="button"
+        {...wheel.bind}
         onClick={() => setOpen((o) => !o)}
-        title="Intervalo de tempo"
+        title="Intervalo de tempo (no telemóvel: carregue e arraste para cima/baixo)"
         className={cn('flex h-8 items-center gap-0.5 rounded-md px-1.5 text-[13px] font-medium hover:bg-hover', !favs.includes(tf) && 'text-accent')}
       >
         <span className="md:hidden">{tfShort(tf)}</span>
@@ -228,6 +237,16 @@ export function TopBar() {
   const redo = useDrawings((s) => s.redo);
   const [full, setFull] = useState(false);
   const sym = cfg ? resolveSymbol(cfg.symbolId) : null;
+  const watch = useWorkspace((s) => (s.watchlists.find((w) => w.id === s.activeWatchlist) ?? s.watchlists[0])?.symbols);
+  const symItems: WheelItem[] = useMemo(() => {
+    const ids = [...(watch ?? [])];
+    if (cfg && !ids.includes(cfg.symbolId)) ids.unshift(cfg.symbolId);
+    return ids.map((id) => {
+      const r = resolveSymbol(id);
+      return { id, label: r.name, hint: r.assetClass, icon: <AssetIcon symbol={r} size={18} /> };
+    });
+  }, [watch, cfg]);
+  const symWheel = useWheelPicker({ items: symItems, currentId: cfg?.symbolId ?? '', onSelect: (it) => useWorkspace.getState().setSymbol(it.id, active) });
 
   const screenshot = () => {
     if (!cfg) return;
@@ -259,11 +278,13 @@ export function TopBar() {
       <IconButton label="Ferramentas de desenho" className="sm:hidden" onClick={() => useUi.getState().set({ mobileTools: !useUi.getState().mobileTools })}>
         <MenuIcon size={18} />
       </IconButton>
+      {symWheel.overlay}
       <button
         type="button"
+        {...symWheel.bind}
         onClick={() => useUi.getState().openSymbolSearch('', active)}
         className="flex h-8 shrink-0 items-center gap-2 rounded-md px-2 hover:bg-hover"
-        title="Procurar símbolo (ou comece a escrever no gráfico)"
+        title="Procurar símbolo (no telemóvel: carregue e arraste para cima/baixo para percorrer a lista)"
         data-testid="symbol-button"
       >
         {sym && <AssetIcon symbol={sym} size={18} />}
