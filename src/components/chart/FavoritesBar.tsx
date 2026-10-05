@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { GripVertical, Magnet, Star, X } from 'lucide-react';
+import { GripHorizontal, GripVertical, Magnet, PanelLeft, PanelTop, Star, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
@@ -19,6 +19,7 @@ export function FavoritesBar() {
   const pos = useSettings((s) => s.favoritesBarPos);
   const magnet = useSettings((s) => s.magnet);
   const angleSnap = useSettings((s) => s.angleSnap);
+  const vertical = useSettings((s) => s.favoritesBarVertical);
   const set = useSettings((s) => s.set);
   const tool = useDrawings((s) => s.tool);
   const setTool = useDrawings((s) => s.setTool);
@@ -39,7 +40,7 @@ export function FavoritesBar() {
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
-  }, [pos, set]);
+  }, [pos, vertical, set]);
 
   // fechada: fica um botão pequeno à vista para a voltar a abrir
   if (!show && favs.length) {
@@ -89,12 +90,12 @@ export function FavoritesBar() {
   return (
     <div
       ref={ref}
-      className={cn('absolute z-20 flex items-center gap-0.5 rounded-lg border border-line bg-elev/95 p-0.5 shadow-pop backdrop-blur no-select', !at && 'top-2 left-1/2 -translate-x-1/2')}
+      className={cn('absolute z-20 flex items-center gap-0.5 rounded-lg border border-line bg-elev/95 p-0.5 shadow-pop backdrop-blur no-select', vertical && 'max-h-[calc(100%-16px)] flex-col overflow-y-auto', !at && (vertical ? 'top-2 left-2' : 'top-2 left-1/2 -translate-x-1/2'))}
       style={at ? { left: at.x, top: at.y } : undefined}
       data-testid="favorites-bar"
     >
-      <span onPointerDown={onGrip} className="flex h-8 w-5 cursor-grab touch-none items-center justify-center text-faint active:cursor-grabbing" title="Arrastar">
-        <GripVertical size={14} />
+      <span onPointerDown={onGrip} className={cn('flex shrink-0 cursor-grab touch-none items-center justify-center text-faint active:cursor-grabbing', vertical ? 'h-5 w-8' : 'h-8 w-5')} title="Arrastar">
+        {vertical ? <GripHorizontal size={14} /> : <GripVertical size={14} />}
       </span>
       {favs.map((t) => {
         const I = TOOL_ICONS[t];
@@ -113,7 +114,7 @@ export function FavoritesBar() {
           </button>
         );
       })}
-      <span className="mx-0.5 h-5 w-px bg-line" />
+      <span className={cn('shrink-0 bg-line', vertical ? 'my-0.5 h-px w-5' : 'mx-0.5 h-5 w-px')} />
       <SavedElements className="h-8 w-8" size={16} placement="bottom-start" />
       <button
         type="button"
@@ -134,7 +135,17 @@ export function FavoritesBar() {
       >
         <AngleIcon size={16} />
       </button>
-      <button type="button" title="Esconder a barra (fica uma ⭐ para a voltar a abrir)" aria-label="Esconder a barra de favoritos" onClick={() => set({ favoritesBar: false })} className="flex h-8 w-6 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text">
+      <button
+        type="button"
+        title={vertical ? 'Barra na horizontal' : 'Barra na vertical'}
+        aria-label={vertical ? 'Barra na horizontal' : 'Barra na vertical'}
+        onClick={() => set({ favoritesBarVertical: !vertical })}
+        className={cn('flex shrink-0 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text', vertical ? 'h-8 w-8' : 'h-8 w-6')}
+        data-testid="favorites-orient"
+      >
+        {vertical ? <PanelTop size={14} /> : <PanelLeft size={14} />}
+      </button>
+      <button type="button" title="Esconder a barra (fica uma ⭐ para a voltar a abrir)" aria-label="Esconder a barra de favoritos" onClick={() => set({ favoritesBar: false })} className={cn('flex shrink-0 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text', vertical ? 'h-6 w-8' : 'h-8 w-6')}>
         <X size={13} />
       </button>
     </div>

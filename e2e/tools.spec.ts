@@ -341,3 +341,20 @@ test('legenda dos indicadores acompanha os painéis e o nome abre as ações (re
   await expect(page.getByTestId('indicator-name')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+test('barra de favoritos pode ficar na vertical', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  const bar = page.getByTestId('favorites-bar');
+  const h = (await bar.boundingBox())!;
+  expect(h.width).toBeGreaterThan(h.height);
+  await page.getByTestId('favorites-orient').click();
+  const v = (await bar.boundingBox())!;
+  expect(v.height).toBeGreaterThan(v.width);
+  // a escolha fica guardada
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('rx-settings') || '{}').state?.favoritesBarVertical)).toBe(true);
+  await page.getByTestId('favorites-orient').click();
+  const back = (await bar.boundingBox())!;
+  expect(back.width).toBeGreaterThan(back.height);
+});
