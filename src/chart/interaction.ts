@@ -315,6 +315,8 @@ export class Interaction {
   private onPinchDown = (e: PointerEvent) => {
     if (e.pointerType !== 'touch') return;
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // rede de segurança: um dedo sozinho com tudo parado tem de poder mover o gráfico
+    if (this.touches.size === 1 && this.mode.kind === 'idle' && !this.cb.replaySelecting()) this.setScroll(true);
     if (this.touches.size !== 2) return;
     // segundo dedo: deixa de desenhar/arrastar e passa a fazer zoom
     this.cancel();
@@ -360,10 +362,14 @@ export class Interaction {
 
   private onPinchUp = (e: PointerEvent) => {
     this.touches.delete(e.pointerId);
-    if (this.touches.size >= 2 || !this.pinch) return;
+    if (this.touches.size >= 2) return;
+    // a pinça acaba quando sobra menos de dois dedos; o movimento só volta quando já não há nenhum dedo
+    // (antes só voltava se o último dedo saísse a meio de uma pinça: com os dedos a sair um de cada vez ficava preso)
     this.pinch = null;
-    this.capturing = false;
-    if (this.touches.size === 0) this.setScroll(true);
+    if (this.touches.size === 0 && this.mode.kind === 'idle') {
+      this.capturing = false;
+      this.setScroll(true);
+    }
   };
 
   private onDown = (e: PointerEvent) => {

@@ -131,3 +131,28 @@ test('replay no telemóvel: arrastar a linha, ajuste fino e confirmar', async ({
   expect(cursor).toBe(p2.t + 900);
   expect(errors).toEqual([]);
 });
+
+test('depois do zoom com dois dedos, um dedo volta a mover o gráfico (dedos a sair um de cada vez)', async ({ page }) => {
+  await setup(page);
+  const { send } = await touch(page);
+  const range = () => page.evaluate(`(() => { const r = ${ctl}.chart.timeScale().getVisibleLogicalRange(); return { from: r.from, to: r.to }; })()`) as Promise<{ from: number; to: number }>;
+  const A = (x: number) => ({ x, y: 300 });
+  // zoom com os dedos a sair um de cada vez (o normal numa mão real)
+  await send('touchStart', [A(150), A(250)]);
+  for (let i = 1; i <= 10; i++) await send('touchMove', [A(150 - i * 3), A(250 + i * 3)]);
+  await send('touchEnd', [A(120)]); // levanta o 2.º dedo, o 1.º continua
+  await send('touchEnd', []); // levanta o 1.º
+  const before = await range();
+  // um dedo arrasta o gráfico para a direita: tem de mostrar barras mais antigas
+  await send('touchStart', [A(120)]);
+  for (let i = 1; i <= 10; i++) await send('touchMove', [A(120 + i * 15)]);
+  await send('touchEnd', []);
+  const after = await range();
+  expect(before.from - after.from).toBeGreaterThan(2);
+  // e o inverso também (para cima/baixo não muda a escala de preços fixa, mas o arrasto horizontal funciona sempre)
+  await send('touchStart', [A(300)]);
+  for (let i = 1; i <= 10; i++) await send('touchMove', [A(300 - i * 15)]);
+  await send('touchEnd', []);
+  const back = await range();
+  expect(back.from).toBeGreaterThan(after.from + 2);
+});
