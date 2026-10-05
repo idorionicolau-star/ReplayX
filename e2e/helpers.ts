@@ -8,7 +8,9 @@ export async function enterAsGuest(page: Page) {
 }
 
 export async function chooseSymbol(page: Page, query: string, id: string) {
-  await page.click('[data-testid=symbol-button]');
+  // no telemóvel o símbolo está na faixa de baixo
+  const mobile = !(await page.locator('[data-testid=symbol-button]').isVisible());
+  await page.click(mobile ? '[data-testid=mobile-symbol]' : '[data-testid=symbol-button]');
   await page.fill('[data-testid=symbol-search-input]', query);
   await page.click(`[data-testid="symbol-row-${id}"]`);
 }

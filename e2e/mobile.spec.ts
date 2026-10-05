@@ -213,11 +213,11 @@ test('zoom no mínimo: continuar a afastar os dedos não mexe no gráfico e avis
   expect(await range()).toBe(at);
 });
 
-test('seletor em roda: carregar e arrastar no símbolo e no intervalo, sem arrastar abre a pesquisa', async ({ page }) => {
+test('faixa de baixo: roda de símbolo e intervalo com arrasto; toque abre a pesquisa', async ({ page }) => {
   await setup(page);
   const cdp = await page.context().newCDPSession(page);
   const drag = async (testid: string | null, dyTotal: number) => {
-    const loc = testid ? page.getByTestId(testid) : page.getByTitle(/^Intervalo de tempo/);
+    const loc = page.getByTestId(testid ?? 'mobile-tf');
     const b = (await loc.boundingBox())!;
     const x = b.x + b.width / 2;
     const y = b.y + b.height / 2;
@@ -228,9 +228,12 @@ test('seletor em roda: carregar e arrastar no símbolo e no intervalo, sem arras
   };
   const sym = () => page.evaluate(`${ctl}.symbol.id`) as Promise<string>;
   const tf = () => page.evaluate(`${ctl}.tf`) as Promise<string>;
+  // a faixa de baixo existe e o botão do símbolo da barra de cima fica escondido no telemóvel
+  await expect(page.getByTestId('mobile-strip')).toBeVisible();
+  await expect(page.getByTestId('symbol-button')).toBeHidden();
   const s0 = await sym();
   // símbolo: arrastar para baixo (o símbolo de teste é o último da lista) recua ~2 itens
-  let release = await drag('symbol-button', 75);
+  let release = await drag('mobile-symbol', 75);
   await expect(page.getByTestId('wheel-picker')).toBeVisible();
   await release();
   await expect(page.getByTestId('wheel-picker')).toBeHidden();
@@ -245,6 +248,12 @@ test('seletor em roda: carregar e arrastar no símbolo e no intervalo, sem arras
   await expect.poll(tf).not.toBe(t0);
   // toque simples abre a pesquisa
   await page.waitForTimeout(600);
-  await page.getByTestId('symbol-button').tap();
+  await page.getByTestId('mobile-symbol').tap();
   await expect(page.getByPlaceholder(/Símbolo, nome ou mercado/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+  // toque no intervalo abre a grelha de intervalos
+  await page.getByTestId('mobile-tf').tap();
+  await page.locator('div.grid-cols-4 button[title="1 hora"]').tap();
+  await expect.poll(tf).toBe('1h');
 });

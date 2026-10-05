@@ -103,7 +103,8 @@ function Wheel({ items, index, rect }: { items: WheelItem[]; index: number; rect
   const width = 210;
   const height = ROW * 5;
   const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left));
-  const top = Math.min(window.innerHeight - height - 12, rect.bottom + 10);
+  // por baixo do botão; se não couber (faixa em baixo no telemóvel), por cima
+  const top = rect.bottom + 10 + height > window.innerHeight - 8 ? Math.max(8, rect.top - height - 10) : rect.bottom + 10;
   return (
     <div className="pointer-events-none fixed inset-0 z-[200]" data-testid="wheel-picker">
       <div className="absolute rounded-2xl border border-line bg-elev/90 shadow-pop backdrop-blur-md" style={{ left, top, width, height, overflow: 'hidden' }}>

@@ -27,6 +27,7 @@ import { ChartContextMenu } from './ChartContextMenu';
 import { TfQuickInput } from './TfQuickInput';
 import { useAlertMonitor } from './useAlertMonitor';
 import { ReplayBar } from '@/components/replay/ReplayBar';
+import { MobileStrip } from './MobileStrip';
 import { SymbolSearch } from '@/components/dialogs/SymbolSearch';
 import { IndicatorsDialog } from '@/components/dialogs/IndicatorsDialog';
 import { IndicatorSettings } from '@/components/dialogs/IndicatorSettings';
@@ -216,6 +217,7 @@ export function Terminal() {
         <RightPanel />
         <RightIconBar />
       </div>
+      {!hideBottom && <MobileStrip />}
       {!hideBottom && <MobileNav />}
       <SymbolSearch />
       <IndicatorsDialog />
