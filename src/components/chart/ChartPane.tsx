@@ -48,7 +48,7 @@ export function ChartPane({ index }: { index: number }) {
   const [ctrl, setCtrl] = useState<ChartController | null>(null);
   const [status, setStatus] = useState<ChartStatus>({ state: 'idle' });
   const [legend, setLegend] = useState<CrosshairInfo | null>(null);
-  const [panes, setPanes] = useState<number[]>([]);
+  const [panes, setPanes] = useState<{ top: number; height: number }[]>([]);
   const [barsVersion, setBarsVersion] = useState(0);
 
   const symbolId = cfg?.symbolId;

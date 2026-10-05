@@ -1,6 +1,8 @@
 'use client';
-import { memo } from 'react';
-import { Bell, Eye, EyeOff, Settings2, X } from 'lucide-react';
+import { memo, useRef, useState } from 'react';
+import { Bell, Eye, EyeOff, Settings2, Trash2, X } from 'lucide-react';
+import { Popover } from '@/components/ui/Popover';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
 import type { ChartController, ChartStatus, CrosshairInfo, LegendIndicator } from '@/chart/controller';
 import type { SymbolInfo } from '@/core/types';
 import { PROVIDER_LABEL } from '@/core/symbols';
@@ -15,9 +17,33 @@ import { AssetIcon } from './AssetIcon';
 function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
   const update = useWorkspace((s) => s.updateIndicator);
   const remove = useWorkspace((s) => s.removeIndicator);
+  const nameRef = useRef<HTMLButtonElement>(null);
+  const [menu, setMenu] = useState(false);
+  const act = (fn: () => void) => () => {
+    setMenu(false);
+    fn();
+  };
   return (
     <div className="group pointer-events-auto flex h-[22px] w-fit max-w-full items-center gap-1.5 rounded px-1 hover:bg-elev/90">
-      <span className={cn('truncate', ind.hidden ? 'text-faint' : 'text-text')}>{ind.label}</span>
+      {/* tocar no nome abre as ações (no telemóvel não há "passar o rato") */}
+      <button ref={nameRef} type="button" aria-label={`Opções de ${ind.label}`} onClick={() => setMenu((o) => !o)} className={cn('truncate text-left', ind.hidden ? 'text-faint' : 'text-text')} data-testid="indicator-name">
+        {ind.label}
+      </button>
+      <Popover anchor={nameRef} open={menu} onClose={() => setMenu(false)} placement="bottom-start">
+        <MenuList className="w-[220px]">
+          <MenuItem icon={ind.hidden ? <Eye size={15} /> : <EyeOff size={15} />} label={ind.hidden ? 'Mostrar' : 'Ocultar'} onClick={act(() => update(ind.uid, { hidden: !ind.hidden }, index))} />
+          <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } }))} />
+          <MenuItem
+            icon={<Bell size={15} />}
+            label="Adicionar alerta…"
+            onClick={act(() => {
+              const c = useWorkspace.getState().charts[index];
+              if (c) useUi.getState().set({ alertDraft: { symbolId: c.symbolId, indicatorUid: ind.uid } });
+            })}
+          />
+          <MenuItem icon={<Trash2 size={15} />} label="Remover indicador" danger onClick={act(() => remove(ind.uid, index))} />
+        </MenuList>
+      </Popover>
       {ind.error ? (
         <span className="text-down" title={ind.error}>
           erro
@@ -57,7 +83,7 @@ function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
   );
 }
 
-function LegendImpl({ index, symbol, tf, info, panes, ctrl, status }: { index: number; symbol: SymbolInfo; tf: string; info: CrosshairInfo | null; panes: number[]; ctrl: ChartController | null; status: ChartStatus }) {
+function LegendImpl({ index, symbol, tf, info, panes, ctrl, status }: { index: number; symbol: SymbolInfo; tf: string; info: CrosshairInfo | null; panes: { top: number; height: number }[]; ctrl: ChartController | null; status: ChartStatus }) {
   const replayOn = useReplay((s) => s.active && !s.selecting && s.cursor !== null);
   const bar = info?.bar;
   const prec = symbol.precision;
@@ -67,12 +93,7 @@ function LegendImpl({ index, symbol, tf, info, panes, ctrl, status }: { index: n
   const color = change >= 0 ? 'text-up' : 'text-down';
   const inds = info?.indicators ?? [];
   const main = inds.filter((i) => i.pane === 0);
-  const tops: number[] = [];
-  let acc = 0;
-  for (let i = 0; i < panes.length; i++) {
-    tops.push(acc);
-    acc += panes[i] + 1;
-  }
+  const tops = panes.map((p) => p.top);
   void ctrl;
 
   return (

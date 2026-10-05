@@ -273,3 +273,57 @@ test('fechar a barra de favoritos deixa um botão para a voltar a abrir', async 
   await expect(page.getByTestId('favorites-bar')).toBeVisible();
   await expect(page.getByTestId('favorites-show')).toBeHidden();
 });
+
+test('legenda dos indicadores acompanha os painéis e o nome abre as ações (remover)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=right-tab-watchlist]');
+  // tira as médias que já vêm no gráfico (o plano grátis só deixa 3 indicadores) pelo menu do nome
+  for (let i = 0; i < 2; i++) {
+    await page.getByTestId('indicator-name').first().click();
+    await page.getByRole('button', { name: 'Remover indicador' }).click();
+  }
+  await expect(page.getByTestId('indicator-name')).toHaveCount(0);
+  // dois indicadores de painel próprio
+  await page.click('[data-testid=indicators-button]');
+  await page.getByPlaceholder('Procurar indicador').fill('Estocástico');
+  await page.getByTestId('indicator-stoch').click();
+  await page.getByTestId('indicator-stoch').click();
+  await page.keyboard.press('Escape');
+
+  type P = { getHeight(): number; getHTMLElement(): HTMLElement | null; setStretchFactor(n: number): void };
+  const geometry = () =>
+    page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, { container: HTMLElement; chart: { panes(): P[] } }> }).__rxCharts.values()][0];
+      const base = c.container.getBoundingClientRect().top;
+      const panes = c.chart.panes().map((p) => Math.round(p.getHTMLElement()!.getBoundingClientRect().top - base));
+      const labels = [...document.querySelectorAll('[data-testid=indicator-name]')].map((e) => Math.round(e.getBoundingClientRect().top - base));
+      return { panes, labels };
+    });
+  await expect.poll(async () => (await geometry()).labels.length).toBe(2);
+  const g0 = await geometry();
+  // cada etiqueta fica no topo do seu painel (painéis 1 e 2)
+  expect(Math.abs(g0.labels[0] - g0.panes[1])).toBeLessThan(14);
+  expect(Math.abs(g0.labels[1] - g0.panes[2])).toBeLessThan(14);
+
+  // muda a altura do 1.º painel de indicadores sem mexer na janela: a etiqueta do 2.º tem de acompanhar
+  await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { chart: { panes(): P[] } }> }).__rxCharts.values()][0];
+    c.chart.panes()[1].setStretchFactor(4);
+  });
+  await expect
+    .poll(async () => {
+      const g = await geometry();
+      return Math.abs(g.labels[1] - g.panes[2]) < 14 && g.panes[2] !== g0.panes[2];
+    })
+    .toBe(true);
+
+  // tocar no nome abre as ações; remover tira o indicador
+  await page.getByTestId('indicator-name').first().click();
+  await page.getByRole('button', { name: 'Remover indicador' }).click();
+  await expect(page.getByTestId('indicator-name')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});

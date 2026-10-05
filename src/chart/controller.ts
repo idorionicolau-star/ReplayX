@@ -90,7 +90,7 @@ export interface ScriptIndicatorResult {
 export interface ChartCallbacks {
   onStatus(s: ChartStatus): void;
   onLegend(info: CrosshairInfo): void;
-  onPanes(heights: number[]): void;
+  onPanes(layout: { top: number; height: number }[]): void;
   /** Os dados visíveis mudaram (para scripts/estratégias recalcularem). */
   onBars?(bars: readonly Bar[]): void;
   /** Cursor atual do replay (null = tempo real). */
@@ -208,6 +208,9 @@ export class ChartController {
     this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.onRange);
     this.resizeObs = new ResizeObserver(() => this.emitPanes());
     this.resizeObs.observe(container);
+    // arrastar o separador entre painéis também reposiciona as etiquetas
+    container.addEventListener('pointermove', this.onPaneDrag);
+    container.addEventListener('pointerup', this.onPaneDrag);
     // o contador da vela anda de segundo a segundo
     this.countdownTimer = setInterval(() => {
       if (this.theme.appearance.countdown && this.cursor === null && this.bars.length) this.overlay.update();
@@ -984,13 +987,40 @@ export class ChartController {
     this.emitPanes();
   }
 
+  private onPaneDrag = (e: PointerEvent) => {
+    if (e.type === 'pointerup' || e.buttons) this.emitPanes();
+  };
+
+  private paneRaf = 0;
+  private paneKey = '';
+  private observedPanes = new Set<Element>();
+
+  /** Posição e altura reais de cada painel (medidas no ecrã), para a legenda acompanhar quando os painéis mudam. */
   private emitPanes() {
-    try {
-      const panes = this.chart.panes();
-      this.cb.onPanes(panes.map((p) => p.getHeight()));
-    } catch {
-      /* gráfico removido */
-    }
+    if (this.paneRaf) return;
+    this.paneRaf = requestAnimationFrame(() => {
+      this.paneRaf = 0;
+      if (this.destroyed) return;
+      try {
+        const panes = this.chart.panes();
+        const base = this.container.getBoundingClientRect().top;
+        const layout = panes.map((p) => {
+          const el = p.getHTMLElement();
+          if (el && !this.observedPanes.has(el)) {
+            // quando um painel muda de altura (arrastar o separador, novo indicador…) volta a medir
+            this.observedPanes.add(el);
+            this.resizeObs?.observe(el);
+          }
+          return { top: el ? Math.round(el.getBoundingClientRect().top - base) : 0, height: p.getHeight() };
+        });
+        const key = JSON.stringify(layout);
+        if (key === this.paneKey) return;
+        this.paneKey = key;
+        this.cb.onPanes(layout);
+      } catch {
+        /* gráfico removido */
+      }
+    });
   }
 
   private indTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1349,6 +1379,9 @@ export class ChartController {
     if (this.indTimer) clearTimeout(this.indTimer);
     if (this.markerTimer) clearTimeout(this.markerTimer);
     this.resizeObs?.disconnect();
+    this.container.removeEventListener('pointermove', this.onPaneDrag);
+    this.container.removeEventListener('pointerup', this.onPaneDrag);
+    if (this.paneRaf) cancelAnimationFrame(this.paneRaf);
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     try {
       this.chart.remove();

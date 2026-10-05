@@ -37,6 +37,8 @@ Linha de tendência, raio, linha de informação, linha estendida, linha com set
 ### Indicadores (36)
 Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner, Donchian, VWAP, Supertrend, Parabolic SAR, Ichimoku, ZigZag, Regressão linear, Pivots, Fractais, Volume, RSI, MACD, Estocástico, Stoch RSI, CCI, Williams %R, ADX/DMI, ATR, Desvio padrão, Largura de Bollinger, Momentum, ROC, Awesome Oscillator, TRIX, Aroon, OBV, MFI, CMF e mais. Todos com parâmetros, cores e painéis próprios.
 
+A legenda de cada indicador fica no topo do seu painel e acompanha quando mudas a altura dos painéis. **Toca (ou clica) no nome** para abrir as ações: ocultar, definições, adicionar alerta e remover.
+
 ### Bar Replay
 - Escolhe o ponto de partida clicando no gráfico, por data, ou ao acaso.
 - Avançar/recuar barra a barra, reprodução automática com várias velocidades, "avançar por" um intervalo diferente do gráfico (ex.: gráfico em 1h, avançar de 5 em 5 minutos).
