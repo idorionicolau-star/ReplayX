@@ -130,7 +130,21 @@ export const useDrawings = create<DrawingsState>()(
     },
     {
       name: 'rx-drawings',
-      version: 1,
+      version: 2,
+      // sem isto, mudar a versão apagava os desenhos já guardados
+      migrate: (persisted) => persisted as DrawingsState,
+      // dados guardados antes: tirar o texto que ficou preso no "último estilo"
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<DrawingsState>;
+        const lastStyle: DrawingsState['lastStyle'] = {};
+        for (const [k, v] of Object.entries(p.lastStyle ?? {})) {
+          const { text: _t, visibleOn: _v, ...rest } = (v ?? {}) as Partial<DrawingStyle>;
+          void _t;
+          void _v;
+          lastStyle[k as ToolId] = rest;
+        }
+        return { ...current, ...p, lastStyle };
+      },
       partialize: (s) => ({ bySymbol: s.bySymbol, lastStyle: s.lastStyle, locked: s.locked, hidden: s.hidden, updatedAt: s.updatedAt }) as unknown as DrawingsState,
     },
   ),

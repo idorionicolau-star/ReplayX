@@ -217,3 +217,34 @@ test('barra de baixo: períodos, navegação, "+" do preço e ir para data', asy
   await expect(page.getByTestId('replay-bar')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('texto antigo guardado no navegador não aparece em linhas novas', async ({ page }) => {
+  // simula o que ficou guardado de uma versão anterior: o "último estilo" da linha de tendência com texto
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('rx-drawings')) {
+      localStorage.setItem('rx-drawings', JSON.stringify({ state: { bySymbol: { 'DEMO:SIMFX': [{ id: 'old1', type: 'hline', points: [{ time: Math.floor(Date.now() / 1000) - 3600, price: 1.2 }], style: { color: '#00ff00', width: 1, dash: 0, text: 'guardada' }, createdAt: 1 }] }, lastStyle: { trendline: { color: '#ff0000', text: 'olá', visibleOn: ['h'] } }, locked: false, hidden: false, updatedAt: 0 }, version: 1 }));
+    }
+  });
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=right-tab-watchlist]');
+  for (let i = 0; i < 2; i++) {
+    await page.click('[data-testid=tool-trendline]');
+    await page.mouse.click(300, 500 - i * 120);
+    await page.mouse.click(700, 400 - i * 120);
+    await page.keyboard.press('Escape');
+  }
+  const ds = await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { drawings: { style: { text?: string; color: string; visibleOn?: string[] } }[] }> }).__rxCharts.values()][0];
+    return c.drawings.map((d) => ({ text: d.style.text ?? null, color: d.style.color, visibleOn: d.style.visibleOn ?? null }));
+  });
+  // o desenho guardado antes continua lá (com o seu texto) e os dois novos saem sem texto
+  expect(ds).toHaveLength(3);
+  expect(ds[0].text).toBe('guardada');
+  for (const d of ds.slice(1)) {
+    expect(d.text).toBeNull();
+    expect(d.visibleOn).toBeNull();
+    expect(d.color).toBe('#ff0000'); // a cor continua a ser lembrada
+  }
+});

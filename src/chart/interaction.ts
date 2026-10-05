@@ -355,7 +355,11 @@ export class Interaction {
   }
 
   private newDrawing(def: ToolDef, pt: PricePoint): Drawing {
-    const style: DrawingStyle = { ...def.style, ...this.cb.lastStyle(def.id) };
+    // o texto e a visibilidade são de cada desenho: nunca passam do último para o próximo
+    const { text: _t, visibleOn: _v, ...last } = this.cb.lastStyle(def.id);
+    void _t;
+    void _v;
+    const style: DrawingStyle = { ...def.style, ...last };
     if (def.style.levels && !style.levels) style.levels = def.style.levels;
     return { id: uid('d'), type: def.id, points: [pt], style, createdAt: Date.now() };
   }

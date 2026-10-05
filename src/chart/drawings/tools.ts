@@ -157,7 +157,7 @@ function fontOf(s: DrawingStyle) {
  * Texto ao longo do segmento a→b (rodado com a linha, sempre legível), com alinhamento (esquerda/centro/direita)
  * e posição (por cima, sobre ou por baixo da linha). Suporta várias linhas.
  */
-function segmentText(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, s: DrawingStyle, def: { align: 'left' | 'center' | 'right'; valign: 'top' | 'middle' | 'bottom'; size?: number }) {
+function segmentText(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, s: DrawingStyle, def: { align: 'left' | 'center' | 'right'; valign: 'top' | 'middle' | 'bottom'; size?: number }, dark = true) {
   if (!s.text) return;
   const size = s.fontSize ?? def.size ?? 13;
   let p0 = a;
@@ -186,9 +186,9 @@ function segmentText(ctx: CanvasRenderingContext2D, a: Pt, b: Pt, s: DrawingStyl
     if (valign === 'middle') {
       // sobre a linha: contorno para se ler por cima do traço
       ctx.save();
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(19,23,34,0.75)';
+      ctx.strokeStyle = dark ? 'rgba(19,23,34,0.9)' : 'rgba(255,255,255,0.95)';
       ctx.strokeText(l, along, top + i * lh);
       ctx.restore();
     }
@@ -284,7 +284,7 @@ function trendFamily(id: ToolId, label: string, extras: Partial<DrawingStyle>, o
           { bg: vp.dark ? 'rgba(30,34,45,0.92)' : 'rgba(255,255,255,0.95)', fg: vp.dark ? '#d1d4dc' : '#131722', align: 'left', valign: 'middle', border: d.style.color },
         );
       }
-      segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' });
+      segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' }, vp.dark);
     },
     hit(d, vp, p) {
       const pts = allXY(d, vp);
@@ -309,7 +309,7 @@ const hline: ToolDef = {
     if (y === null) return;
     stroke(ctx, d.style, sel);
     line(ctx, { x: 0, y }, { x: vp.width, y });
-    segmentText(ctx, { x: 0, y }, { x: vp.width, y }, d.style, { align: 'right', valign: 'top', size: 12 });
+    segmentText(ctx, { x: 0, y }, { x: vp.width, y }, d.style, { align: 'right', valign: 'top', size: 12 }, vp.dark);
   },
   hit(d, vp, p) {
     const y = vp.priceToY(d.points[0].price);
@@ -336,7 +336,7 @@ const hray: ToolDef = {
     if (!p) return;
     stroke(ctx, d.style, sel);
     line(ctx, p, { x: vp.width + 10, y: p.y });
-    segmentText(ctx, p, { x: Math.max(p.x + 1, vp.width), y: p.y }, d.style, { align: 'left', valign: 'top', size: 12 });
+    segmentText(ctx, p, { x: Math.max(p.x + 1, vp.width), y: p.y }, d.style, { align: 'left', valign: 'top', size: 12 }, vp.dark);
   },
   hit(d, vp, p) {
     const a = xy(d, 0, vp);
@@ -358,7 +358,7 @@ const vline: ToolDef = {
     if (x === null) return;
     stroke(ctx, d.style, sel);
     line(ctx, { x, y: 0 }, { x, y: vp.height });
-    segmentText(ctx, { x, y: vp.height }, { x, y: 0 }, d.style, { align: 'left', valign: 'top', size: 12 });
+    segmentText(ctx, { x, y: vp.height }, { x, y: 0 }, d.style, { align: 'left', valign: 'top', size: 12 }, vp.dark);
   },
   hit(d, vp, p) {
     const x = vp.timeToX(d.points[0].time);
@@ -420,7 +420,7 @@ const channel: ToolDef = {
     }
     stroke(ctx, d.style, sel);
     line(ctx, s1, e1);
-    segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' });
+    segmentText(ctx, a, b, d.style, { align: 'center', valign: 'top' }, vp.dark);
     if (pts[2]) {
       line(ctx, s2, e2);
       ctx.save();
