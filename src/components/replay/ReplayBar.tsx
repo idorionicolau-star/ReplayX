@@ -1,6 +1,6 @@
 'use client';
-import { useRef, useState } from 'react';
-import { ChevronDown, Pause, Play, SkipBack, SkipForward, X, Save, CalendarDays, Shuffle, MousePointerClick, Gauge, Clock3, PauseCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Pause, Play, SkipBack, SkipForward, X, Save, CalendarDays, Shuffle, MousePointerClick, Gauge, Clock3, PauseCircle, GripVertical } from 'lucide-react';
 import { replay, SPEEDS, useReplay } from '@/replay/engine';
 import { useWorkspace } from '@/store/workspace';
 import { useSettings } from '@/store/settings';
@@ -35,6 +35,59 @@ export function ReplayBar() {
   const speedRef = useRef<HTMLButtonElement>(null);
   const stepRef = useRef<HTMLButtonElement>(null);
   const [menu, setMenu] = useState<'select' | 'speed' | 'step' | null>(null);
+  const pos = useSettings((s) => s.replayBarPos);
+  const setSettings = useSettings((s) => s.set);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
+  const shown = st.active && !st.selecting && st.cursor !== null && !!cfg;
+
+  // mantém a barra dentro da área quando a janela muda de tamanho
+  useEffect(() => {
+    if (!pos || !shown) return;
+    const fit = () => {
+      const el = barRef.current;
+      const parent = wrapRef.current?.parentElement;
+      if (!el || !parent) return;
+      const x = Math.max(0, Math.min(parent.clientWidth - el.offsetWidth, pos.x));
+      const y = Math.max(0, Math.min(parent.clientHeight - el.offsetHeight, pos.y));
+      if (x !== pos.x || y !== pos.y) setSettings({ replayBarPos: { x, y } });
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [pos, shown, setSettings]);
+
+  const onGrip = (e: React.PointerEvent) => {
+    const el = barRef.current;
+    const parent = wrapRef.current?.parentElement;
+    if (!el || !parent) return;
+    e.preventDefault();
+    const pr = parent.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const dx = e.clientX - r.left;
+    const dy = e.clientY - r.top;
+    let last = { x: r.left - pr.left, y: r.top - pr.top };
+    let moved = false;
+    const move = (ev: PointerEvent) => {
+      moved = true;
+      last = {
+        x: Math.max(0, Math.min(pr.width - r.width, ev.clientX - pr.left - dx)),
+        y: Math.max(0, Math.min(pr.height - r.height, ev.clientY - pr.top - dy)),
+      };
+      setDrag(last);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      setDrag(null);
+      if (moved) setSettings({ replayBarPos: last });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
 
   if (!st.active || st.selecting || st.cursor === null || !cfg) return null;
   const sym = resolveSymbol(cfg.symbolId);
@@ -50,9 +103,24 @@ export function ReplayBar() {
     submitOrder({ symbolId: cfg.symbolId, side, type: 'market', qty: defaultQty });
   };
 
+  const at = drag ?? pos;
+
   return (
-    <div className="pointer-events-none absolute right-0 bottom-[38px] left-0 z-30 flex justify-center px-2">
-      <div className="pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-elev/97 px-1.5 py-1 shadow-pop no-select" data-testid="replay-bar">
+    <div
+      ref={wrapRef}
+      className={cn('absolute z-30', at ? 'max-w-[calc(100%-8px)]' : 'pointer-events-none right-0 bottom-[38px] left-0 flex justify-center px-2')}
+      style={at ? { left: at.x, top: at.y } : undefined}
+    >
+      <div ref={barRef} className="pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-elev/97 px-1.5 py-1 shadow-pop no-select" data-testid="replay-bar">
+        <span
+          onPointerDown={onGrip}
+          onDoubleClick={() => setSettings({ replayBarPos: null })}
+          className="flex h-8 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-faint active:cursor-grabbing"
+          title="Arrastar a barra (duplo toque para a repor em baixo)"
+          data-testid="replay-grip"
+        >
+          <GripVertical size={15} />
+        </span>
         <button ref={selRef} type="button" onClick={() => setMenu(menu === 'select' ? null : 'select')} className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] hover:bg-hover" title="Escolher ponto de partida">
           <MousePointerClick size={16} className="text-accent" />
           <span className="hidden md:inline">Selecionar</span>

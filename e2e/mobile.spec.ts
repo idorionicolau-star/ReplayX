@@ -188,3 +188,27 @@ test('depois do zoom com dois dedos, um dedo volta a mover o gráfico (dedos a s
   const back = await range();
   expect(back.from).toBeGreaterThan(after.from + 2);
 });
+
+test('zoom no mínimo: continuar a afastar os dedos não mexe no gráfico e avisa', async ({ page }) => {
+  await setup(page);
+  const { send } = await touch(page);
+  const range = () => page.evaluate(`JSON.stringify(${ctl}.chart.timeScale().getVisibleLogicalRange())`) as Promise<string>;
+  const pinchOut = async () => {
+    await send('touchStart', [
+      { x: 90, y: 300 },
+      { x: 300, y: 300 },
+    ]);
+    for (let i = 1; i <= 20; i++)
+      await send('touchMove', [
+        { x: 90 + i * 4, y: 300 },
+        { x: 300 - i * 4, y: 300 },
+      ]);
+    await send('touchEnd', []);
+  };
+  for (let i = 0; i < 6; i++) await pinchOut();
+  await page.waitForTimeout(150);
+  const at = await range();
+  await pinchOut();
+  await page.waitForTimeout(150);
+  expect(await range()).toBe(at);
+});

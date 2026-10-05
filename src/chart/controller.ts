@@ -120,6 +120,11 @@ let chartSeq = 0;
 
 
 /** Ecrã tátil como meio principal (telemóvel, tablet). */
+/** Menor espaço entre barras (zoom máximo para fora). */
+export const MIN_BAR_SPACING = 0.5;
+/** Menor número de barras visíveis (zoom máximo para dentro). */
+export const MIN_VISIBLE_BARS = 5;
+
 export function coarsePointer(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 }
@@ -267,7 +272,7 @@ export class ChartController {
         secondsVisible: false,
         rightOffset: 12,
         barSpacing: 8,
-        minBarSpacing: 0.5,
+        minBarSpacing: MIN_BAR_SPACING,
         shiftVisibleRangeOnNewBar: true,
         tickMarkFormatter: (time: Time, type: TickMarkType) => {
           const sec = time as number;
@@ -1324,7 +1329,8 @@ export class ChartController {
     const ts = this.chart.timeScale();
     const r = ts.getVisibleLogicalRange();
     if (!r) return;
-    const w = Math.max(10, (r.to - r.from) * factor);
+    const maxW = this.paneSize().width / MIN_BAR_SPACING;
+    const w = Math.min(maxW, Math.max(10, (r.to - r.from) * factor));
     ts.setVisibleLogicalRange({ from: r.to - w, to: r.to });
   }
 

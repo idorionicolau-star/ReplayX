@@ -44,6 +44,8 @@ export interface SettingsState {
   favoritesBar: boolean;
   /** Posição da barra flutuante (px a partir do canto superior esquerdo da área dos gráficos). */
   favoritesBarPos: { x: number; y: number } | null;
+  /** Posição da barra do replay (null = por baixo, ao centro). */
+  replayBarPos: { x: number; y: number } | null;
   /** Indicadores favoritos (id). */
   favoriteIndicators: string[];
   /** Linhas encaixam em ângulos de 15° (também com Shift). */
@@ -96,6 +98,7 @@ export const useSettings = create<SettingsState>()(
       favoriteTools: ['trendline', 'hline', 'fib', 'rect', 'long', 'short'],
       favoritesBar: true,
       favoritesBarPos: null,
+      replayBarPos: null,
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       loupe: true,

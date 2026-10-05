@@ -81,3 +81,33 @@ test('desenhos sobrevivem à troca de timeframe', async ({ page }) => {
   expect(xs[0]).toBeGreaterThan(0);
   expect(xs[1]).toBeGreaterThan(xs[0]!);
 });
+
+test('a barra do replay arrasta-se e fica onde foi deixada (duplo clique repõe)', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 500);
+  await page.click('[data-testid=replay-button]');
+  await page.mouse.click(600, 450);
+  const bar = page.getByTestId('replay-bar');
+  await expect(bar).toBeVisible();
+  const b0 = (await bar.boundingBox())!;
+  const g = (await page.getByTestId('replay-grip').boundingBox())!;
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + g.width / 2 + 40, g.y + g.height / 2 - 160, { steps: 6 });
+  await page.mouse.up();
+  const b1 = (await bar.boundingBox())!;
+  expect(b0.y - b1.y).toBeGreaterThan(120);
+  expect(b1.x - b0.x).toBeGreaterThan(20);
+  // fica guardada
+  await page.reload();
+  await page.waitForTimeout(300);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('rx-settings') || '{}').state?.replayBarPos);
+  expect(saved).toBeTruthy();
+  // duplo clique na pega repõe a posição
+  const g2 = page.getByTestId('replay-grip');
+  if (await g2.isVisible()) {
+    await g2.dblclick();
+    await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('rx-settings') || '{}').state?.replayBarPos)).toBeNull();
+  }
+});

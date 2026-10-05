@@ -1,5 +1,5 @@
 import type { PricePoint } from '@/core/types';
-import type { ChartController } from './controller';
+import { MIN_BAR_SPACING, MIN_VISIBLE_BARS, type ChartController } from './controller';
 import type { Drawing, DrawingStyle, ToolId } from './drawings/types';
 import { setHitTolerance, toolDef, type ToolDef } from './drawings/tools';
 import { Loupe, type LoupePlace } from './loupe';
@@ -390,18 +390,39 @@ export class Interaction {
     const width = this.c.paneSize().width;
     let range = r;
     if (r && width > 0 && Number.isFinite(factor) && factor > 0) {
-      const frac = Math.min(1, Math.max(0, (this.pinch.cx - rect.left) / width));
       const oldW = r.to - r.from;
-      const anchor = r.from + frac * oldW;
-      const newW = Math.min(50000, Math.max(5, oldW / factor));
-      // os dois dedos a andar juntos também deslocam o gráfico
-      const shift = ((this.pinch.cx - now.cx) / width) * newW;
-      const from = anchor - frac * newW + shift;
-      range = { from, to: from + newW };
-      ts.setVisibleLogicalRange(range);
+      const maxW = width / MIN_BAR_SPACING;
+      const wanted = oldW / factor;
+      const newW = Math.min(maxW, Math.max(MIN_VISIBLE_BARS, wanted));
+      if (newW !== wanted && Math.abs(newW - oldW) < Math.max(0.5, newW * 0.01)) {
+        // já no limite do zoom: nada se mexe (antes o gráfico fugia para a esquerda) e avisa-se
+        this.flashLimit(wanted > newW ? 'Zoom mínimo' : 'Zoom máximo');
+      } else {
+        const frac = Math.min(1, Math.max(0, (this.pinch.cx - rect.left) / width));
+        const anchor = r.from + frac * oldW;
+        // os dois dedos a andar juntos também deslocam o gráfico
+        const shift = ((this.pinch.cx - now.cx) / width) * newW;
+        const from = anchor - frac * newW + shift;
+        range = { from, to: from + newW };
+        ts.setVisibleLogicalRange(range);
+        if (newW !== wanted) this.flashLimit(wanted > newW ? 'Zoom mínimo' : 'Zoom máximo');
+      }
     }
     this.pinch = { ...now, range };
   };
+
+  /** Aviso curto no meio do gráfico quando o zoom chega ao limite. */
+  private flashLimit(text: string) {
+    const size = this.c.paneSize();
+    this.c.hint = { x: size.width / 2 - 50, y: size.height / 2, text };
+    this.c.redraw();
+    setTimeout(() => {
+      if (this.c.hint?.text === text) {
+        this.c.hint = null;
+        this.c.redraw();
+      }
+    }, 800);
+  }
 
   private onPinchUp = (e: PointerEvent) => {
     this.touches.delete(e.pointerId);
