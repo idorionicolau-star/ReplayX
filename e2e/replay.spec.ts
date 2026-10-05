@@ -22,6 +22,12 @@ test('bar replay: começar, avançar, trocar de timeframe e negociar', async ({ 
   await page.click('[data-testid=replay-buy]');
   await expect(page.getByText('Compra executada')).toBeVisible();
   for (let i = 0; i < 3; i++) await page.click('[data-testid=replay-forward]');
+  await expect.poll(async () => (await chartInfo(page)).cursor).toBe(start.cursor! + 7 * 900);
+  // o teste precisa de uma vela de 1h a meio: se o cursor calhar numa hora certa, avança mais 15m
+  if ((start.cursor! + 7 * 900) % 3600 === 0) {
+    await page.click('[data-testid=replay-forward]');
+    await expect.poll(async () => (await chartInfo(page)).cursor).toBe(start.cursor! + 8 * 900);
+  }
   const c15 = (await chartInfo(page)).cursor!;
 
   // troca para 1h a meio do replay: o cursor mantém-se e a vela de 1h fica parcial

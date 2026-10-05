@@ -11,6 +11,7 @@ import { runStrategy } from '@/core/strategy/client';
 import type { Dataset, StrategyRef } from '@/core/strategy/runner';
 import type { BacktestResult } from '@/core/strategy/types';
 import type { Bar } from '@/core/types';
+import { consumeBacktest } from '@/lib/billing';
 
 /** Dados do gráfico ativo para testar (no replay, só até ao cursor — sem espreitar o futuro). */
 export async function loadDataset(count: number, symbolId?: string, tf?: string): Promise<Dataset & { tf: string }> {
@@ -41,6 +42,7 @@ export function currentRef(kind: 'visual' | 'script'): { ref: StrategyRef; label
 /** Corre um backtest e mostra-o no Testador (e no gráfico). */
 export async function runTester(ref: StrategyRef, label: string): Promise<BacktestResult | null> {
   const st = useStrategies.getState();
+  if (!consumeBacktest()) return null;
   st.set({ running: { kind: 'backtest', done: 0, total: 1, info: 'A carregar dados…' }, error: null });
   try {
     const data = await loadDataset(st.barsToTest);

@@ -1,7 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Cloud, CloudOff, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
+import { Cloud, CloudOff, Crown, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
+import { openUpgrade } from '@/lib/billing';
 import { logout, useAuth } from '@/lib/auth';
 import { flushSync, stopSync, useSync } from '@/lib/cloud';
 import { useUi } from '@/store/ui';
@@ -62,6 +63,14 @@ export function UserMenu() {
               }}
             />
           )}
+          <MenuItem
+            icon={<Crown size={15} />}
+            label="Plano e pagamentos"
+            onClick={() => {
+              setOpen(false);
+              openUpgrade();
+            }}
+          />
           <MenuItem icon={<Keyboard size={15} />} label="Atalhos de teclado" onClick={() => useUi.getState().set({ shortcuts: true })} />
           <MenuSeparator />
           <MenuItem

@@ -28,6 +28,7 @@ import {
   Link2,
   FunctionSquare,
   Menu as MenuIcon,
+  Crown,
 } from 'lucide-react';
 import { useWorkspace, type LayoutId } from '@/store/workspace';
 import { useSettings } from '@/store/settings';
@@ -46,6 +47,8 @@ import { cn } from '@/components/ui/cn';
 import { AssetIcon } from '@/components/chart/AssetIcon';
 import { UserMenu } from './UserMenu';
 import { toast } from '@/components/ui/Toast';
+import { setChartTf, setLayoutGated } from '@/lib/gates';
+import { openUpgrade, usePlan } from '@/lib/billing';
 
 const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
   { id: 'candles', label: 'Velas', icon: CandlestickChart },
@@ -74,7 +77,7 @@ function TimeframeMenu() {
   const active = useWorkspace((s) => s.active);
   const tf = useWorkspace((s) => s.charts[s.active]?.tf ?? '1h');
   const favorites = useWorkspace((s) => s.favoriteTfs);
-  const setTf = useWorkspace((s) => s.setTf);
+  const setTf = setChartTf;
   const toggleFav = useWorkspace((s) => s.toggleFavoriteTf);
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -186,7 +189,7 @@ function ChartTypeMenu() {
 
 function LayoutMenu() {
   const layout = useWorkspace((s) => s.layout);
-  const setLayout = useWorkspace((s) => s.setLayout);
+  const setLayout = setLayoutGated;
   const sync = useWorkspace((s) => s.sync);
   const setSync = useWorkspace((s) => s.setSync);
   const ref = useRef<HTMLButtonElement>(null);
@@ -200,7 +203,7 @@ function LayoutMenu() {
         <MenuList className="w-[240px]">
           <MenuHeader>Layout</MenuHeader>
           {LAYOUTS.map((l) => (
-            <MenuItem key={l.id} icon={<l.icon size={16} />} label={l.label} active={layout === l.id} onClick={() => setLayout(l.id)} />
+            <MenuItem key={l.id} icon={<l.icon size={16} />} label={l.label} active={layout === l.id} onClick={() => (setOpen(false), setLayout(l.id))} />
           ))}
           <MenuSeparator />
           <MenuHeader>Sincronizar entre gráficos</MenuHeader>
@@ -301,6 +304,7 @@ export function TopBar() {
 
       <div className="flex-1" />
 
+      <PlanBadge />
       <LayoutMenu />
       <IconButton label="Captura do gráfico" onClick={screenshot}>
         <Camera size={17} />
@@ -317,5 +321,27 @@ export function TopBar() {
       <Divider />
       <UserMenu />
     </header>
+  );
+}
+
+/** Plano atual: "Pro" (pago ou em teste) ou botão para assinar. */
+function PlanBadge() {
+  const plan = usePlan();
+  if (!plan.loaded) return null;
+  const label = plan.reason === 'paid' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : 'Assinar Pro';
+  return (
+    <button
+      type="button"
+      onClick={() => openUpgrade()}
+      title={plan.reason === 'trial' ? 'Teste do Pro' : plan.reason === 'paid' ? 'Plano Pro' : 'Ver o plano Pro'}
+      className={cn(
+        'mr-1 flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
+        plan.reason === 'free' ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-warn/15 text-warn hover:bg-warn/25',
+      )}
+      data-testid="plan-badge"
+    >
+      <Crown size={13} />
+      {label}
+    </button>
   );
 }

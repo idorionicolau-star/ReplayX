@@ -1,4 +1,5 @@
 'use client';
+import { canAddIndicator } from '@/lib/billing';
 import { useMemo, useState } from 'react';
 import { Search, Code2, Plus } from 'lucide-react';
 import { useUi } from '@/store/ui';
@@ -61,6 +62,7 @@ export function IndicatorsDialog() {
                     key={d.id}
                     type="button"
                     onClick={() => {
+                      if (!canAddIndicator(current.length)) return close();
                       add(d.id, active);
                       toast(`${d.name} adicionado`, { kind: 'success', duration: 1800 });
                     }}
@@ -84,6 +86,7 @@ export function IndicatorsDialog() {
                     key={s.id}
                     type="button"
                     onClick={() => {
+                      if (!canAddIndicator(current.length)) return close();
                       update(active, { indicators: [...current, { uid: uid('si'), type: `script:${s.id}`, params: {}, styles: {} }] });
                       toast(`${s.name} adicionado`, { kind: 'success', duration: 1800 });
                     }}

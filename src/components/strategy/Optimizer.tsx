@@ -7,6 +7,7 @@ import { listParams, setPath, type VisualStrategy } from '@/core/strategy/visual
 import { OBJECTIVE_LABEL, gridSize, type Objective, type OptimizeRange } from '@/core/strategy/optimizer';
 import type { OptimizeResult, StrategyRef, WalkForwardResult, BatchRow, Dataset } from '@/core/strategy/runner';
 import { runStrategy } from '@/core/strategy/client';
+import { requirePro } from '@/lib/billing';
 import type { ScriptRunResult } from '@/core/strategy/script';
 import type { monteCarlo } from '@/core/trading/stats';
 import { getChart } from '@/chart/registry';
@@ -113,6 +114,7 @@ export function Optimizer() {
   const progress = (kindName: string) => (done: number, total: number, info?: string) => useStrategies.getState().set({ running: { kind: kindName, done, total, info } });
 
   const runOptimize = async () => {
+    if (!requirePro('optimizer')) return;
     if (!ref) return;
     const ctrl = new AbortController();
     setAbort(ctrl);
@@ -129,6 +131,7 @@ export function Optimizer() {
   };
 
   const runWalkForward = async () => {
+    if (!requirePro('optimizer')) return;
     if (!ref) return;
     const ctrl = new AbortController();
     setAbort(ctrl);
@@ -148,6 +151,7 @@ export function Optimizer() {
   };
 
   const runMulti = async () => {
+    if (!requirePro('optimizer')) return;
     if (!ref || !multiSyms.length) return;
     const ctrl = new AbortController();
     setAbort(ctrl);

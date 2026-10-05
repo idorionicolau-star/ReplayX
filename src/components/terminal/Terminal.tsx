@@ -6,6 +6,9 @@ import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { useAuth } from '@/lib/auth';
 import { startSync, stopSync } from '@/lib/cloud';
+import { setChartTf } from '@/lib/gates';
+import { startBilling, usePlan } from '@/lib/billing';
+import { UpgradeDialog } from '@/components/dialogs/UpgradeDialog';
 import { replay, useReplay } from '@/replay/engine';
 import { getChart } from '@/chart/registry';
 import { isValidTf, normalizeTf } from '@/core/timeframes';
@@ -119,7 +122,7 @@ function useShortcuts() {
         } else if (/[a-zA-Z]/.test(e.key) && ui.tfInput !== null && /^[mhdwMHDW]$/.test(e.key)) {
           e.preventDefault();
           const v = normalizeTf(`${ui.tfInput}${e.key === 'H' ? 'h' : e.key === 'd' ? 'D' : e.key === 'w' ? 'W' : e.key}`);
-          if (isValidTf(v) && cfg) ws.setTf(v);
+          if (isValidTf(v) && cfg) setChartTf(v);
           ui.set({ tfInput: null });
         } else if (/[a-zA-Z]/.test(e.key)) {
           e.preventDefault();
@@ -127,7 +130,7 @@ function useShortcuts() {
         }
       } else if (e.key === 'Enter' && ui.tfInput) {
         const n = parseInt(ui.tfInput, 10);
-        if (n > 0 && cfg) ws.setTf(normalizeTf(`${n}m`));
+        if (n > 0 && cfg) setChartTf(normalizeTf(`${n}m`));
         ui.set({ tfInput: null });
       } else if (e.key === 'Escape' && ui.tfInput !== null) ui.set({ tfInput: null });
     };
@@ -149,6 +152,17 @@ export function Terminal() {
     if (user && !user.guest) void startSync(user.uid);
     return () => stopSync();
   }, [user]);
+
+  useEffect(() => {
+    startBilling(user && !user.guest ? user.uid : null);
+  }, [user]);
+
+  // no plano grátis só há um gráfico (o layout guardado de quando era Pro volta a 1)
+  const plan = usePlan();
+  const layout = useWorkspace((s) => s.layout);
+  useEffect(() => {
+    if (plan.loaded && !plan.pro && layout !== '1') useWorkspace.getState().setLayout('1');
+  }, [plan.loaded, plan.pro, layout]);
 
   useEffect(() => {
     // no telemóvel começa com o gráfico livre
@@ -196,6 +210,7 @@ export function Terminal() {
       <Shortcuts />
       <AlertDialog />
       <ChartContextMenu />
+      <UpgradeDialog />
       <Toaster />
     </div>
   );

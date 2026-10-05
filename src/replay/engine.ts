@@ -11,6 +11,8 @@ import { useTrading, specFor } from '@/store/trading';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
 import { uid } from '@/lib/uid';
+import { isPro, openUpgrade, replayTfAllowed } from '@/lib/billing';
+import { FREE_LIMITS, freeReplayTfOk } from '@/core/plans';
 
 /**
  * Motor do Bar Replay.
@@ -123,6 +125,7 @@ class ReplayEngine {
   /** Entrar em modo de seleção do ponto de partida. */
   enter() {
     this.pause();
+    this.fitFreePlan();
     useReplay.setState({ active: true, selecting: true, ended: false, error: null });
   }
 
@@ -144,6 +147,7 @@ class ReplayEngine {
   /** Começa (ou recomeça) o replay no instante dado. */
   async start(cursor: number, opts: { keepAccount?: boolean } = {}) {
     this.pause();
+    this.fitFreePlan();
     const c = Math.min(cursor, nowSec());
     this.snapshots = [];
     if (!opts.keepAccount) {
@@ -410,7 +414,21 @@ class ReplayEngine {
     useReplay.setState({ speedMs: ms });
   }
 
+  /** No plano grátis o replay só usa intervalos de 15m ou mais: os gráficos abaixo disso passam para 15m. */
+  private fitFreePlan() {
+    if (isPro()) return;
+    const ws = useWorkspace.getState();
+    const low = ws.charts.map((c, i) => (freeReplayTfOk(c.tf) ? -1 : i)).filter((i) => i >= 0);
+    for (const i of low) ws.updateChart(i, { tf: FREE_LIMITS.replayMinTf });
+    if (this.state.stepTf && !freeReplayTfOk(this.state.stepTf)) useReplay.setState({ stepTf: null });
+    if (low.length) openUpgrade('replayTf');
+  }
+
   setStepTf(tf: string | null) {
+    if (tf && !replayTfAllowed(tf)) {
+      openUpgrade('replayTf');
+      return;
+    }
     useReplay.setState({ stepTf: tf });
   }
 

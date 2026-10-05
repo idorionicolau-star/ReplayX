@@ -21,6 +21,8 @@ export interface SessionUser {
   email: string | null;
   photo: string | null;
   guest: boolean;
+  /** Quando a conta foi criada (ms) — conta para o período de teste do Pro. */
+  createdAt: number | null;
 }
 
 interface AuthState {
@@ -29,11 +31,20 @@ interface AuthState {
 }
 
 const GUEST_KEY = 'rx-guest';
+const GUEST_USER: SessionUser = { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true, createdAt: null };
 
 export const useAuth = create<AuthState>(() => ({ user: null, ready: false }));
 
 function fromFirebase(u: User): SessionUser {
-  return { uid: u.uid, name: u.displayName || u.email?.split('@')[0] || 'Trader', email: u.email, photo: u.photoURL, guest: false };
+  const created = u.metadata.creationTime ? Date.parse(u.metadata.creationTime) : NaN;
+  return {
+    uid: u.uid,
+    name: u.displayName || u.email?.split('@')[0] || 'Trader',
+    email: u.email,
+    photo: u.photoURL,
+    guest: false,
+    createdAt: Number.isFinite(created) ? created : null,
+  };
 }
 
 let started = false;
@@ -48,12 +59,12 @@ export function startAuth() {
         localStorage.removeItem(GUEST_KEY);
         useAuth.setState({ user: fromFirebase(u), ready: true });
       } else if (localStorage.getItem(GUEST_KEY) === '1') {
-        useAuth.setState({ user: { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true }, ready: true });
+        useAuth.setState({ user: GUEST_USER, ready: true });
       } else useAuth.setState({ user: null, ready: true });
     });
   } catch {
     // sem Firebase (ex.: configuração inválida): permite modo convidado
-    useAuth.setState({ user: guest ? { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true } : null, ready: true });
+    useAuth.setState({ user: guest ? GUEST_USER : null, ready: true });
   }
 }
 
@@ -110,7 +121,7 @@ export async function resetPassword(email: string) {
 
 export function enterAsGuest() {
   localStorage.setItem(GUEST_KEY, '1');
-  useAuth.setState({ user: { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true }, ready: true });
+  useAuth.setState({ user: GUEST_USER, ready: true });
 }
 
 export async function logout() {

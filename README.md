@@ -49,6 +49,12 @@ Lista de operações com notas e etiquetas, curva de capital, lucro líquido, ta
 ### Notícias e calendário
 Notícias de forex, cripto, ações e matérias-primas (RSS públicos) e calendário económico semanal.
 
+### Planos
+- **Grátis:** replay a partir de 15m, 1 gráfico, 3 indicadores por gráfico e 3 backtests por dia.
+- **Pro** (450 MT/mês, 1200 MT/trimestre, 4500 MT/ano): replay em todos os intervalos, até 4 gráficos, indicadores e backtests sem limite, otimizador, walk-forward e multi-mercado.
+- Contas novas têm 7 dias de Pro grátis. Os preços e limites estão em `src/core/plans.ts`.
+- O plano vem do documento `replayx_users/{uid}` no Firestore (só o servidor o escreve). O pagamento é feito pela ZumboPay (M-Pesa, e-Mola, cartão) através das rotas `/api/billing/checkout` e `/api/billing/status`, **que ainda não estão incluídas** — o botão de pagar mostra "pagamentos ainda não estão ativos" até lá.
+
 ### Conta
 Login com **Google** ou **e-mail/palavra-passe** (Firebase Auth), recuperação de palavra-passe e **modo convidado** (tudo fica só no navegador). Com sessão iniciada, as configurações, layouts, desenhos, contas, sessões de replay, estratégias e alertas são sincronizados no Firestore.
 
