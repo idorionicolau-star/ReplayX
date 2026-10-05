@@ -6,11 +6,14 @@ import { allSymbols, registerSymbol } from '../symbols';
 /**
  * Cliente WebSocket da Deriv (índices sintéticos, forex, metais, índices de bolsa).
  * Usa primeiro o endpoint público novo (sem app_id) e recorre ao antigo se falhar.
+ * O `app_id` é o público de testes (1089) até registares o teu em api.deriv.com e o pores em NEXT_PUBLIC_DERIV_APP_ID.
  */
+export const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1089';
+
 export const DERIV_ENDPOINTS = [
   'wss://api.derivws.com/trading/v1/options/ws/public',
-  'wss://ws.derivws.com/websockets/v3?app_id=1089',
-  'wss://ws.binaryws.com/websockets/v3?app_id=1089',
+  `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`,
+  `wss://ws.binaryws.com/websockets/v3?app_id=${DERIV_APP_ID}`,
 ];
 
 const GRANULARITIES = [60, 120, 180, 300, 600, 900, 1800, 3600, 7200, 14400, 28800, 86400];

@@ -4,7 +4,7 @@ import { PwaRegister } from '@/components/PwaRegister';
 
 export const metadata: Metadata = {
   title: 'ReplayX — Bar Replay, backtest e estratégias',
-  description: 'Plataforma de trading estilo TradingView: Bar Replay com troca de timeframe, backtest manual e automático, estratégias visuais e por script, índices sintéticos, forex, cripto e ações.',
+  description: 'Plataforma de gráficos e simulação: Bar Replay com troca de timeframe, backtest manual e automático, estratégias visuais e por script, índices sintéticos, forex, cripto e ações.',
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

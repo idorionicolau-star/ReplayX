@@ -121,6 +121,21 @@ export function LoginCard() {
           Continuar sem conta (dados só neste dispositivo)
         </Button>
       </div>
+      <p className="mt-3 text-center text-[11px] leading-snug text-muted" data-testid="consent">
+        Ao continuar, aceita os{' '}
+        <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+          Termos
+        </a>
+        , a{' '}
+        <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+          Política de privacidade
+        </a>{' '}
+        e o{' '}
+        <a href="/aviso-de-risco" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+          Aviso de risco
+        </a>
+        .
+      </p>
     </div>
   );
 }

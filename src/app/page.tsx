@@ -6,11 +6,12 @@ import { startAuth, useAuth } from '@/lib/auth';
 import { LoginCard } from '@/components/auth/LoginCard';
 import { Logo } from '@/components/Logo';
 import { Spinner } from '@/components/ui/Spinner';
+import { LegalFooter } from '@/components/legal/LegalFooter';
 
 const FEATURES = [
   { icon: Rewind, title: 'Bar Replay completo', text: 'Volte a qualquer data, avance barra a barra ou em reprodução, e troque de timeframe a meio do replay sem perder o ponto.' },
   { icon: Layers, title: 'Todos os mercados', text: 'Índices sintéticos (Volatility, Boom & Crash, Step, Jump…), forex, ouro, índices, cripto e ações.' },
-  { icon: PencilRuler, title: 'Ferramentas do TradingView', text: 'Linhas, Fibonacci, canais, pitchfork, retângulos, texto, posição longa/curta e medições.' },
+  { icon: PencilRuler, title: 'Ferramentas de desenho completas', text: 'Linhas, Fibonacci, canais, pitchfork, retângulos, texto, posição longa/curta e medições.' },
   { icon: BarChart3, title: '35+ indicadores', text: 'Médias, Bollinger, RSI, MACD, Ichimoku, Supertrend, VWAP, ADX, volume e mais.' },
   { icon: History, title: 'Backtest manual', text: 'Compre e venda durante o replay com SL/TP, veja o diário, estatísticas e curva de capital.' },
   { icon: BrainCircuit, title: 'Estratégias visuais', text: 'Monte regras "SE … ENTÃO …" sem programar, otimize os parâmetros e valide em walk-forward.' },
@@ -46,7 +47,7 @@ export default function Home() {
               <span className="text-accent">Opere melhor no futuro.</span>
             </h1>
             <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
-              Uma plataforma de gráficos ao estilo TradingView, feita para praticar: Bar Replay com troca de timeframe, operações simuladas, diário de trading e
+              Uma plataforma de gráficos profissional, feita para praticar: Bar Replay com troca de timeframe, operações simuladas, diário de trading e
               backtest automático de estratégias — incluindo os índices sintéticos.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -64,9 +65,10 @@ export default function Home() {
           <div className="flex justify-center lg:justify-end">{!ready || user ? <Spinner size={28} className="text-accent" /> : <LoginCard />}</div>
         </section>
 
-        <footer className="border-t border-line pt-4 text-[11px] text-muted">
-          Dados de mercado: Deriv (sintéticos, forex, metais, índices), Binance (cripto) e Yahoo Finance (ações e futuros). Simulação para fins educativos — não é aconselhamento financeiro.
-        </footer>
+        <div className="border-t border-line pt-4">
+          <p className="mb-2 text-[11px] text-muted">Dados de mercado: Deriv (sintéticos, forex, metais, índices), Binance (cripto) e Yahoo Finance (ações e futuros).</p>
+          <LegalFooter />
+        </div>
       </div>
     </main>
   );

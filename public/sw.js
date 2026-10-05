@@ -1,5 +1,5 @@
 /* Service worker do ReplayX: abre sem internet, atualiza-se sozinho e mostra as notificações dos alertas. */
-const VERSION = 'rx-v1';
+const VERSION = 'rx-v2';
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const PRECACHE = ['/', '/terminal', '/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/badge-96.png'];
@@ -52,18 +52,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // páginas: primeiro a rede; sem internet, a última versão guardada
+  // páginas: primeiro a rede; sem internet, a última versão guardada dessa página (só / e /terminal se guardam)
   if (req.mode === 'navigate') {
+    const key = url.pathname === '/' ? '/' : url.pathname === '/terminal' ? '/terminal' : null;
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) {
+          if (res.ok && key) {
             const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(url.pathname === '/' ? '/' : '/terminal', copy));
+            caches.open(SHELL).then((c) => c.put(key, copy));
           }
           return res;
         })
-        .catch(() => caches.match(url.pathname === '/' ? '/' : '/terminal').then((hit) => hit || caches.match('/'))),
+        .catch(() => caches.match(key || '/terminal').then((hit) => hit || caches.match('/'))),
     );
   }
 });

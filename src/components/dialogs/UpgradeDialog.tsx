@@ -216,6 +216,17 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
         <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted">
           <ShieldCheck size={13} /> Pagamento seguro pela ZumboPay. Renovação manual: nada é cobrado sem confirmar.
         </div>
+        <div className="text-center text-[11px] text-muted">
+          Ao pagar aceita os{' '}
+          <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            Termos
+          </a>{' '}
+          (sem reembolso, exceto cobrança indevida) e o{' '}
+          <a href="/aviso-de-risco" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            Aviso de risco
+          </a>
+          .
+        </div>
       </div>
     </Dialog>
   );

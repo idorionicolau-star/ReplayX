@@ -11,6 +11,7 @@ import { ColorPicker } from '@/components/ui/ColorPicker';
 import { Tabs, Segmented } from '@/components/ui/Tabs';
 import { dataFeed } from '@/core/feed/datafeed';
 import { toast } from '@/components/ui/Toast';
+import { LegalFooter } from '@/components/legal/LegalFooter';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 
 export function SettingsDialog() {
@@ -130,13 +131,14 @@ export function SettingsDialog() {
             <Switch checked={pauseOnFill} onChange={(v) => useReplay.setState({ pauseOnFill: v })} />
           </Row>
           <p className="pt-3 text-xs leading-relaxed text-muted">
-            Com dados finos, o SL/TP é verificado com velas mais pequenas dentro de cada passo (ex.: 1m dentro de 1h), como o “bar magnifier” do TradingView. Desligue para um replay mais rápido em
+            Com dados finos, o SL/TP é verificado com velas mais pequenas dentro de cada passo (ex.: 1m dentro de 1h), como um “bar magnifier”. Desligue para um replay mais rápido em
             ligações lentas.
           </p>
         </div>
       )}
       {tab === 'data' && (
         <div className="flex flex-col gap-3">
+          <LegalFooter className="rounded-lg bg-sunken p-3" />
           <p className="text-xs leading-relaxed text-muted">
             Fontes: <b>Deriv</b> (índices sintéticos, forex, metais e índices — WebSocket público), <b>Binance</b> (cripto) e <b>Yahoo Finance</b> (ações, índices e futuros). Os dados ficam em memória
             enquanto a página está aberta.

@@ -82,7 +82,8 @@ Notícias de forex, cripto, ações e matérias-primas (RSS públicos) e calend�
 - **Grátis:** replay a partir de 15m, 1 gráfico, 3 indicadores por gráfico e 3 backtests por dia.
 - **Pro** (100 MT/mês, 270 MT/trimestre, 1000 MT/ano): replay em todos os intervalos, até 4 gráficos, indicadores e backtests sem limite, otimizador, walk-forward e multi-mercado.
 - Contas novas têm 7 dias de Pro grátis. Os preços e limites estão em `src/core/plans.ts`.
-- O plano vem do documento `replayx_users/{uid}` no Firestore (só o servidor o escreve). O pagamento é feito pela ZumboPay (M-Pesa e cartão) através das rotas `/api/billing/checkout` e `/api/billing/status`, **que ainda não estão incluídas** — o botão de pagar mostra "pagamentos ainda não estão ativos" até lá.
+- O plano vem do documento `replayx_users/{uid}` no Firestore (só o servidor o escreve). O pagamento é feito pela **ZumboPay** (M-Pesa e cartão) pelas rotas `/api/billing/checkout`, `/api/billing/status` e `/api/billing/webhook`: o preço vem sempre do servidor, o webhook valida a assinatura, a ativação é idempotente e pagar antes do fim soma ao período em curso. Sem renovação automática.
+- Contas novas: 7 dias de Pro. Páginas legais em `/termos`, `/privacidade` e `/aviso-de-risco` (rever com um advogado antes de vender).
 
 ### Conta
 Login com **Google** ou **e-mail/palavra-passe** (Firebase Auth), recuperação de palavra-passe e **modo convidado** (tudo fica só no navegador). Com sessão iniciada, as configurações, layouts, desenhos, contas, sessões de replay, estratégias e alertas são sincronizados no Firestore.
@@ -126,6 +127,12 @@ npm start
    ```
    Ou, sem instalar nada: copia o conteúdo de `firestore.rules` para *Firestore Database* → *Rules* na consola e carrega em *Publish*.
    Até lá a sincronização na nuvem falha com "permissão negada" e a app continua a guardar tudo localmente.
+
+### Pagamentos (ZumboPay)
+1. Na Vercel → *Settings → Environment Variables*, define `ZUMBOPAY_API_KEY`, `ZUMBOPAY_MERCHANT_ID`, `ZUMBOPAY_WALLET_ID`, `ZUMBOPAY_WEBHOOK_SECRET` e `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON da chave de serviço do Firebase: *Project settings → Service accounts → Generate new private key*).
+2. No painel da ZumboPay (*Programadores → Webhooks*) acrescenta `https://<o-teu-domínio>/api/billing/webhook` com os eventos `payment.succeeded`, `payment.failed` e `payment.refunded`. A mesma conta pode servir o MajorStockX: o ReplayX ignora os pagamentos que não são seus.
+3. Define também `NEXT_PUBLIC_OPERATOR_NAME`, `NEXT_PUBLIC_SUPPORT_EMAIL` e `NEXT_PUBLIC_SUPPORT_WHATSAPP` (aparecem nas páginas legais) e, quando tiveres, `NEXT_PUBLIC_DERIV_APP_ID`.
+4. Faz uma compra de teste de 100 MT e confirma que o Pro se ativa sozinho.
 
 ### Outro projeto Firebase (opcional)
 Por omissão usa o projeto Firebase próprio do ReplayX (`coffee-spark-ai-barista-e7a91`). Para usar outro, copia `.env.example` para `.env.local`, preenche as variáveis `NEXT_PUBLIC_FIREBASE_*`, muda o projeto em `.firebaserc` e publica as regras nesse projeto.

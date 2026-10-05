@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Cloud, CloudOff, Crown, Download, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
+import { BellRing, FileText, Cloud, CloudOff, Crown, Download, Keyboard, LogOut, RefreshCw, UserPlus } from 'lucide-react';
 import { promptInstall, usePwa } from '@/lib/pwa';
 import { notifyDevice, notifyPermission, requestNotifyPermission } from '@/lib/notify';
 import { IosInstallHelp } from './PwaPrompts';
@@ -101,6 +101,7 @@ export function UserMenu() {
               else if (p === 'unsupported') toast('Este navegador não suporta notificações', { kind: 'warning', body: pwa.ios ? 'No iPhone, instale primeiro a app no ecrã principal.' : undefined });
             }}
           />
+          <MenuItem icon={<FileText size={15} />} label="Termos, privacidade e aviso de risco" onClick={() => (setOpen(false), window.open('/termos', '_blank', 'noopener'))} />
           <MenuItem icon={<Keyboard size={15} />} label="Atalhos de teclado" onClick={() => useUi.getState().set({ shortcuts: true })} />
           <MenuSeparator />
           <MenuItem
