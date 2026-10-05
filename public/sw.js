@@ -1,5 +1,5 @@
 /* Service worker do ReplayX: abre sem internet, atualiza-se sozinho e mostra as notificações dos alertas. */
-const VERSION = 'rx-v2';
+const VERSION = 'rx-v3';
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const PRECACHE = ['/', '/terminal', '/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/badge-96.png'];

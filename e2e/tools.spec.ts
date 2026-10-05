@@ -358,3 +358,26 @@ test('barra de favoritos pode ficar na vertical', async ({ page }) => {
   const back = (await bar.boundingBox())!;
   expect(back.width).toBeGreaterThan(back.height);
 });
+
+test('animação de abertura: aparece uma vez por sessão, salta-se com um toque e some sozinha', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+  const page = await ctx.newPage();
+  await page.goto('/');
+  const splash = page.getByTestId('splash');
+  await expect(splash).toBeVisible();
+  await splash.click(); // saltar
+  await expect(splash).toBeHidden();
+  // na mesma sessão não volta
+  await page.reload();
+  await expect(page.getByTestId('splash')).toBeHidden();
+  await ctx.close();
+  // sessão nova: some sozinha
+  const ctx2 = await browser.newContext();
+  await ctx2.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+  const p2 = await ctx2.newPage();
+  await p2.goto('/');
+  await expect(p2.getByTestId('splash')).toBeVisible();
+  await expect(p2.getByTestId('splash')).toBeHidden({ timeout: 6000 });
+  await ctx2.close();
+});

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { PwaRegister } from '@/components/PwaRegister';
+import { Splash } from '@/components/Splash';
 
 export const metadata: Metadata = {
   title: 'ReplayX — Bar Replay, backtest e estratégias',
@@ -29,14 +30,18 @@ export const viewport: Viewport = {
 // aplica o tema antes de pintar (evita flash)
 const themeScript = `try{var s=JSON.parse(localStorage.getItem('rx-settings')||'{}');var t=(s.state&&s.state.theme)||'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}`;
 
+// a animação de abertura só corre uma vez por sessão (e não em testes automáticos)
+const splashScript = `try{if(navigator.webdriver||sessionStorage.getItem('rx-splash'))document.documentElement.classList.add('no-splash')}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt" data-theme="dark" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeScript + splashScript }} />
       </head>
       <body>
         {children}
+        <Splash />
         <PwaRegister />
       </body>
     </html>

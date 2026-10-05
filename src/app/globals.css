@@ -164,3 +164,153 @@ textarea {
 .cm-editor.cm-focused {
   outline: none !important;
 }
+
+/* ---------- animação de abertura ---------- */
+.rx-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 90% at 50% 40%, #151b33 0%, #0a0d18 70%);
+  color: #fff;
+  overflow: hidden;
+  cursor: pointer;
+  animation: rx-out 0.55s cubic-bezier(0.4, 0, 0.2, 1) 3s forwards;
+}
+.no-splash .rx-splash {
+  display: none;
+}
+.rx-splash-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  animation: rx-fade 0.8s ease-out 0.05s forwards;
+}
+.rx-candle {
+  transform: scaleY(0);
+  animation: rx-grow 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+.rx-curve {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 1.2px rgba(45, 255, 192, 0.7));
+  animation: rx-draw 1.5s cubic-bezier(0.5, 0, 0.2, 1) 0.3s forwards;
+}
+.rx-splash-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  text-align: center;
+}
+.rx-mark {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  filter: drop-shadow(0 18px 40px rgba(76, 80, 255, 0.45));
+}
+.rx-tile {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.2) rotate(-18deg);
+  opacity: 0;
+  animation: rx-pop 0.75s cubic-bezier(0.2, 1.2, 0.3, 1) 0.45s forwards;
+}
+.rx-s {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  animation: rx-draw 0.45s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+.rx-s1 { animation-delay: 0.95s; }
+.rx-s2 { animation-delay: 1.05s; }
+.rx-s3 { animation-delay: 1.15s; }
+.rx-s4 { animation-delay: 1.45s; }
+.rx-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 34px;
+  border: 2px solid rgba(45, 255, 192, 0.8);
+  opacity: 0;
+  animation: rx-ring 0.9s ease-out 1.55s forwards;
+}
+.rx-word {
+  display: flex;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow: hidden;
+  padding: 2px 4px;
+}
+.rx-letter {
+  display: inline-block;
+  transform: translateY(110%);
+  opacity: 0;
+  animation: rx-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+.rx-x {
+  background: linear-gradient(135deg, #2dffc0, #22d3ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rx-tag {
+  font-size: 14px;
+  color: rgba(214, 222, 255, 0.75);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: rx-up 0.6s ease-out 1.85s forwards;
+}
+.rx-track {
+  position: relative;
+  width: min(260px, 70vw);
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 0;
+  animation: rx-fade 0.4s ease-out 1.9s forwards;
+}
+.rx-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #2b5cff, #2dffc0);
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: rx-fillx 1.05s cubic-bezier(0.5, 0, 0.2, 1) 1.9s forwards;
+}
+.rx-head {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(45, 255, 192, 0.9);
+  animation: rx-sweep 1.05s cubic-bezier(0.5, 0, 0.2, 1) 1.9s forwards;
+}
+@keyframes rx-fade { to { opacity: 1; } }
+@keyframes rx-grow { to { transform: scaleY(1); } }
+@keyframes rx-draw { to { stroke-dashoffset: 0; opacity: 1; } }
+@keyframes rx-pop { to { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes rx-ring { 0% { opacity: 0.9; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes rx-rise { to { transform: translateY(0); opacity: 1; } }
+@keyframes rx-up { to { opacity: 1; transform: translateY(0); } }
+@keyframes rx-fillx { to { transform: scaleX(1); } }
+@keyframes rx-sweep { to { left: 100%; } }
+@keyframes rx-out { to { opacity: 0; transform: scale(1.06); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  .rx-splash { animation: rx-out 0.4s ease-out 0.9s forwards; }
+  .rx-splash *, .rx-splash-bg { animation-duration: 0.01s !important; animation-delay: 0s !important; }
+}
