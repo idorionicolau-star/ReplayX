@@ -2,6 +2,7 @@
 import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
 import { ChartNav, PriceAxisPlus } from './ChartOverlays';
 import { parseTf } from '@/core/timeframes';
+import { toolDef } from '@/chart/drawings/tools';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -45,6 +46,7 @@ export function ChartPane({ index }: { index: number }) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const ctrlRef = useRef<ChartController | null>(null);
+  const interRef = useRef<Interaction | null>(null);
   const [ctrl, setCtrl] = useState<ChartController | null>(null);
   const [status, setStatus] = useState<ChartStatus>({ state: 'idle' });
   const [legend, setLegend] = useState<CrosshairInfo | null>(null);
@@ -129,7 +131,9 @@ export function ChartPane({ index }: { index: number }) {
       prepareReplay: (cur) => c.prepareReplay(cur),
       applyReplay: (cur) => c.applyReplay(cur),
     });
+    interRef.current = inter;
     return () => {
+      interRef.current = null;
       inter.dispose();
       replay.unregister(chartId);
       unregisterChart(chartId);
@@ -304,6 +308,9 @@ export function ChartPane({ index }: { index: number }) {
   useEffect(() => {
     ctrl?.setCursorStyle(tool !== 'cross' && tool !== 'cursor' ? 'crosshair' : '');
     ctrl?.clearAim();
+    // no ecrã tátil a mira aparece logo ao escolher uma ferramenta de desenho
+    const def = tool === 'cross' || tool === 'cursor' ? undefined : toolDef(tool);
+    if (ctrl && def && def.points !== 0 && coarsePointer()) interRef.current?.showAim();
   }, [ctrl, tool]);
 
   if (!cfg || !symbol) return null;

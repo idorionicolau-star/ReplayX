@@ -171,6 +171,7 @@ export class ChartController {
   clearAim() {
     if (!this.aimMark) return;
     this.aimMark = null;
+    this.chart.clearCrosshairPosition();
     this.redraw();
   }
   events: ChartEvent[] = [];

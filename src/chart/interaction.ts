@@ -521,20 +521,24 @@ export class Interaction {
 
   // ---------------------------------------------------------------- pontaria com o dedo
 
-  private aimTouch: { downAt: { x: number; y: number }; offset: { x: number; y: number }; confirm: boolean; moved: boolean } | null = null;
+  private aimTouch: { downAt: { x: number; y: number }; last: { x: number; y: number }; moved: boolean } | null = null;
 
+  /**
+   * Dedo (como no TradingView): a mira (linha horizontal e vertical) anda quando se arrasta o dedo em qualquer parte do gráfico,
+   * em movimento relativo (o dedo pode estar longe). Um toque simples, sem arrastar, marca o ponto onde a mira está.
+   */
   private aimDown(e: PointerEvent, p: { x: number; y: number }) {
     this.consume(e);
-    const aim = this.c.aimMark;
-    const near = !!aim && Math.hypot(p.x - aim.x, p.y - aim.y) <= 44;
-    this.aimTouch = { downAt: { x: p.x, y: p.y }, offset: near && aim ? { x: aim.x - p.x, y: aim.y - p.y } : { x: 0, y: 0 }, confirm: near, moved: false };
+    if (!this.c.aimMark) {
+      const size = this.c.paneSize();
+      this.moveAim(size.width / 2, size.height / 2, e);
+    }
+    this.aimTouch = { downAt: { x: p.x, y: p.y }, last: { x: p.x, y: p.y }, moved: false };
     this.setScroll(false);
     window.addEventListener('pointermove', this.onAimMove);
     window.addEventListener('pointerup', this.onAimUp);
     window.addEventListener('pointercancel', this.onAimUp);
-    // o 1.º toque (longe do cursor) só o posiciona
-    if (!near) this.moveAim(p.x, p.y, e);
-    else this.showAimLoupe(e);
+    this.showAimLoupe(e);
   }
 
   private showAimLoupe(e: { clientX: number; clientY: number }) {
@@ -550,13 +554,16 @@ export class Interaction {
     const ay = Math.max(0, Math.min(size.height, y));
     this.c.aimMark = { x: ax, y: ay };
     const m = this.mode;
+    let pt: PricePoint | null;
     if (m.kind === 'create') {
       const pts = m.drawing.points;
-      const pt = this.linePoint(m.drawing.type, pts[pts.length - 2], ax, ay, { x: ax, y: ay });
+      pt = this.linePoint(m.drawing.type, pts[pts.length - 2], ax, ay, { x: ax, y: ay });
       if (pt) pts[pts.length - 1] = pt;
     } else {
-      this.toPoint(ax, ay); // só para mostrar onde o íman prende
+      pt = this.toPoint(ax, ay); // também mostra onde o íman prende
     }
+    // mira nativa com as etiquetas de preço e hora nos eixos
+    if (pt) this.c.setCrosshair(pt.time, pt.price);
     this.showAimLoupe(e);
     this.c.redraw();
   }
@@ -565,11 +572,11 @@ export class Interaction {
     const t = this.aimTouch;
     if (!t || e.pointerType !== 'touch') return;
     const p = this.local(e);
-    if (Math.hypot(p.x - t.downAt.x, p.y - t.downAt.y) > DRAG_THRESHOLD) {
-      t.moved = true;
-      t.confirm = false;
-    }
-    if (t.moved || !t.confirm) this.moveAim(p.x + t.offset.x, p.y + t.offset.y, e);
+    if (Math.hypot(p.x - t.downAt.x, p.y - t.downAt.y) > DRAG_THRESHOLD) t.moved = true;
+    if (!t.moved) return;
+    const a = this.c.aimMark;
+    if (a) this.moveAim(a.x + (p.x - t.last.x), a.y + (p.y - t.last.y), e);
+    t.last = { x: p.x, y: p.y };
   };
 
   private onAimUp = (e: PointerEvent) => {
@@ -581,11 +588,11 @@ export class Interaction {
     this.aimTouch = null;
     this.capturing = false;
     const a = this.c.aimMark;
-    if (e.type === 'pointercancel' || !t || !t.confirm || t.moved || !a) {
+    if (e.type === 'pointercancel' || !t || t.moved || !a || this.touches.size > 0) {
       if (this.mode.kind === 'idle') this.setScroll(true);
       return;
     }
-    // toque no cursor: marca o ponto
+    // toque simples: marca o ponto na mira
     if (this.mode.kind === 'create') {
       this.addCreationPoint(a.x, a.y);
       return;
@@ -596,6 +603,14 @@ export class Interaction {
     this.startCreation(def, a.x, a.y, true);
     if (this.mode.kind === 'idle') this.setScroll(true);
   };
+
+  /** Ao escolher uma ferramenta no dedo, a mira aparece logo no centro do gráfico. */
+  showAim() {
+    if (this.c.aimMark || this.mode.kind !== 'idle') return;
+    const size = this.c.paneSize();
+    this.moveAim(size.width / 2, size.height / 2, { clientX: 0, clientY: 0 });
+    this.loupe.hide();
+  }
 
   private beginDrag() {
     this.setScroll(false);
@@ -670,7 +685,7 @@ export class Interaction {
   }
 
   private finish(d: Drawing) {
-    this.c.aimMark = null;
+    this.c.clearAim();
     this.c.preview = null;
     this.c.hint = null;
     this.mode = { kind: 'idle' };
@@ -693,10 +708,6 @@ export class Interaction {
   }
 
   cancel() {
-    if (this.c.aimMark) {
-      this.c.aimMark = null;
-      this.c.redraw();
-    }
     if (this.mode.kind === 'create' || this.mode.kind === 'brush') {
       this.c.preview = null;
       this.mode = { kind: 'idle' };

@@ -50,21 +50,28 @@ test('no dedo, a ferramenta volta ao cursor depois de criar: arrastar/editar nã
   const { send } = await touch(page);
   const count = () => page.evaluate(`${ctl}.drawings.length`) as Promise<number>;
   await page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' }).click();
-  // como no TradingView: 1.º toque posiciona o cursor, 2.º toque nele marca o ponto; o mesmo para o 2.º ponto
+  // como no TradingView: a mira aparece no centro, anda com o dedo em qualquer parte (relativo) e um toque marca o ponto
+  const aim = () => page.evaluate(`${ctl}.aimMark`) as Promise<{ x: number; y: number } | null>;
   const tap = async (x: number, y: number) => {
     await send('touchStart', [{ x, y }]);
     await send('touchEnd', []);
   };
-  await tap(80, 420);
-  expect(await count()).toBe(0);
-  await tap(80, 420);
-  expect(await count()).toBe(0);
-  // arrastar move o cursor (sem marcar nada)
-  await send('touchStart', [{ x: 80, y: 420 }]);
-  for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 80 + i * 25, y: 420 - i * 15 }]);
+  const a0 = (await aim())!;
+  expect(a0).not.toBeNull();
+  // arrastar longe da mira move-a pela mesma distância, sem marcar nada
+  await send('touchStart', [{ x: 60, y: 600 }]);
+  for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 60 + i * 10, y: 600 - i * 10 }]);
   await send('touchEnd', []);
+  const a1 = (await aim())!;
+  expect(Math.round(a1.x - a0.x)).toBeGreaterThan(60);
+  expect(Math.round(a0.y - a1.y)).toBeGreaterThan(60);
   expect(await count()).toBe(0);
-  await tap(280, 300);
+  await tap(60, 600); // toque em qualquer sítio marca o 1.º ponto na mira
+  expect(await count()).toBe(0);
+  await send('touchStart', [{ x: 60, y: 300 }]);
+  for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 60 + i * 8, y: 300 + i * 10 }]);
+  await send('touchEnd', []);
+  await tap(60, 600); // 2.º ponto
   expect(await count()).toBe(1);
   // a ferramenta já não está ativa (o botão deixou de estar marcado)
   await expect(page.getByTestId('favorites-bar').getByRole('button', { name: 'Linha de tendência' })).not.toHaveClass(/text-accent/);

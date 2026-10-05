@@ -94,9 +94,7 @@ test.describe('telemóvel', () => {
     const cdp = await page.context().newCDPSession(page);
     const pt = (x: number, y: number) => [{ x: box.x + x, y: box.y + y }];
     const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', pts: { x: number; y: number }[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.length ? pt(pts[0].x, pts[0].y) : [] });
-    // 1.º toque posiciona o cursor; arrastar a partir dele mostra a lupa
-    await send('touchStart', [{ x: 80, y: 400 }]);
-    await send('touchEnd', []);
+    // arrastar o dedo move a mira (mesmo longe dela) e mostra a lupa
     await send('touchStart', [{ x: 80, y: 400 }]);
     for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 80 + i * 20, y: 400 - i * 15 }]);
     await expect(page.getByTestId('loupe')).toBeVisible();
@@ -106,12 +104,13 @@ test.describe('telemóvel', () => {
     expect(lb.y).toBeLessThan(box.y + 20);
     await send('touchEnd', []);
     await expect(page.getByTestId('loupe')).toBeHidden();
-    // toca no cursor (marca o 1.º ponto), move-o e toca (2.º ponto)
-    await send('touchStart', [{ x: 240, y: 280 }]);
+    // toque marca o 1.º ponto, arrasta-se a mira e outro toque marca o 2.º
+    await send('touchStart', [{ x: 200, y: 500 }]);
     await send('touchEnd', []);
-    await send('touchStart', [{ x: 120, y: 300 }]);
+    await send('touchStart', [{ x: 200, y: 500 }]);
+    for (let i = 1; i <= 8; i++) await send('touchMove', [{ x: 200 - i * 10, y: 500 }]);
     await send('touchEnd', []);
-    await send('touchStart', [{ x: 120, y: 300 }]);
+    await send('touchStart', [{ x: 200, y: 500 }]);
     await send('touchEnd', []);
     const d = await firstDrawing(page);
     expect(d?.type).toBe('trendline');
