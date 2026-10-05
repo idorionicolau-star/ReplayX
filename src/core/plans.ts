@@ -1,6 +1,6 @@
 import { tfSeconds } from './timeframes';
 
-/** Planos do ReplayX Pro (MZN), pagos pela ZumboPay (M-Pesa, e-Mola, cartão). Preços num único sítio. */
+/** Planos do ReplayX Pro (MZN), pagos pela ZumboPay (M-Pesa e cartão). Preços num único sítio. */
 export type PlanId = 'mensal' | 'trimestral' | 'anual';
 export interface Plan {
   id: PlanId;

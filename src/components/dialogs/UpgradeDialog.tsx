@@ -210,7 +210,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
         ) : (
           <Button variant="primary" size="lg" block disabled={busy} onClick={checkout} data-testid="pay-button">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
-            Pagar {mzn(PLANS.find((p) => p.id === selected)!.amount)} com M-Pesa, e-Mola ou cartão
+            Pagar {mzn(PLANS.find((p) => p.id === selected)!.amount)} com M-Pesa ou cartão
           </Button>
         )}
         <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted">
