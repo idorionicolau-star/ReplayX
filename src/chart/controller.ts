@@ -164,6 +164,8 @@ export class ChartController {
   trading: TradingOverlay | null = null;
   alerts: { price: number; label: string }[] = [];
   hint: { x: number; y: number; text: string } | null = null;
+  /** Ponto onde o íman prendeu (círculo no ecrã). */
+  snapMark: { x: number; y: number } | null = null;
   events: ChartEvent[] = [];
   replayPickX: number | null = null;
   /** Barra escolhida para começar o replay (modo de arrastar, no telemóvel) e posição livre do dedo. */
@@ -197,6 +199,7 @@ export class ChartController {
       alerts: () => this.alerts,
       dark: () => this.theme.dark,
       hint: () => this.hint,
+      snapMark: () => this.snapMark,
       coarse: () => coarsePointer(),
       countdown: () => this.countdownLabel(),
       events: () => this.events,

@@ -6,6 +6,7 @@ import { useDrawings } from '@/store/drawings';
 import { toolDef } from '@/chart/drawings/tools';
 import { TOOL_ICONS } from '@/components/terminal/DrawingToolbar';
 import { cn } from '@/components/ui/cn';
+import { SavedElements } from './SavedElements';
 
 const MAGNET_NEXT = { off: 'weak', weak: 'strong', strong: 'off' } as const;
 const MAGNET_LABEL = { off: 'Íman desligado', weak: 'Íman fraco', strong: 'Íman forte' } as const;
@@ -112,6 +113,7 @@ export function FavoritesBar() {
         );
       })}
       <span className="mx-0.5 h-5 w-px bg-line" />
+      <SavedElements className="h-8 w-8" size={16} placement="bottom-start" />
       <button
         type="button"
         title={`${MAGNET_LABEL[magnet]} (toque para mudar)`}

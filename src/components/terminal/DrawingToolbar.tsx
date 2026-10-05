@@ -50,6 +50,7 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuHeader } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
 import { toast } from '@/components/ui/Toast';
+import { SavedElements } from '@/components/chart/SavedElements';
 
 type Icon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
@@ -291,6 +292,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
         <GroupButton key={g.id} group={g} />
       ))}
       <span className="my-0.5 h-px w-7 bg-line" />
+      <SavedElements className="h-9 w-9" onPicked={closeMobileTools} />
       <button
         ref={magRef}
         type="button"

@@ -316,7 +316,7 @@ export function ChartPane({ index }: { index: number }) {
       <div ref={containerRef} className="absolute inset-0" data-testid={`chart-${index}`} />
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
       {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
-      {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} />}
+      {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} ctrl={ctrl} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
       {status.state === 'loading' && (

@@ -123,33 +123,63 @@ export class Interaction {
     return { x, y, inside: x >= 0 && y >= 0 && x <= size.width && y <= size.height };
   }
 
-  /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. */
+  /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. Ctrl = íman agressivo (como no TradingView). */
   private toPoint(x: number, y: number, snapTime = true): PricePoint | null {
     const l = this.c.xToLogical(x);
     let price = this.c.yToPrice(y);
+    this.c.snapMark = null;
     if (l === null || price === null) return null;
     const li = snapTime ? Math.round(l) : l;
-    const time = this.c.logicalToTime(li);
+    let time = this.c.logicalToTime(li);
     if (time === null) return null;
-    let magnet = this.cb.magnet();
-    // Ctrl inverte o íman enquanto está carregado (como no TradingView)
-    if (this.mods.ctrl) magnet = magnet === 'off' ? 'strong' : 'off';
+    const aggressive = this.mods.ctrl;
+    const magnet = aggressive ? 'strong' : this.cb.magnet();
     if (magnet !== 'off') {
-      const bar = this.c.bars[Math.round(l)];
-      if (bar) {
-        const candidates = [bar.open, bar.high, bar.low, bar.close];
-        let best = price;
-        let bestDist = Infinity;
-        for (const cand of candidates) {
-          const cy = this.c.priceToY(cand);
-          if (cy === null) continue;
-          const dist = Math.abs(cy - y);
-          if (dist < bestDist) {
-            bestDist = dist;
-            best = cand;
+      // candidatos: OHLC das barras vizinhas (e, com Ctrl, pontos de outros desenhos)
+      const cands: { time: number; price: number }[] = [];
+      const reach = aggressive ? 2 : 0;
+      const centre = Math.round(l);
+      for (let i = centre - reach; i <= centre + reach; i++) {
+        const bar = this.c.bars[i];
+        if (!bar) continue;
+        for (const v of [bar.open, bar.high, bar.low, bar.close]) cands.push({ time: bar.time, price: v });
+      }
+      if (aggressive) {
+        for (const d of this.c.drawings) {
+          if (d.hidden || d.id === this.c.selectedId) continue;
+          for (const q of d.points) cands.push(q);
+        }
+      }
+      let best: { time: number; price: number; x: number; y: number } | null = null;
+      let bestDist = Infinity;
+      for (const cand of cands) {
+        const cx = this.c.timeToX(cand.time);
+        const cy = this.c.priceToY(cand.price);
+        if (cx === null || cy === null) continue;
+        const dist = Math.hypot(cx - x, cy - y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = { ...cand, x: cx, y: cy };
+        }
+      }
+      // íman fraco: só perto; forte: sempre à barra do cursor; Ctrl: alcance largo, apanha pontos de outros desenhos
+      const reachPx = aggressive ? 40 : magnet === 'strong' ? Infinity : 14;
+      if (best && bestDist <= reachPx) {
+        price = best.price;
+        if (aggressive) time = best.time;
+        this.c.snapMark = { x: best.x, y: best.y };
+      } else if (magnet === 'strong' && !aggressive) {
+        const bar = this.c.bars[centre];
+        if (bar) {
+          let bd = Infinity;
+          for (const v of [bar.open, bar.high, bar.low, bar.close]) {
+            const cy = this.c.priceToY(v);
+            if (cy !== null && Math.abs(cy - y) < bd) {
+              bd = Math.abs(cy - y);
+              price = v;
+            }
           }
         }
-        if (magnet === 'strong' || bestDist < 14) price = best;
       }
     }
     return { time, price };
@@ -489,6 +519,7 @@ export class Interaction {
   private endDrag() {
     this.loupe.hide();
     this.c.hint = null;
+    this.c.snapMark = null;
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);

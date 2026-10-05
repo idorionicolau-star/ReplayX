@@ -52,6 +52,8 @@ export interface OverlayHost {
   dark(): boolean;
   /** Etiqueta temporária junto ao dedo/rato (ex.: ângulo da linha). */
   hint(): { x: number; y: number; text: string } | null;
+  /** Círculo no ponto onde o íman prendeu. */
+  snapMark(): { x: number; y: number } | null;
   /** Ecrã tátil: pegas maiores. */
   coarse(): boolean;
   /** Tempo até fechar a vela (debaixo da etiqueta do último preço). */
@@ -189,6 +191,17 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
           ctx.fillStyle = color;
           ctx.fillText('⚡', x, y + 0.5);
         }
+        ctx.restore();
+      }
+
+      const snap = host.snapMark();
+      if (snap) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(snap.x, snap.y, 7, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.restore();
       }
 

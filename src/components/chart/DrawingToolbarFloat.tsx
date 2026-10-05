@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react';
 import { Bell, Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
 import { TemplateMenu } from './TemplateMenu';
+import { AngleMenu } from './AngleMenu';
+import type { ChartController } from '@/chart/controller';
 import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
 import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
@@ -21,7 +23,7 @@ import { toast } from '@/components/ui/Toast';
 const DASH_ICONS = ['—', '- -', '···'];
 const TEXT_TOOLS = new Set(['trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowline', 'infoline', 'arrowup', 'arrowdown']);
 
-export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
+export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl: ChartController }) {
   const sel = useDrawings((s) => (s.selected?.symbolId === symbolId ? s.selected.id : null));
   const d = useDrawings((s) => (sel ? s.bySymbol[symbolId]?.find((x) => x.id === sel) : undefined));
   const widthRef = useRef<HTMLButtonElement>(null);
@@ -100,6 +102,7 @@ export function DrawingToolbarFloat({ symbolId }: { symbolId: string }) {
           <Type size={15} />
         </IconButton>
       )}
+      <AngleMenu symbolId={symbolId} d={d} ctrl={ctrl} />
       <TemplateMenu symbolId={symbolId} d={d} compact />
       <IconButton size="sm" label="Definições" onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id } })}>
         <Settings2 size={15} />
