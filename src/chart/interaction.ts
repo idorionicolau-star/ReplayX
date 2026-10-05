@@ -139,7 +139,7 @@ export class Interaction {
     if (magnet !== 'off') {
       // candidatos: OHLC das barras vizinhas (e, com Ctrl, pontos de outros desenhos)
       const cands: { time: number; price: number }[] = [];
-      const reach = aggressive ? 2 : 0;
+      const reach = aggressive ? 400 : 0;
       const centre = Math.round(l);
       for (let i = centre - reach; i <= centre + reach; i++) {
         const bar = this.c.bars[i];
@@ -165,7 +165,7 @@ export class Interaction {
         }
       }
       // íman fraco: só perto; forte: sempre à barra do cursor; Ctrl: alcance largo, apanha pontos de outros desenhos
-      const reachPx = aggressive ? 40 : magnet === 'strong' ? Infinity : 14;
+      const reachPx = aggressive ? 5000 : magnet === 'strong' ? Infinity : 14;
       if (best && bestDist <= reachPx) {
         price = best.price;
         if (aggressive) time = best.time;
