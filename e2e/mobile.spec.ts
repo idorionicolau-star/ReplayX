@@ -291,3 +291,23 @@ test('roda infinita: depois do último símbolo vem o primeiro', async ({ page }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect.poll(sym).not.toBe(s0); // deu a volta ao início
 });
+
+test('a faixa mostra a mini-roda: item anterior por cima e seguinte por baixo, e atualiza ao girar', async ({ page }) => {
+  await setup(page);
+  const sym = page.getByTestId('mobile-symbol');
+  const tf = page.getByTestId('mobile-tf');
+  await expect(sym.getByTestId('wheel-prev')).not.toHaveText('');
+  await expect(sym.getByTestId('wheel-next')).not.toHaveText('');
+  await expect(tf.getByTestId('wheel-prev')).not.toHaveText('');
+  await expect(tf.getByTestId('wheel-next')).not.toHaveText('');
+  // girar o intervalo para o seguinte: o que estava por baixo passa a ser o atual (e muda o gráfico)
+  const nextBefore = (await tf.getByTestId('wheel-next').innerText()).trim();
+  const cdp = await page.context().newCDPSession(page);
+  const b = (await tf.boundingBox())!;
+  const x = b.x + b.width / 2;
+  const y = b.y + b.height / 2;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - (40 * i) / 8 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(tf).toContainText(nextBefore);
+});

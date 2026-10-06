@@ -48,13 +48,13 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
       if (!its.length) return;
       if (!opened) {
         opened = true;
-        vibrate(10);
+        vibrate(20);
       }
       // arrastar para cima avança na lista (como girar a roda)
       const next = start + Math.round(dy / STEP); // sem limites: a roda é infinita
       if (next !== idx) {
         idx = next;
-        vibrate(7);
+        vibrate(14);
       }
       setState({ index: idx, rect: el.getBoundingClientRect() });
     };
@@ -68,7 +68,7 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
         const item = its[wrapIndex(idx, its.length)];
         setState(null);
         if (item && wrapIndex(idx, its.length) !== wrapIndex(start, its.length)) {
-          vibrate([12, 30, 12]);
+          vibrate([22, 40, 22]);
           live.current.onSelect(item);
         }
       }
@@ -100,7 +100,12 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
     state && typeof document !== 'undefined'
       ? createPortal(<Wheel items={items} index={state.index} rect={state.rect} />, document.body)
       : null;
-  return { bind, overlay, open: state !== null };
+  // vizinhos do item atual (para mostrar a roda "espreitando" mesmo sem tocar)
+  const n = items.length;
+  const cur = Math.max(0, items.findIndex((i) => i.id === currentId));
+  const prev = n > 1 ? items[wrapIndex(cur - 1, n)] : undefined;
+  const next = n > 1 ? items[wrapIndex(cur + 1, n)] : undefined;
+  return { bind, overlay, open: state !== null, prev, next, current: items[cur] };
 }
 
 function Wheel({ items, index, rect }: { items: WheelItem[]; index: number; rect: DOMRect }) {

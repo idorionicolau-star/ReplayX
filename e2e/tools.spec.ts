@@ -137,11 +137,15 @@ test('contador da vela, cores do gráfico e texto com modelo', async ({ page }) 
   await page.click('[data-testid=right-tab-watchlist]');
 
   // contador até ao fecho da vela (em tempo real)
-  const cd = await page.evaluate(() => {
-    const c = [...(window as unknown as { __rxCharts: Map<string, { countdownLabel(): { text: string } | null }> }).__rxCharts.values()][0];
-    return c.countdownLabel()?.text ?? null;
-  });
-  expect(cd).toMatch(/^\d\d:\d\d/);
+  // o gráfico pode ainda não ter posicionado a etiqueta: espera até aparecer
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const c = [...(window as unknown as { __rxCharts: Map<string, { countdownLabel(): { text: string } | null }> }).__rxCharts.values()][0];
+        return c.countdownLabel()?.text ?? null;
+      }),
+    )
+    .toMatch(/^\d\d:\d\d/);
 
   // fundo do gráfico pelo código da cor
   await page.getByRole('button', { name: 'Definições', exact: true }).first().click();
