@@ -12,7 +12,7 @@ export type TradeAction =
   | { type: 'close-position'; id: string }
   | { type: 'cancel-order'; id: string }
   | { type: 'modify-position'; id: string; sl?: number | null; tp?: number | null }
-  | { type: 'modify-order'; id: string; price: number };
+  | { type: 'modify-order'; id: string; price?: number; sl?: number | null; tp?: number | null };
 
 export interface InteractionCallbacks {
   tool(): ToolId;
@@ -524,7 +524,8 @@ export class Interaction {
     if (tr) {
       this.consume(e);
       if (tr.kind === 'close') {
-        if (tr.target.type === 'order') this.cb.onTrade({ type: 'cancel-order', id: tr.target.id });
+        if (tr.target.type === 'order' && (tr.target.field === 'sl' || tr.target.field === 'tp')) this.cb.onTrade({ type: 'modify-order', id: tr.target.id, [tr.target.field]: null });
+        else if (tr.target.type === 'order') this.cb.onTrade({ type: 'cancel-order', id: tr.target.id });
         else if (tr.target.field === 'entry') this.cb.onTrade({ type: 'close-position', id: tr.target.id });
         else this.cb.onTrade({ type: 'modify-position', id: tr.target.id, [tr.target.field]: null });
         return;
@@ -873,7 +874,7 @@ export class Interaction {
       this.setCursor('');
       if (m.moved) {
         const t = m.region.target;
-        if (t.type === 'order') this.cb.onTrade({ type: 'modify-order', id: t.id, price: m.price });
+        if (t.type === 'order') this.cb.onTrade({ type: 'modify-order', id: t.id, ...(t.field === 'sl' ? { sl: m.price } : t.field === 'tp' ? { tp: m.price } : { price: m.price }) });
         else if (t.field === 'entry') {
           const pos = this.c.trading?.positions.find((x) => x.id === t.id);
           if (pos) {

@@ -113,7 +113,24 @@ export function applyTradeAction(a: TradeAction) {
     return;
   }
   if (a.type === 'modify-order') {
-    acc.orders = acc.orders.map((o) => (o.id === a.id ? { ...o, price: a.price } : o));
+    const o = acc.orders.find((x) => x.id === a.id);
+    if (!o) return;
+    const long = o.side === 'long';
+    const price = a.price ?? o.price;
+    // o stop fica do lado da perda e o alvo do lado do ganho, em relação à entrada da ordem
+    if (a.sl !== undefined && a.sl !== null && (long ? a.sl >= price : a.sl <= price)) {
+      toast('O stop tem de ficar do lado da perda', { kind: 'error' });
+      return;
+    }
+    if (a.tp !== undefined && a.tp !== null && (long ? a.tp <= price : a.tp >= price)) {
+      toast('O alvo tem de ficar do lado do ganho', { kind: 'error' });
+      return;
+    }
+    acc.orders = acc.orders.map((x) =>
+      x.id === a.id
+        ? { ...x, price, sl: a.sl === undefined ? x.sl : a.sl === null ? undefined : a.sl, tp: a.tp === undefined ? x.tp : a.tp === null ? undefined : a.tp }
+        : x,
+    );
     tr.setAccount(mode, acc);
     return;
   }

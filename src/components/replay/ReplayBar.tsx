@@ -12,7 +12,7 @@ import { tfLabel, tfShort, STANDARD_TFS } from '@/core/timeframes';
 import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { submitOrder } from '@/trading/actions';
 import { QtyStepper } from '@/components/ui/QtyStepper';
-import { openOrderTicket } from '@/trading/ticket';
+import { createPosition } from '@/trading/position';
 import { useLotRule } from '@/trading/lotRule';
 import { snapLot, fmtLotWith } from '@/core/trading/lots';
 import { Popover } from '@/components/ui/Popover';
@@ -198,7 +198,7 @@ export function ReplayBar() {
         <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Vender ${fmtLotWith(defaultQty, lotRuleNow)} a mercado (lote mín. ${fmtLotWith(lotRuleNow.min, lotRuleNow)})`} data-testid="replay-sell">
           Vender
         </button>
-        <button type="button" onClick={() => openOrderTicket(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title="Ordem limite/stop no gráfico, com SL e TP arrastáveis" data-testid="replay-order">
+        <button type="button" onClick={() => createPosition(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title="Posição com stop e alvo para arrastar: arrasta a entrada, o SL e o TP e envia a ordem (limite, stop ou mercado)" data-testid="replay-order">
           <ListPlus size={15} /> Ordem
         </button>
         <div className="flex flex-col px-2 leading-tight" title="Saldo da conta de replay">

@@ -1,8 +1,8 @@
 'use client';
 import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
 import { ChartNav, FitButton, PriceAxisPlus } from './ChartOverlays';
-import { OrderTicket } from './OrderTicket';
 import { parseTf } from '@/core/timeframes';
+import { positionSizing } from '@/trading/position';
 import { toolDef } from '@/chart/drawings/tools';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
@@ -86,6 +86,7 @@ export function ChartPane({ index }: { index: number }) {
       },
     );
     ctrlRef.current = c;
+    c.positionSizing = (d) => positionSizing(symbolRef.current, d);
     setCtrl(c);
     const inter = new Interaction(c, {
       tool: () => useDrawings.getState().tool,
@@ -100,7 +101,14 @@ export function ChartPane({ index }: { index: number }) {
       addDrawing: (d) => {
         const sid = symbolRef.current;
         if (!sid) return;
-        if (d.data) d.data.account = useTrading.getState()[tradingMode()].balance;
+        if (d.data) {
+          const st = useSettings.getState().trading;
+          d.data.account = useTrading.getState()[tradingMode()].balance;
+          // o lote e o risco da posição começam como nas Definições
+          d.data.riskPct = st.defaultRiskPct;
+          d.data.sizing = st.sizing;
+          d.data.qty = st.defaultQty;
+        }
         useDrawings.getState().add(sid, d);
       },
       patchDrawing: (id, patch) => symbolRef.current && useDrawings.getState().patchLive(symbolRef.current, id, patch),
@@ -333,7 +341,6 @@ export function ChartPane({ index }: { index: number }) {
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
       {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} ctrl={ctrl} />}
-      {ctrl && isActive && <OrderTicket ctrl={ctrl} symbolId={cfg.symbolId} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <FitButton ctrl={ctrl} />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}

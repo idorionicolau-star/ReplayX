@@ -35,7 +35,7 @@ import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance,
 import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
 import { BandFill } from './fill';
 import type { Viewport } from './drawings/tools';
-import type { Drawing } from './drawings/types';
+import type { Drawing, PositionSizing } from './drawings/types';
 import { usePick } from './pick';
 import { fmtCountdown, resolveAppearance, type Appearance, type ResolvedAppearance } from './appearance';
 import { withAlpha } from './drawings/geometry';
@@ -171,6 +171,8 @@ export class ChartController {
   hoveredId: string | null = null;
   preview: Drawing | null = null;
   trading: TradingOverlay | null = null;
+  /** Lote, risco e tipo de ordem das ferramentas de posição (definido pelo painel, que conhece o ativo e a conta). */
+  positionSizing: ((d: Drawing) => PositionSizing | null) | null = null;
   alerts: { price: number; label: string }[] = [];
   hint: { x: number; y: number; text: string } | null = null;
   /** Ponto onde o íman prendeu (círculo no ecrã). */
@@ -506,6 +508,7 @@ export class ChartController {
         bars: this.bars,
         dark: this.theme.dark,
         cursor: this.cursor,
+        sizing: (d) => this.positionSizing?.(d) ?? null,
       };
     }
     const size = this.paneSize();

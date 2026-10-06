@@ -22,8 +22,6 @@ interface UiState {
   mobileTools: boolean;
   /** Criar alerta (preço, desenho ou indicador) ou editar um existente (`editId`). */
   alertDraft: { symbolId: string; price?: number; drawingId?: string; indicatorUid?: string; editId?: string } | null;
-  /** Bilhete de ordem no gráfico (entrada, SL e TP arrastáveis). */
-  orderTicket: { symbolId: string; side: 'long' | 'short'; price: number; sl: number; tp: number } | null;
   set: (patch: Partial<UiState>) => void;
   openSymbolSearch: (initial?: string, chart?: number, mode?: UiState['symbolSearch']['mode']) => void;
 }
@@ -40,7 +38,6 @@ export const useUi = create<UiState>((set) => ({
   tfInput: null,
   mobileTools: false,
   alertDraft: null,
-  orderTicket: null,
   set: (patch) => set(patch),
   openSymbolSearch: (initial = '', chart, mode = 'set') =>
     set((s) => ({ symbolSearch: { open: true, chart: chart ?? s.symbolSearch.chart, initial, mode } })),
