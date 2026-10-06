@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Bookmark, BookmarkPlus, Check, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Check, Trash2 } from 'lucide-react';
+import { TemplateIcon } from '@/components/ui/TemplateIcon';
 import { useSettings, type DrawingTemplate } from '@/store/settings';
 import { useDrawings } from '@/store/drawings';
 import type { Drawing } from '@/chart/drawings/types';
@@ -45,13 +46,13 @@ export function TemplateMenu({ symbolId, d, compact }: { symbolId: string; d: Dr
       <button
         ref={ref}
         type="button"
-        title="Modelos"
+        title="Modelos guardados"
         aria-label="Modelos"
         onClick={() => setOpen((o) => !o)}
         className={cn('flex items-center gap-1 rounded-md text-xs hover:bg-hover', compact ? 'h-7 w-7 justify-center' : 'h-8 px-2.5')}
         data-testid="template-menu"
       >
-        <Bookmark size={15} />
+        <TemplateIcon size={compact ? 17 : 15} />
         {!compact && 'Modelo'}
       </button>
       <Popover anchor={ref} open={open} onClose={() => (setOpen(false), setNaming(null))} placement="bottom-start">

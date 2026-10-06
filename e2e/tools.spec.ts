@@ -419,3 +419,21 @@ test('lista de observação: símbolo adicionado fica visível na lista', async 
   await expect(page.getByText('adicionado à lista')).toBeVisible();
   await expect(page.getByTestId(`watch-${id}`)).toBeInViewport();
 });
+
+test('barra do desenho simplificada: sem o nome da ferramenta, modelos à esquerda e o resto em "Mais opções"', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.keyboard.press('Alt+H');
+  await page.mouse.click(600, 400);
+  const bar = page.getByTestId('drawing-float');
+  await expect(bar).toBeVisible();
+  await expect(bar).not.toContainText('Linha horizontal');
+  // o seletor de modelos é o primeiro controlo
+  const first = bar.locator('button').first();
+  await expect(first).toHaveAttribute('data-testid', 'template-menu');
+  // clonar passou para "Mais opções"
+  await expect(bar.getByRole('button', { name: 'Clonar' })).toHaveCount(0);
+  await bar.getByTestId('drawing-more').click();
+  await expect(page.getByText('Clonar')).toBeVisible();
+});
