@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Bell, Copy, Ellipsis, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
+import { ArrowUpDown, Bell, Copy, Ellipsis, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
 import { TemplateMenu } from './TemplateMenu';
 import { AngleMenu } from './AngleMenu';
 import type { ChartController } from '@/chart/controller';
@@ -14,12 +14,12 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { IconButton } from '@/components/ui/Button';
 import { uid } from '@/lib/uid';
-import { submitOrder } from '@/trading/actions';
-import { useTrading, specFor } from '@/store/trading';
-import { tradingMode } from '@/trading/actions';
-import { qtyForRisk } from '@/core/trading/engine';
-import { resolveSymbol } from '@/core/symbols';
-import { toast } from '@/components/ui/Toast';
+import { useSettings } from '@/store/settings';
+import { flipPosition, positionSizing, sendPosition } from '@/trading/position';
+import { useLotRule } from '@/trading/lotRule';
+import { QtyStepper } from '@/components/ui/QtyStepper';
+import { PctStepper } from '@/components/ui/PctStepper';
+import { cn } from '@/components/ui/cn';
 
 const DASH_ICONS = ['—', '- -', '···'];
 const TEXT_TOOLS = new Set(['trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowline', 'infoline', 'arrowup', 'arrowdown']);
@@ -47,17 +47,6 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   const isPosition = d.type === 'long' || d.type === 'short';
   const textTool = d.type === 'text' || d.type === 'note';
   const hasFill = d.style.fill !== undefined && d.type !== 'fib' && d.type !== 'fibext' && !isPosition;
-
-  const toOrder = () => {
-    if (!d.data) return;
-    const sym = resolveSymbol(symbolId);
-    const entry = d.points[0].price;
-    const acc = useTrading.getState()[tradingMode()];
-    const qty = qtyForRisk((acc.balance * d.data.riskPct) / 100, entry, d.data.stop, specFor(sym));
-    const side = d.type === 'long' ? 'long' : 'short';
-    const ok = submitOrder({ symbolId, side, type: 'limit', qty: +qty.toFixed(sym.contractSize && sym.contractSize >= 1000 ? 2 : 4), price: entry, sl: d.data.stop, tp: d.data.target });
-    if (ok) toast('Ordem criada a partir da ferramenta de posição', { kind: 'success' });
-  };
 
   return (
     <div data-testid="drawing-float" className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
@@ -90,11 +79,7 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
           </button>
         </>
       )}
-      {isPosition && (
-        <IconButton size="sm" label="Criar ordem com esta posição" onClick={toOrder}>
-          <Send size={15} />
-        </IconButton>
-      )}
+      {isPosition && d.data && <PositionControls symbolId={symbolId} d={d} />}
       {(LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
         <IconButton size="sm" label="Adicionar alerta neste desenho" onClick={() => useUi.getState().set({ alertDraft: { symbolId, drawingId: d.id } })}>
           <Bell size={15} />
@@ -121,5 +106,53 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
         <Trash2 size={15} />
       </IconButton>
     </div>
+  );
+}
+
+/** Posição longa/curta: inverter direção, calcular o lote (manual ou pelo risco e pelo stop) e enviar a ordem. */
+function PositionControls({ symbolId, d }: { symbolId: string; d: Drawing }) {
+  const rule = useLotRule(symbolId);
+  const setTrading = useSettings((s) => s.setTrading);
+  const defaultQty = useSettings((s) => s.trading.defaultQty);
+  const defaultSizing = useSettings((s) => s.trading.sizing);
+  const data = d.data!;
+  const sizing = data.sizing ?? defaultSizing;
+  const sz = positionSizing(symbolId, d);
+  const long = d.type === 'long';
+  const patch = (p: Partial<typeof data>) => useDrawings.getState().update(symbolId, d.id, { data: { ...data, ...p } });
+  const seg = 'h-7 px-2 text-[11px] font-semibold';
+  return (
+    <>
+      <IconButton size="sm" label={long ? 'Compra: tocar para inverter para venda' : 'Venda: tocar para inverter para compra'} onClick={() => flipPosition(symbolId, d)} data-testid="position-flip" className={long ? 'text-up' : 'text-down'}>
+        <ArrowUpDown size={15} />
+      </IconButton>
+      <div className="flex overflow-hidden rounded-md border border-line" title="Como calcular o lote">
+        <button type="button" onClick={() => (patch({ sizing: 'qty', qty: sz?.qty ?? defaultQty }), setTrading({ sizing: 'qty' }))} className={cn(seg, sizing === 'qty' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="position-mode-lot">
+          Lote
+        </button>
+        <button type="button" onClick={() => (patch({ sizing: 'risk' }), setTrading({ sizing: 'risk' }))} className={cn(seg, sizing === 'risk' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="position-mode-risk">
+          Risco
+        </button>
+      </div>
+      {sizing === 'qty' ? (
+        <QtyStepper value={sz?.qty ?? defaultQty} rule={rule} onChange={(v) => (patch({ qty: v }), setTrading({ defaultQty: v }))} className="scale-90" />
+      ) : (
+        <PctStepper value={data.riskPct} onChange={(v) => (patch({ riskPct: v }), setTrading({ defaultRiskPct: v }))} />
+      )}
+      {sz && (
+        <span className="px-1 text-[11px] whitespace-nowrap text-muted tnum" data-testid="position-info" title={`Mínimo ${rule.min} · passo ${rule.step} · máximo ${rule.max}`}>
+          Lote <b className="text-text">{sz.qtyText}</b> · risco <b className={sz.minExceeds ? 'text-warn' : 'text-text'}>{sz.risk.toFixed(2)}</b> ({sz.riskPct.toFixed(2)}%)
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => sendPosition(symbolId, d)}
+        className={cn('flex h-7 shrink-0 items-center gap-1 rounded-md px-2.5 text-[11px] font-semibold whitespace-nowrap text-white hover:brightness-110', long ? 'bg-up' : 'bg-down')}
+        title={sz ? `${sz.label}: envia a ordem com este stop e alvo` : 'Enviar ordem'}
+        data-testid="position-send"
+      >
+        <Send size={13} /> {sz && sz.kind !== 'market' ? `Enviar ${sz.kind === 'limit' ? 'limite' : 'stop'}` : 'Enviar'}
+      </button>
+    </>
   );
 }

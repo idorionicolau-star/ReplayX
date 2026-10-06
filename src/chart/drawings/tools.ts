@@ -1,5 +1,5 @@
 import type { Bar, PricePoint } from '@/core/types';
-import { DEFAULT_FIBEXT_LEVELS, DEFAULT_FIB_LEVELS, type Drawing, type DrawingStyle, type ToolId } from './types';
+import { DEFAULT_FIBEXT_LEVELS, DEFAULT_FIB_LEVELS, type Drawing, type DrawingStyle, type PositionSizing, type ToolId } from './types';
 import { distToEllipse, distToPolyline, distToSegment, extendSegment, nearRectBorder, pointInPolygon, pointInRect, withAlpha, type Pt } from './geometry';
 import { fmtDuration } from '@/lib/format';
 
@@ -16,6 +16,8 @@ export interface Viewport {
   dark: boolean;
   /** Fim do replay (para a ferramenta de posição mostrar o resultado até ao cursor). */
   cursor: number | null;
+  /** Lote, risco e tipo de ordem de uma ferramenta de posição (injetado pelo gráfico). */
+  sizing?: (d: Drawing) => PositionSizing | null;
 }
 
 export interface Handle {
@@ -1022,16 +1024,20 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       const risk = Math.abs(entry - data.stop);
       const reward = Math.abs(data.target - entry);
       const rr = risk ? reward / risk : 0;
-      const riskAmt = (data.account * data.riskPct) / 100;
-      const qty = risk ? riskAmt / risk : 0;
+      // lote, risco e ganho em dinheiro calculados com o ativo e a conta atuais (cai para um cálculo simples sem eles)
+      const sz = vp.sizing?.(d) ?? null;
+      const riskAmt = sz ? sz.risk : (data.account * data.riskPct) / 100;
+      const rewardAmt = sz ? sz.reward : riskAmt * rr;
+      const qty = sz ? sz.qty : risk ? riskAmt / risk : 0;
+      const qtyText = sz ? sz.qtyText : qty >= 100 ? qty.toFixed(0) : qty.toFixed(3);
       const fg = '#ffffff';
       const font = '11px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif';
       if (sel || w > 70) {
-        labelBox(ctx, [`Alvo: ${vp.fmtPrice(data.target)} (${pctChange(entry, data.target).toFixed(2)}%) +${(riskAmt * rr).toFixed(2)}`], left + w / 2, long ? Math.min(yt, ye) - 4 : Math.max(yt, ye) + 4, { bg: '#089981', fg, valign: long ? 'bottom' : 'top', font });
+        labelBox(ctx, [`Alvo: ${vp.fmtPrice(data.target)} (${pctChange(entry, data.target).toFixed(2)}%) +${rewardAmt.toFixed(2)}`], left + w / 2, long ? Math.min(yt, ye) - 4 : Math.max(yt, ye) + 4, { bg: '#089981', fg, valign: long ? 'bottom' : 'top', font });
         labelBox(ctx, [`Stop: ${vp.fmtPrice(data.stop)} (${pctChange(entry, data.stop).toFixed(2)}%) -${riskAmt.toFixed(2)}`], left + w / 2, long ? Math.max(ys, ye) + 4 : Math.min(ys, ye) - 4, { bg: '#f23645', fg, valign: long ? 'top' : 'bottom', font });
         labelBox(
           ctx,
-          [`${outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : ''}R:R ${rr.toFixed(2)} · Qtd ${qty >= 100 ? qty.toFixed(0) : qty.toFixed(3)}`],
+          [`${outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : ''}${sz ? `${sz.label} · ` : ''}R:R ${rr.toFixed(2)} · Lote ${qtyText}${sz?.minExceeds ? ' ⚠' : ''}`],
           left + w / 2,
           ye,
           { bg: long ? 'rgba(8,153,129,0.95)' : 'rgba(242,54,69,0.95)', fg, font },

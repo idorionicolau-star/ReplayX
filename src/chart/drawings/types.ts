@@ -67,6 +67,27 @@ export interface PositionData {
   /** Risco em % da conta. */
   riskPct: number;
   account: number;
+  /** Como se calcula o lote: pelo risco e pela distância ao stop, ou manual. */
+  sizing?: 'risk' | 'qty';
+  /** Lote manual (quando `sizing` é 'qty'). */
+  qty?: number;
+}
+
+/** Lote, risco e tipo de ordem de uma ferramenta de posição (calculados com o ativo e a conta atuais). */
+export interface PositionSizing {
+  qty: number;
+  /** Perda em dinheiro se bater no stop. */
+  risk: number;
+  /** Ganho em dinheiro se bater no alvo. */
+  reward: number;
+  /** Risco em % da conta. */
+  riskPct: number;
+  /** O lote mínimo do ativo já arrisca mais do que o pretendido. */
+  minExceeds: boolean;
+  /** Texto curto: "COMPRA LIMITE", "VENDA STOP" ou "A MERCADO". */
+  label: string;
+  kind: 'market' | 'limit' | 'stop';
+  qtyText: string;
 }
 
 export interface Drawing {

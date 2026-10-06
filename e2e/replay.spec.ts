@@ -112,79 +112,125 @@ test('a barra do replay arrasta-se e fica onde foi deixada (duplo clique repõe)
   }
 });
 
-test('ordem no gráfico: SL à esquerda e TP à direita arrastáveis, lote com + e −, envio de ordem pendente', async ({ page }) => {
+type Ctl = {
+  drawings: { id: string; type: string; points: { time: number; price: number }[]; data?: { stop: number; target: number; riskPct: number } }[];
+  container: HTMLElement;
+  timeToX(t: number): number | null;
+  priceToY(p: number): number | null;
+  overlay: { regions: { target: { type: string; id: string; field: string }; kind: string; x: number; y: number; w: number; h: number }[] };
+};
+const ctlJs = `[...window.__rxCharts.values()][0]`;
+
+async function startReplay(page: import('@playwright/test').Page) {
   await enterAsGuest(page);
   await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
   await waitBars(page, 500);
   await page.click('[data-testid=replay-button]');
   await page.mouse.click(600, 450);
   await expect(page.getByTestId('replay-bar')).toBeVisible();
+  await page.waitForTimeout(1200);
+}
+
+/** Coordenadas de ecrã da pega (0 entrada, 2 stop, 3 alvo) da 1.ª ferramenta de posição. */
+async function handleXY(page: import('@playwright/test').Page, id: 0 | 2 | 3) {
+  return page.evaluate(
+    ({ id }) => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, Ctl> }).__rxCharts.values()][0];
+      const d = c.drawings[0];
+      const r = c.container.getBoundingClientRect();
+      const price = id === 0 ? d.points[0].price : id === 2 ? d.data!.stop : d.data!.target;
+      return { x: r.left + c.timeToX(d.points[0].time)!, y: r.top + c.priceToY(price)! };
+    },
+    { id },
+  );
+}
+
+test('o botão Ordem cria a ferramenta de posição: arrastar a entrada abaixo do preço dá ordem limite e envia', async ({ page }) => {
+  await startReplay(page);
   await page.getByTestId('replay-order').click();
-  const sl = page.getByTestId('ticket-sl');
-  const tp = page.getByTestId('ticket-tp');
-  const entry = page.getByTestId('ticket-entry');
-  await expect(sl).toBeVisible();
-  const [bs, bt, be] = [(await sl.boundingBox())!, (await tp.boundingBox())!, (await entry.boundingBox())!];
-  expect(bs.x).toBeLessThan(be.x); // SL à esquerda
-  expect(bt.x).toBeGreaterThan(be.x); // TP à direita
-  expect(bs.y).toBeGreaterThan(be.y); // compra: SL abaixo
-  expect(bt.y).toBeLessThan(be.y); // TP acima
-  // arrastar o TP para cima aumenta o preço
-  const price = async (id: string) => parseFloat(((await page.getByTestId(id).innerText()).match(/TP\s+([\d.]+)/) ?? (await page.getByTestId(id).innerText()).match(/SL\s+([\d.]+)/))![1]);
-  const tp0 = await price('ticket-tp');
-  await page.mouse.move(bt.x + bt.width / 2, bt.y + bt.height / 2);
+  const send = page.getByTestId('position-send');
+  await expect(send).toBeVisible();
+  expect(await page.evaluate(`${ctlJs}.drawings.length`)).toBe(1);
+  expect(await page.evaluate(`${ctlJs}.drawings[0].type`)).toBe('long');
+  // entrada no preço atual: ordem a mercado
+  await expect(send).toHaveText(/Enviar$/);
+  // arrasta a entrada para baixo (compra abaixo do preço = limite)
+  const e = await handleXY(page, 0);
+  await page.mouse.move(e.x, e.y);
   await page.mouse.down();
-  await page.mouse.move(bt.x + bt.width / 2, bt.y + bt.height / 2 - 60, { steps: 6 });
+  await page.mouse.move(e.x, e.y + 70, { steps: 8 });
   await page.mouse.up();
-  expect(await price('ticket-tp')).toBeGreaterThan(tp0);
-  // lote: + passa ao degrau seguinte
-  const q0 = (await page.getByTestId('qty-value').first().innerText()).trim();
-  await page.getByTestId('qty-plus').first().click();
-  expect((await page.getByTestId('qty-value').first().innerText()).trim()).not.toBe(q0);
-  // entrada mais abaixo do preço = compra limite pendente
-  await page.mouse.move(be.x + be.width / 2, be.y + be.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(be.x + be.width / 2, be.y + be.height / 2 + 70, { steps: 6 });
-  await page.mouse.up();
-  await expect(entry).toContainText('LIMITE');
-  await page.getByTestId('ticket-send').click();
-  await expect(page.getByText('Ordem pendente colocada')).toBeVisible();
-  await expect(page.getByTestId('order-ticket')).toBeHidden();
+  await expect(send).toHaveText(/Enviar limite/);
+  await send.click();
+  await expect(page.getByText('Ordem limite pendente colocada')).toBeVisible();
 });
 
-test('lote pelo risco: afastar o stop reduz o lote e o painel mostra as regras do ativo', async ({ page }) => {
-  await enterAsGuest(page);
-  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
-  await waitBars(page, 500);
-  await page.click('[data-testid=replay-button]');
-  await page.mouse.click(600, 450);
-  await expect(page.getByTestId('replay-bar')).toBeVisible();
+test('posição: lote pelo risco recalcula ao afastar o stop, e Lote manual usa a escada do ativo', async ({ page }) => {
+  await startReplay(page);
   await page.getByTestId('replay-order').click();
-  const info = page.getByTestId('ticket-lot-info');
-  await expect(info).toContainText('mín.');
-  await expect(info).toContainText('passo');
-  await page.getByTestId('ticket-mode-risk').click();
-  const lot = async () => parseFloat(((await info.locator('b').first().innerText()) ?? '0').replace(',', '.'));
-  const risk = async () => parseFloat((await info.locator('b').nth(1).innerText()).replace(/[^\d.,-]/g, '').replace(',', '.'));
+  const info = page.getByTestId('position-info');
+  await expect(info).toBeVisible();
+  await page.getByTestId('position-mode-risk').click();
+  const lot = async () => parseFloat((await info.locator('b').first().innerText()).replace(',', '.'));
   const l0 = await lot();
-  const r0 = await risk();
   expect(l0).toBeGreaterThan(0);
-  // arrastar o SL para mais longe da entrada: com o risco fixo o lote tem de baixar
-  const sl = page.getByTestId('ticket-sl');
-  const b = (await sl.boundingBox())!;
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  // stop mais longe da entrada: com o risco fixo o lote baixa
+  const s0 = await handleXY(page, 2);
+  await page.mouse.move(s0.x, s0.y);
   await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + 90, { steps: 6 });
+  await page.mouse.move(s0.x, s0.y + 90, { steps: 8 });
   await page.mouse.up();
   await expect.poll(lot).toBeLessThan(l0);
-  // o risco em dinheiro mantém-se (≈ 1% da conta, arredondado para baixo ao passo do lote)
-  const r1 = await risk();
-  expect(r1).toBeLessThanOrEqual(r0 * 1.02);
-  expect(r1).toBeGreaterThan(r0 * 0.5);
-  // risco +: o lote sobe
   const l1 = await lot();
   await page.getByTestId('risk-plus').click();
   await expect.poll(lot).toBeGreaterThan(l1);
+  // modo Lote: o valor é um degrau válido do ativo
+  await page.getByTestId('position-mode-lot').click();
+  await expect(page.getByTestId('qty-value').first()).toHaveText(/\d/);
+  await page.getByTestId('qty-plus').first().click();
+  await expect(info).toContainText('Lote');
+});
+
+test('inverter a posição espelha stop e alvo; ordem pendente tem SL e TP arrastáveis', async ({ page }) => {
+  await startReplay(page);
+  await page.getByTestId('replay-order').click();
+  await expect(page.getByTestId('position-send')).toBeVisible();
+  const before = await page.evaluate(`JSON.stringify(${ctlJs}.drawings[0].data)`);
+  await page.getByTestId('position-flip').click();
+  expect(await page.evaluate(`${ctlJs}.drawings[0].type`)).toBe('short');
+  const after = JSON.parse((await page.evaluate(`JSON.stringify(${ctlJs}.drawings[0].data)`)) as string);
+  const b = JSON.parse(before as string);
+  // espelhado à volta da entrada: novo = 2 × entrada − antigo (o stop passa para cima e o alvo para baixo)
+  const entry = (await page.evaluate(`${ctlJs}.drawings[0].points[0].price`)) as number;
+  expect(after.stop).toBeCloseTo(2 * entry - b.stop, 5);
+  expect(after.target).toBeCloseTo(2 * entry - b.target, 5);
+  expect(after.stop).toBeGreaterThan(entry);
+  expect(after.target).toBeLessThan(entry);
+  // põe a entrada acima do preço (venda acima = limite) e envia; depois apaga o desenho para sobrar só a ordem
+  const e = await handleXY(page, 0);
+  await page.mouse.move(e.x, e.y);
+  await page.mouse.down();
+  await page.mouse.move(e.x, e.y - 60, { steps: 8 });
+  await page.mouse.up();
+  await page.getByTestId('position-send').click();
+  await expect(page.getByText(/Ordem (limite|stop) pendente colocada/)).toBeVisible();
+  await page.keyboard.press('Delete');
+  await expect.poll(() => page.evaluate(`${ctlJs}.drawings.length`)).toBe(0);
+  // a linha do SL da ordem pendente arrasta-se
+  const slRegion = () =>
+    page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, Ctl> }).__rxCharts.values()][0];
+      const r = c.overlay.regions.find((x) => x.kind === 'line' && x.target.type === 'order' && x.target.field === 'sl');
+      const box = c.container.getBoundingClientRect();
+      return r ? { x: box.left + r.x + r.w / 2, y: box.top + r.y + r.h / 2 } : null;
+    });
+  const sl0 = await slRegion();
+  expect(sl0).not.toBeNull();
+  await page.mouse.move(sl0!.x, sl0!.y);
+  await page.mouse.down();
+  await page.mouse.move(sl0!.x, sl0!.y + 40, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await slRegion())?.y ?? 0).not.toBe(sl0!.y);
 });
 
 test('definições: regras de lote por tipo de mercado e ajuste do lote ao enviar', async ({ page }) => {

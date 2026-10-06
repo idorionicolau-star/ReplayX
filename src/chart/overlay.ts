@@ -324,32 +324,10 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       const long = o.side === 'long';
       const kind = `${long ? 'COMPRA' : 'VENDA'} ${o.type === 'limit' ? 'LIMITE' : 'STOP'}`;
       lineAt(price, long ? '#2962ff' : '#f23645', [2, 3], [`${kind} ${o.qty >= 100 ? o.qty.toFixed(0) : +o.qty.toFixed(4)} @ ${vp.fmtPrice(price)}`], true, { type: 'order', id: o.id, field: 'price' }, long ? '#2962ff' : '#e65100');
-      if (o.sl !== undefined) {
-        const y = vp.priceToY(o.sl);
-        if (y !== null) {
-          ctx.save();
-          ctx.strokeStyle = 'rgba(242,54,69,0.6)';
-          ctx.setLineDash([2, 4]);
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(vp.width, y);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-      if (o.tp !== undefined) {
-        const y = vp.priceToY(o.tp);
-        if (y !== null) {
-          ctx.save();
-          ctx.strokeStyle = 'rgba(8,153,129,0.6)';
-          ctx.setLineDash([2, 4]);
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(vp.width, y);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
+      const osl = drag?.id === o.id && drag.field === 'sl' ? drag.price : o.sl;
+      const otp = drag?.id === o.id && drag.field === 'tp' ? drag.price : o.tp;
+      if (osl !== undefined) lineAt(osl, '#f23645', [5, 4], [`SL ${vp.fmtPrice(osl)}`], true, { type: 'order', id: o.id, field: 'sl' }, '#f23645');
+      if (otp !== undefined) lineAt(otp, '#089981', [5, 4], [`TP ${vp.fmtPrice(otp)}`], true, { type: 'order', id: o.id, field: 'tp' }, '#089981');
     }
     return regions;
   }

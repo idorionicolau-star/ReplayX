@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Minus, Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, ArrowUpToLine, ArrowDownToLine, CopyPlus, Layers, ListPlus } from 'lucide-react';
+import { Minus, Bell, Copy, Eye, Lock, LockOpen, RefreshCcw, Rewind, Settings2, Trash2, CopyPlus, Layers, ListPlus } from 'lucide-react';
 import { useUi } from '@/store/ui';
 import { useWorkspace } from '@/store/workspace';
 import { useDrawings } from '@/store/drawings';
@@ -9,8 +9,8 @@ import { resolveSymbol } from '@/core/symbols';
 import { getChart } from '@/chart/registry';
 import { replay, useReplay } from '@/replay/engine';
 import { barEnd } from '@/core/feed/datafeed';
-import { currentPrice, submitOrder } from '@/trading/actions';
-import { openOrderTicket } from '@/trading/ticket';
+import { currentPrice } from '@/trading/actions';
+import { createPosition } from '@/trading/position';
 import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { fmtPrice } from '@/lib/format';
@@ -30,7 +30,6 @@ function addHLine(symbolId: string, chartId: string, price: number) {
 export function ChartContextMenu() {
   const menu = useUi((s) => s.contextMenu);
   const cfg = useWorkspace((s) => (menu ? s.charts[menu.chart] : undefined));
-  const qty = useSettings((s) => s.trading.defaultQty);
   const replayActive = useReplay((s) => s.active && !s.selecting);
   const anchor = useMemo(() => (menu ? { x: menu.x, y: menu.y } : null), [menu]);
   if (!menu || !cfg) return null;
@@ -70,17 +69,7 @@ export function ChartContextMenu() {
           <>
             {price !== null && last !== undefined && (
               <>
-                <MenuItem icon={<ListPlus size={15} />} label="Ordem com SL e TP aqui…" onClick={act(() => openOrderTicket(cfg.symbolId, { price }))} />
-                <MenuItem
-                  icon={<ArrowUpToLine size={15} className="text-up" />}
-                  label={`Comprar ${price < last ? 'limite' : 'stop'} ${qty} @ ${fmtPrice(price, sym.precision)}`}
-                  onClick={act(() => submitOrder({ symbolId: cfg.symbolId, side: 'long', type: price < last ? 'limit' : 'stop', qty, price }))}
-                />
-                <MenuItem
-                  icon={<ArrowDownToLine size={15} className="text-down" />}
-                  label={`Vender ${price > last ? 'limite' : 'stop'} ${qty} @ ${fmtPrice(price, sym.precision)}`}
-                  onClick={act(() => submitOrder({ symbolId: cfg.symbolId, side: 'short', type: price > last ? 'limit' : 'stop', qty, price }))}
-                />
+                <MenuItem icon={<ListPlus size={15} />} label="Posição com SL e TP aqui" onClick={act(() => createPosition(cfg.symbolId, { price }))} />
                 <MenuSeparator />
               </>
             )}
