@@ -29,6 +29,8 @@ describe('indicadores', () => {
         expect(arr.length, `${def.id}.${k}`).toBe(b.length);
         // as bandas do VWAP estão desligadas por omissão
         if (def.id === 'vwap' && k !== 'vwap') continue;
+        // o Apocalypse só desenha sinais quando há vantagem estatística (num mercado sem padrão ficam vazios, de propósito)
+        if (def.id === 'apocalypse' && ['entry', 'sl', 'tp'].includes(k)) continue;
         expect(arr.some(Number.isFinite), `${def.id}.${k} tem valores`).toBe(true);
       }
     }

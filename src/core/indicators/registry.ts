@@ -1019,8 +1019,8 @@ export const INDICATORS: IndicatorDef[] = [
       { a: 'd2hi', b: 'd2lo', color: 'rgba(8,153,129,0.2)' },
       { a: 's1hi', b: 's1lo', color: 'rgba(242,54,69,0.2)' },
       { a: 's2hi', b: 's2lo', color: 'rgba(242,54,69,0.2)' },
-      { a: 'tp', b: 'entry', color: 'rgba(8,153,129,0.3)' },
-      { a: 'entry', b: 'sl', color: 'rgba(242,54,69,0.3)' },
+      { a: 'tp', b: 'entry', color: 'rgba(8,153,129,0.22)' },
+      { a: 'entry', b: 'sl', color: 'rgba(242,54,69,0.22)' },
     ],
     compute(bars, p) {
       const r = apocalypse(bars, { sensitivity: n(p, 'sens'), topPct: n(p, 'top'), horizon: n(p, 'h'), signals: p.signals !== false, ratio: n(p, 'ratio') });
@@ -1032,7 +1032,7 @@ export const INDICATORS: IndicatorDef[] = [
       // as duas zonas de cada tipo mais perto do preço atual
       for (const [kind, prefix] of [['demand', 'd'], ['supply', 's']] as const) {
         const near = r.zones
-          .filter((z) => z.kind === kind)
+          .filter((z) => z.kind === kind && z.count >= 2)
           .sort((a, b) => Math.abs((a.lo + a.hi) / 2 - price) - Math.abs((b.lo + b.hi) / 2 - price))
           .slice(0, 2);
         near.forEach((z, k) => {
