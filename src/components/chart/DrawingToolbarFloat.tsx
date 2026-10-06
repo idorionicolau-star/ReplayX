@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Bell, Copy, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
+import { Bell, Copy, Ellipsis, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
 import { TemplateMenu } from './TemplateMenu';
 import { AngleMenu } from './AngleMenu';
 import type { ChartController } from '@/chart/controller';
@@ -11,6 +11,7 @@ import { toolDef } from '@/chart/drawings/tools';
 import type { Drawing, DrawingStyle } from '@/chart/drawings/types';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { Popover } from '@/components/ui/Popover';
+import { MenuItem, MenuList } from '@/components/ui/Menu';
 import { IconButton } from '@/components/ui/Button';
 import { uid } from '@/lib/uid';
 import { submitOrder } from '@/trading/actions';
@@ -28,6 +29,8 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   const d = useDrawings((s) => (sel ? s.bySymbol[symbolId]?.find((x) => x.id === sel) : undefined));
   const widthRef = useRef<HTMLButtonElement>(null);
   const [widthOpen, setWidthOpen] = useState(false);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   if (!d) return null;
   const def = toolDef(d.type);
   const st = useDrawings.getState();
@@ -57,8 +60,8 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   };
 
   return (
-    <div className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
-      <span className="px-1.5 text-[11px] whitespace-nowrap text-muted">{def?.label}</span>
+    <div data-testid="drawing-float" className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
+      <TemplateMenu symbolId={symbolId} d={d} compact />
       {!isPosition && <ColorPicker value={d.style.color} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
       {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
       {textTool && <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label="Cor do texto" />}
@@ -103,19 +106,17 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
         </IconButton>
       )}
       <AngleMenu symbolId={symbolId} d={d} ctrl={ctrl} />
-      <TemplateMenu symbolId={symbolId} d={d} compact />
-      <IconButton size="sm" label="Definições" onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id } })}>
-        <Settings2 size={15} />
+      <IconButton ref={moreRef} size="sm" label="Mais opções" active={moreOpen} onClick={() => setMoreOpen((o) => !o)} data-testid="drawing-more">
+        <Ellipsis size={16} />
       </IconButton>
-      <IconButton size="sm" label={d.locked ? 'Desbloquear' : 'Bloquear'} active={d.locked} onClick={() => st.update(symbolId, d.id, { locked: !d.locked })}>
-        {d.locked ? <Lock size={15} /> : <LockOpen size={15} />}
-      </IconButton>
-      <IconButton size="sm" label="Ocultar" onClick={() => st.update(symbolId, d.id, { hidden: true })}>
-        <Eye size={15} />
-      </IconButton>
-      <IconButton size="sm" label="Clonar" onClick={clone}>
-        <Copy size={15} />
-      </IconButton>
+      <Popover anchor={moreRef} open={moreOpen} onClose={() => setMoreOpen(false)} placement="bottom-end">
+        <MenuList className="w-[210px]">
+          <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={() => (setMoreOpen(false), useUi.getState().set({ drawingSettings: { symbolId, id: d.id } }))} />
+          <MenuItem icon={d.locked ? <Lock size={15} /> : <LockOpen size={15} />} label={d.locked ? 'Desbloquear' : 'Bloquear'} onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { locked: !d.locked }))} />
+          <MenuItem icon={<Eye size={15} />} label="Ocultar" onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { hidden: true }))} />
+          <MenuItem icon={<Copy size={15} />} label="Clonar" onClick={() => (setMoreOpen(false), clone())} />
+        </MenuList>
+      </Popover>
       <IconButton size="sm" label="Remover (Delete)" onClick={() => st.remove(symbolId, d.id)} className="hover:text-down">
         <Trash2 size={15} />
       </IconButton>

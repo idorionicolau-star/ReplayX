@@ -137,11 +137,15 @@ test('contador da vela, cores do gráfico e texto com modelo', async ({ page }) 
   await page.click('[data-testid=right-tab-watchlist]');
 
   // contador até ao fecho da vela (em tempo real)
-  const cd = await page.evaluate(() => {
-    const c = [...(window as unknown as { __rxCharts: Map<string, { countdownLabel(): { text: string } | null }> }).__rxCharts.values()][0];
-    return c.countdownLabel()?.text ?? null;
-  });
-  expect(cd).toMatch(/^\d\d:\d\d/);
+  // o gráfico pode ainda não ter posicionado a etiqueta: espera até aparecer
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const c = [...(window as unknown as { __rxCharts: Map<string, { countdownLabel(): { text: string } | null }> }).__rxCharts.values()][0];
+        return c.countdownLabel()?.text ?? null;
+      }),
+    )
+    .toMatch(/^\d\d:\d\d/);
 
   // fundo do gráfico pelo código da cor
   await page.getByRole('button', { name: 'Definições', exact: true }).first().click();
@@ -414,4 +418,22 @@ test('lista de observação: símbolo adicionado fica visível na lista', async 
   await row.click();
   await expect(page.getByText('adicionado à lista')).toBeVisible();
   await expect(page.getByTestId(`watch-${id}`)).toBeInViewport();
+});
+
+test('barra do desenho simplificada: sem o nome da ferramenta, modelos à esquerda e o resto em "Mais opções"', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.keyboard.press('Alt+H');
+  await page.mouse.click(600, 400);
+  const bar = page.getByTestId('drawing-float');
+  await expect(bar).toBeVisible();
+  await expect(bar).not.toContainText('Linha horizontal');
+  // o seletor de modelos é o primeiro controlo
+  const first = bar.locator('button').first();
+  await expect(first).toHaveAttribute('data-testid', 'template-menu');
+  // clonar passou para "Mais opções"
+  await expect(bar.getByRole('button', { name: 'Clonar' })).toHaveCount(0);
+  await bar.getByTestId('drawing-more').click();
+  await expect(page.getByText('Clonar')).toBeVisible();
 });
