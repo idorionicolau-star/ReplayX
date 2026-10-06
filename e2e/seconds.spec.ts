@@ -62,3 +62,25 @@ test('replay em 5s (Pro) avança de 5 em 5 segundos, também com uma posição a
   await page.click('[data-testid=replay-forward]');
   await expect.poll(async () => (await chartInfo(page)).cursor).toBe(c0 + 25);
 });
+
+test('indicadores novos: Accelerator Oscillator, Alligator, Squeeze e Envelope aparecem no gráfico sem erros', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enterAsGuest(page);
+  await page.evaluate(() => (window as unknown as { __rxBilling: { setState(s: object): void } }).__rxBilling.setState({ loaded: false }));
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  const before = await page.getByTestId('indicator-name').count();
+  await page.click('[data-testid=indicators-button]');
+  await page.getByPlaceholder('Procurar indicador').fill('Accelerator');
+  await expect(page.getByTestId('indicator-ac')).toBeVisible();
+  for (const id of ['ac', 'alligator', 'squeeze', 'envelope']) {
+    await page.getByPlaceholder('Procurar indicador').fill(id === 'ac' ? 'Accelerator' : id === 'alligator' ? 'Alligator' : id === 'squeeze' ? 'Squeeze' : 'Envelope');
+    await page.getByTestId(`indicator-${id}`).click();
+  }
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.getByTestId('indicator-name').count()).toBe(before + 4);
+  // o AC tem valores calculados no gráfico
+  await page.waitForTimeout(500);
+  expect(errors).toEqual([]);
+});

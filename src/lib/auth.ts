@@ -21,6 +21,8 @@ export interface SessionUser {
   email: string | null;
   photo: string | null;
   guest: boolean;
+  /** O e-mail está verificado (contas Google estão). */
+  emailVerified: boolean;
   /** Quando a conta foi criada (ms) — conta para o período de teste do Pro. */
   createdAt: number | null;
 }
@@ -31,7 +33,7 @@ interface AuthState {
 }
 
 const GUEST_KEY = 'rx-guest';
-const GUEST_USER: SessionUser = { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true, createdAt: null };
+const GUEST_USER: SessionUser = { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true, emailVerified: false, createdAt: null };
 
 export const useAuth = create<AuthState>(() => ({ user: null, ready: false }));
 
@@ -43,6 +45,7 @@ function fromFirebase(u: User): SessionUser {
     email: u.email,
     photo: u.photoURL,
     guest: false,
+    emailVerified: u.emailVerified,
     createdAt: Number.isFinite(created) ? created : null,
   };
 }

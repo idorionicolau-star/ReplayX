@@ -120,7 +120,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
     }
   };
 
-  const current = plan.reason === 'paid' ? `Pro até ${fmtDate(plan.endsAt)}` : plan.reason === 'trial' ? `Teste do Pro: falta${plan.daysLeft === 1 ? '' : 'm'} ${plan.daysLeft} dia${plan.daysLeft === 1 ? '' : 's'}` : 'Plano grátis';
+  const current = plan.reason === 'lifetime' ? 'Pro vitalício' : plan.reason === 'paid' ? `Pro até ${fmtDate(plan.endsAt)}` : plan.reason === 'trial' ? `Teste do Pro: falta${plan.daysLeft === 1 ? '' : 'm'} ${plan.daysLeft} dia${plan.daysLeft === 1 ? '' : 's'}` : 'Plano grátis';
 
   return (
     <Dialog

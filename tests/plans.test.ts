@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entitlement, extendSubscription, freeReplayTfOk, GRACE_DAYS, PLANS, TRIAL_DAYS } from '@/core/plans';
+import { entitlement, extendSubscription, freeReplayTfOk, GRACE_DAYS, isLifetimeEmail, PLANS, TRIAL_DAYS } from '@/core/plans';
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -47,5 +47,22 @@ describe('planos', () => {
     expect(r.start.toISOString()).toBe(cur);
     expect(extendSubscription(undefined, 3, now).start.getTime()).toBe(NOW);
     expect(extendSubscription(new Date(NOW - DAY).toISOString(), 1, now).start.getTime()).toBe(NOW);
+  });
+});
+
+describe('Pro vitalício', () => {
+  it('só vale para os e-mails da lista e com o e-mail verificado', () => {
+    expect(isLifetimeEmail('idorionicolau@gmail.com', true)).toBe(true);
+    expect(isLifetimeEmail('  IdorioNicolau@Gmail.com ', true)).toBe(true);
+    expect(isLifetimeEmail('idorionicolau@gmail.com', false)).toBe(false); // conta não verificada
+    expect(isLifetimeEmail('outra@pessoa.com', true)).toBe(false);
+    expect(isLifetimeEmail(null, true)).toBe(false);
+  });
+
+  it('dá Pro sem fim, mesmo sem pagamento nem teste', () => {
+    const e = entitlement(null, null, Date.now(), true);
+    expect(e).toEqual({ pro: true, reason: 'lifetime', endsAt: null, daysLeft: null });
+    // sem a marca vitalícia continua no grátis
+    expect(entitlement(null, null, Date.now(), false).pro).toBe(false);
   });
 });

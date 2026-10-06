@@ -676,6 +676,314 @@ export const INDICATORS: IndicatorDef[] = [
       return { values: { cmf: c }, colors: { cmf: c.map((v) => (v >= 0 ? UP : DOWN)) } };
     },
   },
+
+  // ---------------------------------------------------------------- mais indicadores
+  {
+    id: 'ac',
+    name: 'Accelerator Oscillator',
+    short: 'AC',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Mostra se o momento do preço está a acelerar (AO menos a sua média de 5). Verde quando sobe, vermelho quando desce.',
+    inputs: [],
+    outputs: [{ key: 'ac', label: 'AC', style: 'histogram', color: UP }],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars) {
+      const ac = ta.accelerator(bars);
+      return { values: { ac }, colors: { ac: ac.map((v, i) => (i > 0 && v >= ac[i - 1] ? UP : DOWN)) } };
+    },
+  },
+  {
+    id: 'alligator',
+    name: 'Alligator',
+    short: 'ALLIG',
+    category: 'Tendência',
+    overlay: true,
+    description: 'Três médias suavizadas (maxilar, dentes, lábios) deslocadas para o futuro. Quando se abrem, há tendência; quando se juntam, o mercado dorme.',
+    inputs: [],
+    outputs: [
+      { key: 'jaw', label: 'Maxilar', style: 'line', color: '#2962ff', width: 1, offset: () => 8 },
+      { key: 'teeth', label: 'Dentes', style: 'line', color: '#f23645', width: 1, offset: () => 5 },
+      { key: 'lips', label: 'Lábios', style: 'line', color: '#089981', width: 1, offset: () => 3 },
+    ],
+    compute(bars) {
+      return { values: ta.alligator(bars) };
+    },
+  },
+  {
+    id: 'squeeze',
+    name: 'Squeeze Momentum',
+    short: 'SQZ',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Deteta compressões de volatilidade (Bandas de Bollinger dentro dos canais de Keltner, pontos laranja) e o momento que vem a seguir.',
+    inputs: [lenInput(20), numInput('bb', 'Desvios das Bollinger', 2, 0.1, 0.1, 10), numInput('kc', 'Múltiplo de Keltner', 1.5, 0.1, 0.1, 10)],
+    outputs: [
+      { key: 'mom', label: 'Momento', style: 'histogram', color: UP },
+      { key: 'sqz', label: 'Compressão', style: 'dots', color: '#ff9800' },
+    ],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      const { momentum, on } = ta.squeeze(bars, n(p, 'length'), n(p, 'bb'), n(p, 'kc'));
+      const colors = momentum.map((v, i) => {
+        const prev = momentum[i - 1];
+        if (v >= 0) return i > 0 && v > prev ? '#00e676' : UP;
+        return i > 0 && v < prev ? DOWN : '#b71c1c';
+      });
+      const sqz = momentum.map((v) => (Number.isFinite(v) ? 0 : NaN));
+      return { values: { mom: momentum, sqz }, colors: { mom: colors, sqz: on.map((x) => (x ? '#ff9800' : '#787b86')) } };
+    },
+  },
+  {
+    id: 'uo',
+    name: 'Ultimate Oscillator',
+    short: 'UO',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Junta três horizontes (7, 14 e 28) para dar menos sinais falsos. Abaixo de 30 sobrevendido, acima de 70 sobrecomprado.',
+    inputs: [lenInput(7, 'Curto', 'a'), lenInput(14, 'Médio', 'b'), lenInput(28, 'Longo', 'c')],
+    outputs: [{ key: 'uo', label: 'UO', style: 'line', color: '#7e57c2', width: 2 }],
+    levels: [
+      { value: 70, color: 'rgba(242,54,69,0.5)' },
+      { value: 50, color: 'rgba(120,123,134,0.4)' },
+      { value: 30, color: 'rgba(8,153,129,0.5)' },
+    ],
+    scale: { min: 0, max: 100 },
+    compute(bars, p) {
+      return { values: { uo: ta.ultimate(bars, n(p, 'a'), n(p, 'b'), n(p, 'c')) } };
+    },
+  },
+  {
+    id: 'cmo',
+    name: 'Chande Momentum Oscillator',
+    short: 'CMO',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Momento entre −100 e +100. Acima de +50 sobrecomprado, abaixo de −50 sobrevendido.',
+    inputs: [lenInput(9), srcInput()],
+    outputs: [{ key: 'cmo', label: 'CMO', style: 'line', color: '#26a69a', width: 2 }],
+    levels: [
+      { value: 50, color: 'rgba(242,54,69,0.5)' },
+      { value: 0, color: 'rgba(120,123,134,0.4)' },
+      { value: -50, color: 'rgba(8,153,129,0.5)' },
+    ],
+    compute(bars, p) {
+      return { values: { cmo: ta.cmo(src(bars, p), n(p, 'length')) } };
+    },
+  },
+  {
+    id: 'elder',
+    name: 'Elder Ray (Bull/Bear Power)',
+    short: 'ELDER',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Mede a força dos compradores (máximo menos EMA) e dos vendedores (mínimo menos EMA).',
+    inputs: [lenInput(13)],
+    outputs: [
+      { key: 'bull', label: 'Bull Power', style: 'histogram', color: UP },
+      { key: 'bear', label: 'Bear Power', style: 'histogram', color: DOWN },
+    ],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      return { values: ta.elderRay(bars, n(p, 'length')) };
+    },
+  },
+  {
+    id: 'kst',
+    name: 'Know Sure Thing',
+    short: 'KST',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Quatro taxas de variação suavizadas e ponderadas (Martin Pring). Cruzamentos com o sinal indicam viragens.',
+    inputs: [lenInput(9, 'Sinal', 'signal')],
+    outputs: [
+      { key: 'kst', label: 'KST', style: 'line', color: UP, width: 2 },
+      { key: 'signal', label: 'Sinal', style: 'line', color: DOWN, width: 1 },
+    ],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      return { values: ta.kst(ta.source(bars, 'close'), [10, 15, 20, 30], [10, 10, 10, 15], n(p, 'signal')) };
+    },
+  },
+  {
+    id: 'coppock',
+    name: 'Coppock Curve',
+    short: 'COPP',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Indicador de momento de longo prazo, criado para encontrar fundos de mercado.',
+    inputs: [lenInput(10, 'Média ponderada', 'wma'), lenInput(14, 'ROC longo', 'long'), lenInput(11, 'ROC curto', 'short')],
+    outputs: [{ key: 'coppock', label: 'Coppock', style: 'histogram', color: UP }],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      const c = ta.coppock(ta.source(bars, 'close'), n(p, 'wma'), n(p, 'long'), n(p, 'short'));
+      return { values: { coppock: c }, colors: { coppock: c.map((v, i) => (i > 0 && v >= c[i - 1] ? UP : DOWN)) } };
+    },
+  },
+  {
+    id: 'dpo',
+    name: 'Detrended Price Oscillator',
+    short: 'DPO',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Tira a tendência do preço para destacar os ciclos.',
+    inputs: [lenInput(21), srcInput()],
+    outputs: [{ key: 'dpo', label: 'DPO', style: 'line', color: '#2962ff', width: 2 }],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      return { values: { dpo: ta.dpo(src(bars, p), n(p, 'length')) } };
+    },
+  },
+  {
+    id: 'vortex',
+    name: 'Vortex Indicator',
+    short: 'VI',
+    category: 'Tendência',
+    overlay: false,
+    description: 'Quando VI+ passa acima de VI−, começa uma tendência de alta; ao contrário, de baixa.',
+    inputs: [lenInput(14)],
+    outputs: [
+      { key: 'plus', label: 'VI+', style: 'line', color: '#2962ff', width: 2 },
+      { key: 'minus', label: 'VI−', style: 'line', color: '#e91e63', width: 2 },
+    ],
+    levels: [{ value: 1, color: 'rgba(120,123,134,0.4)' }],
+    compute(bars, p) {
+      return { values: ta.vortex(bars, n(p, 'length')) };
+    },
+  },
+  {
+    id: 'chaikinosc',
+    name: 'Chaikin Oscillator',
+    short: 'CHO',
+    category: 'Volume',
+    overlay: false,
+    description: 'Momento da linha de acumulação/distribuição (EMA 3 menos EMA 10).',
+    inputs: [lenInput(3, 'Rápida', 'fast'), lenInput(10, 'Lenta', 'slow')],
+    outputs: [{ key: 'cho', label: 'CHO', style: 'histogram', color: UP }],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      const c = ta.chaikinOsc(bars, n(p, 'fast'), n(p, 'slow'));
+      return { values: { cho: c }, colors: { cho: c.map((v) => (v >= 0 ? UP : DOWN)) } };
+    },
+  },
+  {
+    id: 'force',
+    name: 'Force Index',
+    short: 'FI',
+    category: 'Volume',
+    overlay: false,
+    description: 'Variação do preço vezes o volume, suavizada. Mede a força de cada movimento.',
+    inputs: [lenInput(13)],
+    outputs: [{ key: 'fi', label: 'FI', style: 'histogram', color: UP }],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      const f = ta.forceIndex(bars, n(p, 'length'));
+      return { values: { fi: f }, colors: { fi: f.map((v) => (v >= 0 ? UP : DOWN)) } };
+    },
+  },
+  {
+    id: 'ad',
+    name: 'Acumulação/Distribuição',
+    short: 'A/D',
+    category: 'Volume',
+    overlay: false,
+    description: 'Linha cumulativa que mostra se o volume entra com os compradores ou com os vendedores.',
+    inputs: [],
+    outputs: [{ key: 'ad', label: 'A/D', style: 'line', color: '#2962ff', width: 2 }],
+    compute(bars) {
+      return { values: { ad: ta.adl(bars) } };
+    },
+  },
+  {
+    id: 'chop',
+    name: 'Choppiness Index',
+    short: 'CHOP',
+    category: 'Tendência',
+    overlay: false,
+    description: 'Perto de 100 o mercado está lateral; perto de 0 há tendência forte. Referências em 38,2 e 61,8.',
+    inputs: [lenInput(14)],
+    outputs: [{ key: 'chop', label: 'CHOP', style: 'line', color: '#2962ff', width: 2 }],
+    levels: [
+      { value: 61.8, color: 'rgba(242,54,69,0.5)' },
+      { value: 38.2, color: 'rgba(8,153,129,0.5)' },
+    ],
+    scale: { min: 0, max: 100 },
+    compute(bars, p) {
+      return { values: { chop: ta.choppiness(bars, n(p, 'length')) } };
+    },
+  },
+  {
+    id: 'ppo',
+    name: 'Percentage Price Oscillator',
+    short: 'PPO',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'O MACD em percentagem, por isso compara-se entre ativos de preços diferentes.',
+    inputs: [lenInput(12, 'Rápida', 'fast'), lenInput(26, 'Lenta', 'slow'), lenInput(9, 'Sinal', 'signal'), srcInput()],
+    outputs: [
+      { key: 'hist', label: 'Histograma', style: 'histogram', color: UP },
+      { key: 'ppo', label: 'PPO', style: 'line', color: '#2962ff', width: 2 },
+      { key: 'signal', label: 'Sinal', style: 'line', color: '#ff6d00', width: 1 },
+    ],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      const r = ta.ppo(src(bars, p), n(p, 'fast'), n(p, 'slow'), n(p, 'signal'));
+      return { values: r, colors: { hist: r.hist.map((v) => (v >= 0 ? UP : DOWN)) } };
+    },
+  },
+  {
+    id: 'tsi',
+    name: 'True Strength Index',
+    short: 'TSI',
+    category: 'Osciladores',
+    overlay: false,
+    description: 'Momento suavizado duas vezes (William Blau). Cruzamentos com o sinal e com o zero indicam viragens.',
+    inputs: [lenInput(25, 'Longo', 'long'), lenInput(13, 'Curto', 'short'), lenInput(7, 'Sinal', 'signal'), srcInput()],
+    outputs: [
+      { key: 'tsi', label: 'TSI', style: 'line', color: '#2962ff', width: 2 },
+      { key: 'signal', label: 'Sinal', style: 'line', color: '#ff6d00', width: 1 },
+    ],
+    levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
+    compute(bars, p) {
+      return { values: ta.tsi(src(bars, p), n(p, 'long'), n(p, 'short'), n(p, 'signal')) };
+    },
+  },
+  {
+    id: 'pctb',
+    name: 'Bollinger %B',
+    short: '%B',
+    category: 'Volatilidade',
+    overlay: false,
+    description: 'Onde o preço está dentro das Bandas de Bollinger: 0 na de baixo, 1 na de cima.',
+    inputs: [lenInput(20), numInput('mult', 'Desvios', 2, 0.1, 0.1, 10), srcInput()],
+    outputs: [{ key: 'pctb', label: '%B', style: 'line', color: '#2962ff', width: 2 }],
+    levels: [
+      { value: 1, color: 'rgba(242,54,69,0.5)' },
+      { value: 0.5, color: 'rgba(120,123,134,0.4)' },
+      { value: 0, color: 'rgba(8,153,129,0.5)' },
+    ],
+    compute(bars, p) {
+      return { values: { pctb: ta.percentB(src(bars, p), n(p, 'length'), n(p, 'mult')) } };
+    },
+  },
+  {
+    id: 'envelope',
+    name: 'Envelope de Média',
+    short: 'ENV',
+    category: 'Volatilidade',
+    overlay: true,
+    description: 'Média móvel com bandas a uma percentagem fixa acima e abaixo.',
+    inputs: [lenInput(20), numInput('pct', 'Percentagem', 2.5, 0.1, 0.1, 50), { key: 'type', label: 'Tipo', type: 'ma', default: 'sma', options: MA_OPTIONS }, srcInput()],
+    outputs: [
+      { key: 'basis', label: 'Base', style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'upper', label: 'Superior', style: 'line', color: '#2962ff', width: 1 },
+      { key: 'lower', label: 'Inferior', style: 'line', color: '#2962ff', width: 1 },
+    ],
+    fills: [{ a: 'upper', b: 'lower', color: 'rgba(33,150,243,0.07)' }],
+    compute(bars, p) {
+      return { values: ta.envelope(src(bars, p), n(p, 'length'), n(p, 'pct'), s(p, 'type') as MaType) };
+    },
+  },
 ];
 
 const BY_ID = new Map(INDICATORS.map((d) => [d.id, d]));
