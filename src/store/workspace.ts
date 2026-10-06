@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ChartType } from '@/core/types';
 import { DEFAULT_FAVORITE_TFS } from '@/core/timeframes';
-import { DEFAULT_SYMBOL, DEFAULT_WATCHLIST } from '@/core/symbols';
+import { DEFAULT_SYMBOL, DEFAULT_WATCHLIST, resolveSymbol } from '@/core/symbols';
+import { dataFeed } from '@/core/feed/datafeed';
 import { newInstance, type IndicatorInstance } from '@/core/indicators/registry';
 import { uid } from '@/lib/uid';
 
@@ -107,7 +108,8 @@ export const useWorkspace = create<WorkspaceState>()(
           const i = idx(chart);
           const recent = [symbolId, ...s.recent.filter((x) => x !== symbolId)].slice(0, 12);
           set({
-            charts: s.charts.map((c, k) => (k === i || s.sync.symbol ? { ...c, symbolId } : c)),
+            // segundos só existem em algumas fontes: se o novo símbolo não os tem, o gráfico volta a 1m
+            charts: s.charts.map((c, k) => (k === i || s.sync.symbol ? { ...c, symbolId, tf: dataFeed().supports(resolveSymbol(symbolId), c.tf) ? c.tf : '1m' } : c)),
             recent,
             updatedAt: Date.now(),
           });

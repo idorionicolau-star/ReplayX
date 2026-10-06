@@ -182,7 +182,8 @@ export function ChartPane({ index }: { index: number }) {
   useEffect(() => {
     if (!ctrl || !symbolId) return;
     // "Visibilidade": alguns desenhos só aparecem em certos intervalos
-    const unit = parseTf(chartTf ?? '1h').unit;
+    const u0 = parseTf(chartTf ?? '1h').unit;
+    const unit = u0 === 's' ? 'm' : u0; // desenhos "só em minutos" também aparecem em segundos
     const apply = (s: ReturnType<typeof useDrawings.getState>) => {
       const list = s.hidden ? [] : (s.bySymbol[symbolId] ?? []).filter((d) => !d.style.visibleOn || d.style.visibleOn.includes(unit as 'm'));
       ctrl.setDrawings(list, s.selected?.symbolId === symbolId ? s.selected.id : null);

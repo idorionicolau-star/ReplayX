@@ -16,6 +16,8 @@ interface BillingState {
 }
 
 export const useBilling = create<BillingState>(() => ({ doc: null, loaded: false, upgrade: { open: false, feature: null } }));
+// acesso para testes automáticos (como __rxCharts): permite simular o plano sem pagar
+if (typeof window !== 'undefined') (window as unknown as { __rxBilling: typeof useBilling }).__rxBilling = useBilling;
 
 /** Contagem diária de backtests do plano grátis (só neste dispositivo). */
 const useUsage = create<{ day: string; backtests: number }>()(persist(() => ({ day: '', backtests: 0 }), { name: 'rx-usage' }));

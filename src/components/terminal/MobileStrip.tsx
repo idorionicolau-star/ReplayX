@@ -6,7 +6,8 @@ import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { useReplay, replay } from '@/replay/engine';
 import { resolveSymbol } from '@/core/symbols';
-import { STANDARD_TFS, tfLabel, tfShort } from '@/core/timeframes';
+import { tfsFor } from '@/core/feed/datafeed';
+import { tfLabel, tfShort } from '@/core/timeframes';
 import type { WheelItem } from '@/components/ui/WheelPicker';
 import { setChartTf } from '@/lib/gates';
 import { AssetIcon } from '@/components/chart/AssetIcon';
@@ -67,7 +68,7 @@ export function MobileStrip() {
       </button>
       <Popover anchor={tfRef} open={tfOpen} onClose={() => setTfOpen(false)} placement="top-start" className="p-2">
         <div className="grid w-[260px] grid-cols-4 gap-1">
-          {STANDARD_TFS.map((t) => (
+          {tfsFor(sym).map((t) => (
             <button
               key={t}
               type="button"

@@ -6,7 +6,7 @@ import { registerSymbol } from '../symbols';
 const REST_BASES = ['https://data-api.binance.vision', 'https://api.binance.com', 'https://api1.binance.com'];
 const WS_BASES = ['wss://data-stream.binance.vision', 'wss://stream.binance.com:9443'];
 
-const NATIVE = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1D', '1W', '1M'].map(parseTf);
+const NATIVE = ['1s', '1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1D', '1W', '1M'].map(parseTf);
 
 let restIndex = 0;
 let wsIndex = 0;

@@ -96,7 +96,11 @@ class ReplayEngine {
 
   /** Timeframe fino com que as ordens são executadas num passo de `span` segundos (no máximo ~240 barras). */
   private fineTfFor(sym: SymbolInfo, span: number): Timeframe {
-    const natives = dataFeed().provider(sym).nativeTfs(sym).filter((t) => t.unit !== 'W' && t.unit !== 'M');
+    // intervalos de segundos só servem de dado fino quando o próprio passo é curto: nos outros passos pesariam 5 a 60 vezes mais
+    const natives = dataFeed()
+      .provider(sym)
+      .nativeTfs(sym)
+      .filter((t) => t.unit !== 'W' && t.unit !== 'M' && (t.unit !== 's' || span <= 240));
     return natives.find((t) => span / tfSeconds(t) <= 240) ?? natives[natives.length - 1];
   }
 
@@ -416,7 +420,7 @@ class ReplayEngine {
       if (prices[id] === undefined) {
         try {
           // carrega com folga à frente: assim os passos seguintes leem da memória em vez de pedirem 2 barras à rede a cada passo
-          const f0 = natives[0];
+          const f0 = natives.find((t) => t.unit !== 's') ?? natives[0];
           const fs0 = tfSeconds(f0);
           await feed.range(sym, f0, cursor - fs0 * 3, Math.min(cursor + fs0 * 400, nowSec() + fs0)).catch(() => undefined);
           let last = feed.peekRange(sym, f0, cursor - fs0 * 3, cursor)?.filter((b) => barEnd(b.time, f0) <= cursor).pop();

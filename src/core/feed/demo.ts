@@ -158,9 +158,129 @@ function aggregateBlock(b: MinuteBlock, tf: Timeframe, from: number, to: number,
   return out;
 }
 
+interface SecondBlock {
+  /** Primeiro segundo do bloco (múltiplo de 60). */
+  s0: number;
+  open: Float64Array;
+  high: Float64Array;
+  low: Float64Array;
+  close: Float64Array;
+  vol: Float64Array;
+}
+
+/**
+ * Velas de 1 segundo de um bloco de minutos. Cada minuto divide-se em 60 segundos que somam exatamente
+ * a vela de 1 minuto (abre, fecha, máximo, mínimo e volume iguais), por isso 1s, 15s e 1m são coerentes.
+ */
+function secondBars(info: Pick<SymbolInfo, 'ticker' | 'precision'>, b: MinuteBlock): SecondBlock {
+  const s = specFor(info.ticker);
+  const d = info.precision;
+  const n = b.open.length;
+  const open = new Float64Array(n * 60);
+  const high = new Float64Array(n * 60);
+  const low = new Float64Array(n * 60);
+  const close = new Float64Array(n * 60);
+  const vol = new Float64Array(n * 60);
+  const path = new Float64Array(61);
+  for (let k = 0; k < n; k++) {
+    const m = b.m0 + k;
+    const mo = b.open[k];
+    const mc = b.close[k];
+    const mh = b.high[k];
+    const ml = b.low[k];
+    const range = Math.max(mh - ml, Math.abs(mc - mo), 1e-9);
+    // caminho do preço dentro do minuto: reta de abertura a fecho com ruído que se anula nas pontas
+    for (let j = 0; j <= 60; j++) {
+      const lin = mo + ((mc - mo) * j) / 60;
+      const noise = hash(m * 61 + j, s.seed + 21) * range * 0.35 * Math.sin((Math.PI * j) / 60);
+      path[j] = Math.min(mh, Math.max(ml, round(lin + noise, d)));
+    }
+    path[0] = mo;
+    path[60] = mc;
+    const ih = Math.min(59, Math.floor(((hash(m, s.seed + 31) + 1) / 2) * 60));
+    let il = Math.min(59, Math.floor(((hash(m, s.seed + 37) + 1) / 2) * 60));
+    if (il === ih) il = (il + 1) % 60;
+    let w = 0;
+    const weights = new Float64Array(60);
+    for (let j = 0; j < 60; j++) {
+      weights[j] = 0.5 + Math.abs(hash(m * 60 + j, s.seed + 41));
+      w += weights[j];
+    }
+    let used = 0;
+    for (let j = 0; j < 60; j++) {
+      const i = k * 60 + j;
+      const o = path[j];
+      const c = path[j + 1];
+      open[i] = o;
+      close[i] = c;
+      const hi = Math.max(o, c) + Math.abs(hash(m * 60 + j, s.seed + 23)) * range * 0.08;
+      const lo = Math.min(o, c) - Math.abs(hash(m * 60 + j, s.seed + 27)) * range * 0.08;
+      high[i] = j === ih ? mh : Math.max(Math.min(round(hi, d), mh), o, c);
+      low[i] = j === il ? ml : Math.min(Math.max(round(lo, d), ml), o, c);
+      if (j === ih) low[i] = Math.min(low[i], o, c);
+      if (j === il) high[i] = Math.max(high[i], o, c);
+      const v = j === 59 ? b.vol[k] - used : Math.floor((b.vol[k] * weights[j]) / w);
+      vol[i] = v;
+      used += v;
+    }
+  }
+  return { s0: b.m0 * 60, open, high, low, close, vol };
+}
+
+/** Agrega os segundos de um bloco nas velas de `tf` (segundos) cujo fecho é ≤ `to` (com `partial`, também a última, incompleta). */
+function aggregateSeconds(b: SecondBlock, tf: Timeframe, from: number, to: number, partial = false): Bar[] {
+  const out: Bar[] = [];
+  const last = b.s0 + b.open.length;
+  let t = alignTime(from, tf);
+  if (t < from) t = nextBarTime(t, tf);
+  while (t < to) {
+    const end = nextBarTime(t, tf);
+    if (!partial && (end > to || end > last)) break;
+    const a = Math.max(t, b.s0) - b.s0;
+    const z = Math.min(end, to, last) - b.s0;
+    if (t >= b.s0 && z > a) {
+      let hi = -Infinity;
+      let lo = Infinity;
+      let v = 0;
+      for (let k = a; k < z; k++) {
+        if (b.high[k] > hi) hi = b.high[k];
+        if (b.low[k] < lo) lo = b.low[k];
+        v += b.vol[k];
+      }
+      out.push({ time: t, open: b.open[a], high: hi, low: lo, close: b.close[z - 1], volume: v });
+    }
+    t = end;
+  }
+  return out;
+}
+
+/** Velas de segundos (1s, 5s, 15s, 30s) para [from, to), só com segundos já completos. */
+function demoSecondBars(info: Pick<SymbolInfo, 'ticker' | 'precision'>, tf: Timeframe, from: number, to: number, now: number): Bar[] {
+  const toS = Math.min(to, Math.floor(now));
+  const f = Math.max(from, DEMO_START);
+  if (toS <= f) return [];
+  const out: Bar[] = [];
+  const CHUNK = 2000; // minutos por bloco
+  for (let m0 = Math.floor(f / 60); m0 * 60 < toS; m0 += CHUNK) {
+    const n = Math.min(CHUNK, Math.ceil(toS / 60) - m0);
+    const sb = secondBars(info, minuteBars(info, m0, n));
+    out.push(...aggregateSeconds(sb, tf, Math.max(f, m0 * 60), Math.min(toS, (m0 + n) * 60)));
+  }
+  return out;
+}
+
 /** Vela corrente (incompleta) até agora, incluindo o minuto atual parcial. */
 export function demoLiveBar(info: Pick<SymbolInfo, 'ticker' | 'precision'>, tf: Timeframe, now: number): Bar | null {
   const t = alignTime(now, tf);
+  if (tf.unit === 's') {
+    // o segundo em curso usa a mesma trajetória que a vela completa terá depois
+    const m0 = Math.floor(t / 60);
+    const sb = secondBars(info, minuteBars(info, m0, 1));
+    const part = aggregateSeconds(sb, tf, t, Math.floor(now) + 1, true).find((b) => b.time === t);
+    if (part) return part;
+    const p = round(demoPrice(info.ticker, now), info.precision);
+    return { time: t, open: p, high: p, low: p, close: p, volume: 0 };
+  }
   const m0 = Math.floor(t / 60);
   const mNow = Math.floor(now / 60);
   const full = mNow - m0;
@@ -172,7 +292,7 @@ export function demoLiveBar(info: Pick<SymbolInfo, 'ticker' | 'precision'>, tf: 
   return { ...agg, high: Math.max(agg.high, p), low: Math.min(agg.low, p), close: p };
 }
 
-const NATIVE: Timeframe[] = ['1m', '2m', '3m', '5m', '10m', '15m', '30m', '45m', '1h', '2h', '3h', '4h', '6h', '8h', '12h', '1D'].map(parseTf);
+const NATIVE: Timeframe[] = ['1s', '5s', '15s', '30s', '1m', '2m', '3m', '5m', '10m', '15m', '30m', '45m', '1h', '2h', '3h', '4h', '6h', '8h', '12h', '1D'].map(parseTf);
 const MAX_MINUTES = 2_000_000;
 
 export const demoProvider: Provider = {
@@ -188,6 +308,15 @@ export const demoProvider: Provider = {
   },
 
   async fetch(symbol: SymbolInfo, tf: Timeframe, args: FetchArgs): Promise<Bar[]> {
+    if (tf.unit === 's') {
+      const now = nowSec();
+      const sec = tfSeconds(tf);
+      const to = Math.min(args.to, Math.floor(now));
+      const from = args.from !== undefined ? args.from : alignTime(to - 1, tf) - (args.limit - 1) * sec;
+      const bars = demoSecondBars(symbol, tf, from, to, now);
+      await new Promise((r) => setTimeout(r, 20));
+      return args.from === undefined ? bars.slice(-args.limit) : bars;
+    }
     const nowMin = Math.floor(nowSec() / 60);
     const to = Math.min(args.to, (nowMin + 1) * 60);
     let from: number;

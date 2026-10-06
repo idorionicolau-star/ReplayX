@@ -36,6 +36,7 @@ import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { replay, useReplay } from '@/replay/engine';
 import { resolveSymbol } from '@/core/symbols';
+import { dataFeed, tfsFor } from '@/core/feed/datafeed';
 import { isValidTf, normalizeTf, STANDARD_TFS, tfLabel, tfShort, compareTf } from '@/core/timeframes';
 import type { ChartType } from '@/core/types';
 import { getChart } from '@/chart/registry';
@@ -86,7 +87,10 @@ function TimeframeMenu() {
   const [custom, setCustom] = useState('');
   const favs = [...favorites].sort(compareTf);
   const wheel = useTfWheel(active);
+  const symId = useWorkspace((s) => s.charts[active]?.symbolId);
+  const secs = tfsFor(symId ? resolveSymbol(symId) : null).filter((t) => t.endsWith('s'));
   const groups: { label: string; items: string[] }[] = [
+    ...(secs.length ? [{ label: 'Segundos', items: secs }] : []),
     { label: 'Minutos', items: STANDARD_TFS.filter((t) => t.endsWith('m')) },
     { label: 'Horas', items: STANDARD_TFS.filter((t) => t.endsWith('h')) },
     { label: 'Dias', items: STANDARD_TFS.filter((t) => /[DWM]$/.test(t)) },
@@ -132,6 +136,10 @@ function TimeframeMenu() {
                 const v = custom.trim();
                 if (!isValidTf(v)) {
                   toast('Intervalo inválido', { kind: 'error', body: 'Use, por exemplo: 7m, 90m, 2h, 3D' });
+                  return;
+                }
+                if (symId && !dataFeed().supports(resolveSymbol(symId), normalizeTf(v))) {
+                  toast('Intervalo não disponível', { kind: 'error', body: 'Este símbolo não tem esse intervalo (segundos só existem em sintéticos, cripto e demonstração).' });
                   return;
                 }
                 pick(normalizeTf(v));
