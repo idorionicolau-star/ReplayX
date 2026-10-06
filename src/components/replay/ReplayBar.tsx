@@ -13,6 +13,8 @@ import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { submitOrder } from '@/trading/actions';
 import { QtyStepper } from '@/components/ui/QtyStepper';
 import { openOrderTicket } from '@/trading/ticket';
+import { useLotRule } from '@/trading/lotRule';
+import { snapLot, fmtLotWith } from '@/core/trading/lots';
 import { Popover } from '@/components/ui/Popover';
 import { MenuHeader, MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { Spinner } from '@/components/ui/Spinner';
@@ -31,7 +33,7 @@ export function ReplayBar() {
   const st = useReplay();
   const cfg = useWorkspace((s) => s.charts[s.active]);
   const tz = useSettings((s) => s.timezone);
-  const defaultQty = useSettings((s) => s.trading.defaultQty);
+  const rawQty = useSettings((s) => s.trading.defaultQty);
   const acc = useTrading((s) => s.replay);
   const selRef = useRef<HTMLButtonElement>(null);
   const speedRef = useRef<HTMLButtonElement>(null);
@@ -40,6 +42,9 @@ export function ReplayBar() {
   const pos = useSettings((s) => s.replayBarPos);
   const setSettings = useSettings((s) => s.set);
   const setTrading = useSettings((s) => s.setTrading);
+  const lotRuleNow = useLotRule(cfg?.symbolId);
+  // o lote mostrado é sempre válido para este ativo (mínimo, passo e máximo)
+  const defaultQty = snapLot(rawQty, lotRuleNow);
   const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
@@ -186,11 +191,11 @@ export function ReplayBar() {
           </span>
         )}
         <span className="mx-0.5 h-5 w-px bg-line" />
-        <QtyStepper value={defaultQty} onChange={(v) => setTrading({ defaultQty: v })} className="shrink-0" />
-        <button type="button" onClick={() => quick('long')} className="h-8 rounded-md bg-up px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Comprar ${defaultQty} a mercado`} data-testid="replay-buy">
+        <QtyStepper value={defaultQty} rule={lotRuleNow} onChange={(v) => setTrading({ defaultQty: v })} className="shrink-0" />
+        <button type="button" onClick={() => quick('long')} className="h-8 rounded-md bg-up px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Comprar ${fmtLotWith(defaultQty, lotRuleNow)} a mercado (lote mín. ${fmtLotWith(lotRuleNow.min, lotRuleNow)})`} data-testid="replay-buy">
           Comprar
         </button>
-        <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Vender ${defaultQty} a mercado`} data-testid="replay-sell">
+        <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Vender ${fmtLotWith(defaultQty, lotRuleNow)} a mercado (lote mín. ${fmtLotWith(lotRuleNow.min, lotRuleNow)})`} data-testid="replay-sell">
           Vender
         </button>
         <button type="button" onClick={() => openOrderTicket(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title="Ordem limite/stop no gráfico, com SL e TP arrastáveis" data-testid="replay-order">

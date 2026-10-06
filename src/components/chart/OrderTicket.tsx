@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GripVertical, Send, X } from 'lucide-react';
+import { GripVertical, Minus, Plus, Send, X } from 'lucide-react';
 import type { ChartController } from '@/chart/controller';
 import { useUi } from '@/store/ui';
 import { useSettings } from '@/store/settings';
@@ -8,7 +8,9 @@ import { useTrading, specFor } from '@/store/trading';
 import { useReplay } from '@/replay/engine';
 import { resolveSymbol, pipSize } from '@/core/symbols';
 import { pnlFor, type Side } from '@/core/trading/engine';
-import { clampLevels, fmtLot, mirror, orderKind } from '@/core/trading/ticket';
+import { clampLevels, mirror, orderKind } from '@/core/trading/ticket';
+import { fmtLotWith, lotForRisk, snapLot } from '@/core/trading/lots';
+import { useLotRule } from '@/trading/lotRule';
 import { currentPrice, submitOrder } from '@/trading/actions';
 import { closeOrderTicket } from '@/trading/ticket';
 import { QtyStepper } from '@/components/ui/QtyStepper';
@@ -39,14 +41,19 @@ export function OrderTicket({ ctrl, symbolId }: { ctrl: ChartController; symbolI
 
 function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: string }) {
   const t = useUi((s) => s.orderTicket)!;
-  const qty = useSettings((s) => s.trading.defaultQty);
+  const rawQty = useSettings((s) => s.trading.defaultQty);
+  const sizing = useSettings((s) => s.trading.sizing);
+  const riskPct = useSettings((s) => s.trading.defaultRiskPct);
   const confirmOrders = useSettings((s) => s.trading.confirmOrders);
   const setTrading = useSettings((s) => s.setTrading);
   const replayOn = useReplay((s) => s.active && !s.selecting && s.cursor !== null);
-  useTrading((s) => s.replay.balance);
+  const balance = useTrading((s) => (replayOn ? s.replay.balance : s.live.balance));
+  const rule = useLotRule(symbolId);
   const sym = useMemo(() => resolveSymbol(symbolId), [symbolId]);
   const spec = specFor(sym);
   const pip = pipSize(sym);
+  // o painel abre do lado do gráfico onde a entrada não está (fixo: não salta enquanto se arrasta)
+  const [panelTop, setPanelTop] = useState<boolean | null>(null);
   const [geo, setGeo] = useState<Geo>({ w: 0, h: 0, ye: null, ys: null, yt: null, cur: undefined });
   const tRef = useRef(t);
   useEffect(() => {
@@ -60,6 +67,7 @@ function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: stri
       const size = ctrl.paneSize();
       const k = tRef.current;
       const next: Geo = { w: size.width, h: size.height, ye: ctrl.priceToY(k.price), ys: ctrl.priceToY(k.sl), yt: ctrl.priceToY(k.tp), cur: currentPrice(symbolId) };
+      if (next.ye !== null && next.h > 0) setPanelTop((v) => (v === null ? next.ye! > next.h * 0.5 : v));
       setGeo((g) => (g.w === next.w && g.h === next.h && g.ye === next.ye && g.ys === next.ys && g.yt === next.yt && g.cur === next.cur ? g : next));
       raf = requestAnimationFrame(loop);
     };
@@ -107,13 +115,18 @@ function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: stri
 
   const cur = geo.cur;
   const kind = cur === undefined ? 'market' : orderKind(t.side, t.price, cur, pip * 0.5);
+  // lote: manual (escada do ativo) ou calculado pelo risco e pela distância ao stop, sempre dentro das regras do ativo
+  const riskAmount = (balance * riskPct) / 100;
+  const rl = lotForRisk(t.side, riskAmount, t.price, t.sl, spec, rule);
+  const qty = sizing === 'risk' ? rl.qty : snapLot(rawQty, rule);
   const risk = Math.abs(pnlFor(t.side, qty, t.price, t.sl, spec));
   const reward = Math.abs(pnlFor(t.side, qty, t.price, t.tp, spec));
   const rr = risk > 0 ? reward / risk : 0;
+  const riskOfBalance = balance > 0 ? (risk / balance) * 100 : 0;
   const long = t.side === 'long';
 
   const send = () => {
-    if (confirmOrders && !confirm(`${long ? 'Comprar' : 'Vender'} ${fmtLot(qty)} ${sym.name} (${KIND_LABEL[kind].toLowerCase()})?`)) return;
+    if (confirmOrders && !confirm(`${long ? 'Comprar' : 'Vender'} ${fmtLotWith(qty, rule)} ${sym.name} (${KIND_LABEL[kind].toLowerCase()})?`)) return;
     const ok = submitOrder({ symbolId, side: t.side, type: kind, qty, price: kind === 'market' ? undefined : t.price, sl: t.sl, tp: t.tp });
     if (ok) closeOrderTicket();
   };
@@ -159,7 +172,7 @@ function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: stri
       )}
 
       {/* controlos */}
-      <div className={cn('pointer-events-auto absolute left-1/2 flex w-[min(440px,calc(100%-12px))] -translate-x-1/2 flex-col gap-1.5 rounded-xl border border-line bg-elev/97 p-2 shadow-pop no-select', replayOn ? 'bottom-[92px]' : 'bottom-[52px]')}>
+      <div className={cn('pointer-events-auto absolute left-1/2 flex w-[min(440px,calc(100%-12px))] -translate-x-1/2 flex-col gap-1.5 rounded-xl border border-line bg-elev/97 p-2 shadow-pop no-select', panelTop ? 'top-12' : replayOn ? 'bottom-[92px]' : 'bottom-[52px]')} data-testid="ticket-panel">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex overflow-hidden rounded-md border border-line text-[12px] font-semibold">
             <button type="button" onClick={() => flip('long')} className={cn('h-8 px-3', long ? 'bg-up text-white' : 'hover:bg-hover')} data-testid="ticket-buy">
@@ -169,7 +182,19 @@ function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: stri
               Venda
             </button>
           </div>
-          <QtyStepper value={qty} onChange={(v) => setTrading({ defaultQty: v })} />
+          <div className="flex overflow-hidden rounded-md border border-line text-[12px] font-semibold" title="Como calcular o lote">
+            <button type="button" onClick={() => setTrading({ sizing: 'qty' })} className={cn('h-8 px-2.5', sizing === 'qty' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="ticket-mode-lot">
+              Lote
+            </button>
+            <button type="button" onClick={() => setTrading({ sizing: 'risk' })} className={cn('h-8 px-2.5', sizing === 'risk' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="ticket-mode-risk">
+              Risco
+            </button>
+          </div>
+          {sizing === 'qty' ? (
+            <QtyStepper value={qty} rule={rule} onChange={(v) => setTrading({ defaultQty: v })} />
+          ) : (
+            <PctStepper value={riskPct} onChange={(v) => setTrading({ defaultRiskPct: v })} />
+          )}
           <div className="flex items-center gap-1">
             <button type="button" onClick={send} className={cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-semibold text-white hover:brightness-110', long ? 'bg-up' : 'bg-down')} data-testid="ticket-send">
               <Send size={13} /> Enviar
@@ -183,7 +208,37 @@ function TicketInner({ ctrl, symbolId }: { ctrl: ChartController; symbolId: stri
           <span>{hint(t.side, kind)}</span>
           <span className="shrink-0 font-semibold tnum text-text">R:R 1:{rr.toFixed(1)}</span>
         </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded-md bg-sunken px-2 py-1 text-[11px] tnum" data-testid="ticket-lot-info">
+          <span>
+            Lote <b className="text-text">{fmtLotWith(qty, rule)}</b> · risco <b className="text-text">{fmtMoney(risk)}</b> ({riskOfBalance.toFixed(2)}%)
+          </span>
+          <span className="text-muted">
+            mín. {fmtLotWith(rule.min, rule)} · passo {fmtLotWith(rule.step, rule)} · máx. {fmtLotWith(rule.max, rule)}
+          </span>
+          {sizing === 'risk' && rl.minExceeds && <span className="w-full font-medium text-warn">O lote mínimo deste ativo já arrisca mais do que {riskPct}%. Afaste o stop ou aumente o risco.</span>}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** Risco em % da conta: − e + passam por valores habituais (0,25 · 0,5 · 1 · 2 …). */
+const RISK_STEPS = [0.1, 0.25, 0.5, 1, 1.5, 2, 3, 5, 10];
+function PctStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const up = () => onChange(RISK_STEPS.find((x) => x > value + 1e-9) ?? RISK_STEPS[RISK_STEPS.length - 1]);
+  const down = () => onChange([...RISK_STEPS].reverse().find((x) => x < value - 1e-9) ?? RISK_STEPS[0]);
+  const btn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sunken text-text hover:bg-hover active:bg-active';
+  return (
+    <div className="flex items-center gap-1 no-select">
+      <button type="button" aria-label="Menos risco" className={btn} onClick={down} data-testid="risk-minus">
+        <Minus size={15} />
+      </button>
+      <span className="min-w-[52px] text-center text-[13px] font-semibold tnum" data-testid="risk-value">
+        {+value.toFixed(2)}%
+      </span>
+      <button type="button" aria-label="Mais risco" className={btn} onClick={up} data-testid="risk-plus">
+        <Plus size={15} />
+      </button>
     </div>
   );
 }

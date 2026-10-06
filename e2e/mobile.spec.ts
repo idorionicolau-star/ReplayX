@@ -296,12 +296,13 @@ test('a faixa mostra a mini-roda: item anterior por cima e seguinte por baixo, e
   await setup(page);
   const sym = page.getByTestId('mobile-symbol');
   const tf = page.getByTestId('mobile-tf');
-  await expect(sym.getByTestId('wheel-prev')).not.toHaveText('');
-  await expect(sym.getByTestId('wheel-next')).not.toHaveText('');
-  await expect(tf.getByTestId('wheel-prev')).not.toHaveText('');
-  await expect(tf.getByTestId('wheel-next')).not.toHaveText('');
+  await expect(sym.locator('[data-rel="-1"]')).not.toHaveText('');
+  await expect(sym.locator('[data-rel="1"]')).not.toHaveText('');
+  await expect(tf.locator('[data-rel="-1"]')).not.toHaveText('');
+  await expect(tf.locator('[data-rel="1"]')).not.toHaveText('');
   // girar o intervalo para o seguinte: o que estava por baixo passa a ser o atual (e muda o gráfico)
-  const nextBefore = (await tf.getByTestId('wheel-next').innerText()).trim();
+  const nextBefore = (await tf.locator('[data-rel="1"]').innerText()).trim();
+  const tfBefore = (await page.evaluate(`${ctl}.tf`)) as string;
   const cdp = await page.context().newCDPSession(page);
   const b = (await tf.boundingBox())!;
   const x = b.x + b.width / 2;
@@ -309,5 +310,7 @@ test('a faixa mostra a mini-roda: item anterior por cima e seguinte por baixo, e
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
   for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - (40 * i) / 8 }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await expect(tf).toContainText(nextBefore);
+  await expect.poll(() => page.evaluate(`${ctl}.tf`)).not.toBe(tfBefore);
+  // o intervalo atual (centro da roda) passou a ser o que estava por baixo
+  await expect(tf.locator('[data-active="true"]')).toHaveText(nextBefore);
 });

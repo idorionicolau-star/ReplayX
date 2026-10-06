@@ -12,24 +12,33 @@ import { setChartTf } from '@/lib/gates';
 import { AssetIcon } from '@/components/chart/AssetIcon';
 import { Popover } from '@/components/ui/Popover';
 import { cn } from '@/components/ui/cn';
+import { Drum } from '@/components/ui/Drum';
 import { useSymbolWheel, useTfWheel } from './useWheels';
 
 /**
  * Faixa em baixo (telemóvel), como no TradingView: símbolo e intervalo à esquerda, atalhos à direita.
  * Carregar no símbolo ou no intervalo e arrastar para cima/baixo abre a roda (com vibração); um toque abre a pesquisa/lista.
  */
-/** Mini-roda: item atual ao centro, anterior esbatido por cima e seguinte por baixo (mostra que se pode girar). */
-function WheelFace({ prev, next, width, children }: { prev?: string; next?: string; width: number; children: React.ReactNode }) {
+/** Mini-roda: cilindro que gira (item atual ao centro, vizinhos inclinados e esbatidos); acompanha o dedo e assenta com animação. */
+function WheelFace({ items, pos, dragging, width, render }: { items: WheelItem[]; pos: number; dragging: boolean; width: number; render: (it: WheelItem, centre: boolean) => React.ReactNode }) {
   return (
-    <span className="flex h-[54px] flex-col items-stretch justify-center text-left" style={{ minWidth: width, WebkitMaskImage: 'linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%)', maskImage: 'linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%)' }}>
-      <span className="h-[15px] truncate text-center text-[11px] leading-[15px] text-muted opacity-75" style={{ transform: 'scale(0.92)' }} data-testid="wheel-prev">
-        {prev ?? ''}
-      </span>
-      <span className="flex h-[24px] items-center justify-center gap-1.5 text-[15px] font-semibold">{children}</span>
-      <span className="h-[15px] truncate text-center text-[11px] leading-[15px] text-muted opacity-75" style={{ transform: 'scale(0.92)' }} data-testid="wheel-next">
-        {next ?? ''}
-      </span>
-    </span>
+    <Drum
+      items={items}
+      pos={pos}
+      row={19}
+      reach={1}
+      step={40}
+      smooth={!dragging}
+      style={{ position: 'relative', height: 56, minWidth: width }}
+      render={(it, rel) => {
+        const centre = Math.abs(rel) < 0.5;
+        return (
+          <span className={cn('flex max-w-full items-center justify-center gap-1.5 truncate', centre ? 'text-[15px] font-semibold' : 'text-[11px] text-muted')} data-active={centre ? 'true' : undefined}>
+            {render(it, centre)}
+          </span>
+        );
+      }}
+    />
   );
 }
 
@@ -51,15 +60,10 @@ export function MobileStrip() {
       {symWheel.overlay}
       {tfWheel.overlay}
       <button type="button" {...symWheel.bind} onClick={() => useUi.getState().openSymbolSearch('', active)} className="min-w-0 max-w-[46%] shrink-0 rounded-xl px-2 active:bg-hover" data-testid="mobile-symbol" title="Toque para procurar; carregue e arraste para cima/baixo para girar a lista">
-        <WheelFace prev={symWheel.prev?.label} next={symWheel.next?.label} width={118}>
-          <AssetIcon symbol={sym} size={16} />
-          <span className="truncate">{sym.name}</span>
-        </WheelFace>
+        <WheelFace items={symWheel.items} pos={symWheel.pos} dragging={symWheel.dragging} width={120} render={(it, c) => (c ? <><AssetIcon symbol={resolveSymbol(it.id)} size={16} /><span className="truncate">{it.label}</span></> : <span className="truncate">{it.label}</span>)} />
       </button>
       <button ref={tfRef} type="button" {...tfWheel.bind} onClick={() => setTfOpen((o) => !o)} className="shrink-0 rounded-xl px-2 text-accent active:bg-hover" data-testid="mobile-tf" title="Toque para escolher; carregue e arraste para cima/baixo para girar os intervalos">
-        <WheelFace prev={tfWheel.prev?.hint} next={tfWheel.next?.hint} width={48}>
-          {tfShort(cfg.tf)}
-        </WheelFace>
+        <WheelFace items={tfWheel.items} pos={tfWheel.pos} dragging={tfWheel.dragging} width={52} render={(it) => it.hint ?? it.label} />
       </button>
       <Popover anchor={tfRef} open={tfOpen} onClose={() => setTfOpen(false)} placement="top-start" className="p-2">
         <div className="grid w-[260px] grid-cols-4 gap-1">

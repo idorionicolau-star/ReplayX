@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_LOT_RULES, type LotRules } from '@/core/trading/lots';
 import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 
@@ -60,6 +61,8 @@ export interface SettingsState {
   autoFit: boolean;
   /** Vibração ao rodar o seletor de símbolo/intervalo (Android). */
   haptics: boolean;
+  /** Lote mínimo, passo e máximo por tipo de mercado. */
+  lotRules: LotRules;
   /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
   hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
@@ -112,6 +115,7 @@ export const useSettings = create<SettingsState>()(
       loupePos: 'top-right',
       autoFit: true,
       haptics: true,
+      lotRules: DEFAULT_LOT_RULES,
       // no telemóvel as barras de baixo começam recolhidas (o botão no canto do gráfico mostra-as)
       hideBottomBars: typeof window !== 'undefined' && window.innerWidth < 640,
       appearance: DEFAULT_APPEARANCE,
@@ -145,7 +149,7 @@ export const useSettings = create<SettingsState>()(
       // campos novos da aparência ficam com o valor por omissão
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState>;
-        return { ...current, ...p, appearance: { ...DEFAULT_APPEARANCE, ...(p.appearance ?? {}) } };
+        return { ...current, ...p, appearance: { ...DEFAULT_APPEARANCE, ...(p.appearance ?? {}) }, lotRules: { ...DEFAULT_LOT_RULES, ...(p.lotRules ?? {}) }, trading: { ...DEFAULT_TRADING, ...(p.trading ?? {}) } };
       },
     },
   ),

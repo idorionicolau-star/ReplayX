@@ -2,13 +2,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { fmtLot, stepLot } from '@/core/trading/ticket';
+import { fmtLotWith, snapLot, stepLotRule, type LotRule } from '@/core/trading/lots';
 import { cn } from './cn';
 
 /**
  * Lote intuitivo: − e + passam pela escada 0,01 · 0,02 · 0,05 · 0,1 · 0,2 · 0,5 · 1 · 2 · 5…
  * (manter carregado repete), tocar no valor escreve um número, a roda do rato também sobe/desce.
  */
-export function QtyStepper({ value, onChange, className, unit }: { value: number; onChange: (v: number) => void; className?: string; unit?: string }) {
+export function QtyStepper({ value, onChange, className, unit, rule }: { value: number; onChange: (v: number) => void; className?: string; unit?: string; rule?: LotRule }) {
   const [editing, setEditing] = useState<string | null>(null);
   const valueRef = useRef(value);
   useEffect(() => {
@@ -26,15 +27,16 @@ export function QtyStepper({ value, onChange, className, unit }: { value: number
   const press = (dir: 1 | -1, e: React.PointerEvent) => {
     e.preventDefault();
     stop();
-    onChange(stepLot(valueRef.current, dir));
+    const next = (q: number) => (rule ? stepLotRule(q, dir, rule) : stepLot(q, dir));
+    onChange(next(valueRef.current));
     hold.current.t = setTimeout(() => {
-      hold.current.i = setInterval(() => onChange(stepLot(valueRef.current, dir)), 110);
+      hold.current.i = setInterval(() => onChange(next(valueRef.current)), 110);
     }, 380);
   };
 
   const commit = () => {
     const v = parseFloat((editing ?? '').replace(',', '.'));
-    if (Number.isFinite(v) && v > 0) onChange(+v.toFixed(4));
+    if (Number.isFinite(v) && v > 0) onChange(rule ? snapLot(v, rule) : +v.toFixed(4));
     setEditing(null);
   };
 
@@ -44,7 +46,8 @@ export function QtyStepper({ value, onChange, className, unit }: { value: number
       className={cn('flex items-center gap-1 no-select', className)}
       onWheel={(e) => {
         e.preventDefault();
-        onChange(stepLot(valueRef.current, e.deltaY < 0 ? 1 : -1));
+        const dir = e.deltaY < 0 ? 1 : -1;
+        onChange(rule ? stepLotRule(valueRef.current, dir, rule) : stepLot(valueRef.current, dir));
       }}
     >
       <button type="button" aria-label="Menos lote" data-testid="qty-minus" className={btn} onPointerDown={(e) => press(-1, e)} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}>
@@ -52,7 +55,7 @@ export function QtyStepper({ value, onChange, className, unit }: { value: number
       </button>
       {editing === null ? (
         <button type="button" title="Tocar para escrever o lote" data-testid="qty-value" onClick={() => setEditing(String(value))} className="h-8 min-w-[52px] rounded-md px-1.5 text-center text-[13px] font-semibold tnum hover:bg-hover">
-          {fmtLot(value)}
+          {rule ? fmtLotWith(value, rule) : fmtLot(value)}
           {unit && <span className="ml-0.5 text-[10px] font-normal text-muted">{unit}</span>}
         </button>
       ) : (

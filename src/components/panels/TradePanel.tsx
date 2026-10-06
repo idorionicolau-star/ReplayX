@@ -9,6 +9,8 @@ import { resolveSymbol, pipSize } from '@/core/symbols';
 import { qtyForRisk, unrealized, pnlFor, type OrderType, type Side } from '@/core/trading/engine';
 import { applyTradeAction, closeAll, currentPrice, moveToBreakEven, submitOrder, tradingMode } from '@/trading/actions';
 import { Button } from '@/components/ui/Button';
+import { useLotRule } from '@/trading/lotRule';
+import { fmtLotWith, lotForRisk, snapLot } from '@/core/trading/lots';
 import { NumberInput, Switch } from '@/components/ui/Field';
 import { Segmented, Tabs } from '@/components/ui/Tabs';
 import { fmtDateTime, fmtMoney, fmtPrice } from '@/lib/format';
@@ -40,6 +42,7 @@ export function TradePanel() {
   const [rr, setRr] = useState<number | undefined>(2);
   const [qtyManual, setQtyManual] = useState<number | undefined>(trading.defaultQty);
   const [tab, setTab] = useState<'positions' | 'orders' | 'history'>('positions');
+  const lotRuleNow = useLotRule(symbolId);
 
   if (!sym || !symbolId) return null;
   const spec = specFor(sym);
@@ -50,9 +53,9 @@ export function TradePanel() {
   const sl = useSl && entry !== undefined && slPips ? entry - d * slPips * pip : undefined;
   const tp = useTp && entry !== undefined && sl !== undefined && rr ? entry + d * Math.abs(entry - sl) * rr : undefined;
   const riskAmount = (acc.balance * trading.defaultRiskPct) / 100;
-  const qtyRisk = entry !== undefined && sl !== undefined ? qtyForRisk(riskAmount, entry, sl, spec) : undefined;
-  const qty = trading.sizing === 'risk' && qtyRisk !== undefined ? qtyRisk : qtyManual ?? 0;
-  const qtyRounded = qty >= 100 ? Math.round(qty) : +qty.toFixed(sym.contractSize && sym.contractSize >= 1000 ? 2 : 4);
+  const rl = entry !== undefined && sl !== undefined ? lotForRisk(side, riskAmount, entry, sl, spec, lotRuleNow) : undefined;
+  // o lote respeita sempre o mínimo, o passo e o máximo do tipo de mercado
+  const qtyRounded = trading.sizing === 'risk' && rl ? rl.qty : snapLot(qtyManual ?? 0, lotRuleNow);
   const openPnl = acc.positions.reduce((a, p) => {
     const px = currentPrice(p.symbolId);
     return a + (px === undefined ? 0 : unrealized(p, px, specFor(resolveSymbol(p.symbolId))));
@@ -145,9 +148,16 @@ export function TradePanel() {
           <div className="flex justify-between">
             <span>Quantidade</span>
             <span className="text-text">
-              {qtyRounded} {lotLabel}
+              {fmtLotWith(qtyRounded, lotRuleNow)} {lotLabel}
             </span>
           </div>
+          <div className="flex justify-between text-faint">
+            <span>Regras deste ativo</span>
+            <span>
+              mín. {fmtLotWith(lotRuleNow.min, lotRuleNow)} · passo {fmtLotWith(lotRuleNow.step, lotRuleNow)}
+            </span>
+          </div>
+          {trading.sizing === 'risk' && rl?.minExceeds && <div className="text-warn">O lote mínimo já arrisca mais do que {trading.defaultRiskPct}%. Afaste o stop ou aumente o risco.</div>}
           {sl !== undefined && (
             <div className="flex justify-between">
               <span>SL {fmtPrice(sl, sym.precision)}</span>

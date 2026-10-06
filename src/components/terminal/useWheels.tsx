@@ -19,7 +19,8 @@ export function useSymbolWheel(chart: number) {
       return { id, label: r.name, hint: r.assetClass, icon: <AssetIcon symbol={r} size={18} /> };
     });
   }, [watch, cfg]);
-  return useWheelPicker({ items, currentId: cfg?.symbolId ?? '', onSelect: (it) => useWorkspace.getState().setSymbol(it.id, chart) });
+  const w = useWheelPicker({ items, currentId: cfg?.symbolId ?? '', onSelect: (it) => useWorkspace.getState().setSymbol(it.id, chart) });
+  return { ...w, items };
 }
 
 /** Roda de intervalos: 1 minuto … 1 mês (respeita os limites do plano). */
@@ -30,5 +31,6 @@ export function useTfWheel(chart: number) {
     if (!list.includes(tf)) list.push(tf);
     return list.sort(compareTf).map((t) => ({ id: t, label: tfLabel(t), hint: tfShort(t) }));
   }, [tf]);
-  return useWheelPicker({ items, currentId: tf, onSelect: (it) => setChartTf(it.id, chart) });
+  const w = useWheelPicker({ items, currentId: tf, onSelect: (it) => setChartTf(it.id, chart) });
+  return { ...w, items };
 }

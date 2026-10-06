@@ -151,3 +151,59 @@ test('ordem no gráfico: SL à esquerda e TP à direita arrastáveis, lote com +
   await expect(page.getByText('Ordem pendente colocada')).toBeVisible();
   await expect(page.getByTestId('order-ticket')).toBeHidden();
 });
+
+test('lote pelo risco: afastar o stop reduz o lote e o painel mostra as regras do ativo', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 500);
+  await page.click('[data-testid=replay-button]');
+  await page.mouse.click(600, 450);
+  await expect(page.getByTestId('replay-bar')).toBeVisible();
+  await page.getByTestId('replay-order').click();
+  const info = page.getByTestId('ticket-lot-info');
+  await expect(info).toContainText('mín.');
+  await expect(info).toContainText('passo');
+  await page.getByTestId('ticket-mode-risk').click();
+  const lot = async () => parseFloat(((await info.locator('b').first().innerText()) ?? '0').replace(',', '.'));
+  const risk = async () => parseFloat((await info.locator('b').nth(1).innerText()).replace(/[^\d.,-]/g, '').replace(',', '.'));
+  const l0 = await lot();
+  const r0 = await risk();
+  expect(l0).toBeGreaterThan(0);
+  // arrastar o SL para mais longe da entrada: com o risco fixo o lote tem de baixar
+  const sl = page.getByTestId('ticket-sl');
+  const b = (await sl.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + 90, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(lot).toBeLessThan(l0);
+  // o risco em dinheiro mantém-se (≈ 1% da conta, arredondado para baixo ao passo do lote)
+  const r1 = await risk();
+  expect(r1).toBeLessThanOrEqual(r0 * 1.02);
+  expect(r1).toBeGreaterThan(r0 * 0.5);
+  // risco +: o lote sobe
+  const l1 = await lot();
+  await page.getByTestId('risk-plus').click();
+  await expect.poll(lot).toBeGreaterThan(l1);
+});
+
+test('definições: regras de lote por tipo de mercado e ajuste do lote ao enviar', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 500);
+  // lote guardado fora das regras (0,004) é ajustado ao mínimo do ativo (0,01) ao enviar
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('rx-settings') || '{}');
+    raw.state = { ...(raw.state ?? {}), trading: { ...(raw.state?.trading ?? {}), defaultQty: 0.004 } };
+    localStorage.setItem('rx-settings', JSON.stringify(raw));
+  });
+  await page.reload();
+  await page.waitForFunction(() => (window as unknown as { __rxCharts?: Map<string, unknown> }).__rxCharts?.size);
+  await waitBars(page, 500);
+  await page.click('[data-testid=replay-button]');
+  await page.mouse.click(600, 450);
+  await expect(page.getByTestId('replay-bar')).toBeVisible();
+  await expect(page.getByTestId('qty-value').first()).toHaveText(/0[.,]01/);
+  await page.getByTestId('replay-buy').click();
+  await expect(page.getByText('Compra executada')).toBeVisible();
+});

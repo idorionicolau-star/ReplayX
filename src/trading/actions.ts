@@ -10,6 +10,8 @@ import { toast } from '@/components/ui/Toast';
 import { fmtMoney, fmtPrice } from '@/lib/format';
 import { playSound } from '@/lib/sound';
 import type { TradeAction } from '@/chart/interaction';
+import { fmtLotWith, snapLot } from '@/core/trading/lots';
+import { ruleFor } from './lotRule';
 
 /** Ações de trading que funcionam tanto no replay como em tempo real (conta demo). */
 
@@ -49,12 +51,17 @@ export function notifyFills(fills: Fill[]) {
   if (fills.length) playSound(fills.some((f) => f.kind === 'exit' && (f.pnl ?? 0) < 0) ? 'loss' : 'fill');
 }
 
-export function submitOrder(o: { symbolId: string; side: Side; type: OrderType; qty: number; price?: number; sl?: number; tp?: number; trail?: number }): boolean {
+export function submitOrder(order: { symbolId: string; side: Side; type: OrderType; qty: number; price?: number; sl?: number; tp?: number; trail?: number }): boolean {
   const mode = tradingMode();
-  if (!(o.qty > 0)) {
+  if (!(order.qty > 0)) {
     toast('Quantidade inválida', { kind: 'error' });
     return false;
   }
+  // o lote tem de respeitar o mínimo, o passo e o máximo do tipo de mercado
+  const rule = ruleFor(order.symbolId);
+  const qty = snapLot(order.qty, rule);
+  const o = { ...order, qty };
+  if (qty !== order.qty) toast(`Lote ajustado para ${fmtLotWith(qty, rule)}`, { kind: 'info', body: `Mínimo ${fmtLotWith(rule.min, rule)}, passo ${fmtLotWith(rule.step, rule)}, máximo ${fmtLotWith(rule.max, rule)} neste mercado.` });
   if (mode === 'replay') {
     const r = replay.placeOrder(o);
     if (!r.ok) toast(r.message ?? 'Não foi possível enviar a ordem', { kind: 'error' });
