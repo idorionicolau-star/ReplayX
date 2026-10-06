@@ -112,7 +112,8 @@ export const useSettings = create<SettingsState>()(
       loupePos: 'top-right',
       autoFit: true,
       haptics: true,
-      hideBottomBars: false,
+      // no telemóvel as barras de baixo começam recolhidas (o botão no canto do gráfico mostra-as)
+      hideBottomBars: typeof window !== 'undefined' && window.innerWidth < 640,
       appearance: DEFAULT_APPEARANCE,
       customColors: [],
       drawingTemplates: {},
@@ -126,7 +127,7 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: 'rx-settings',
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Partial<SettingsState>;
         if (version < 2) {
@@ -138,6 +139,7 @@ export const useSettings = create<SettingsState>()(
             scaleMode: p.logScale ? 'log' : 'normal',
           };
         }
+        if (version < 3 && typeof window !== 'undefined' && window.innerWidth < 640) p.hideBottomBars = true;
         return p as SettingsState;
       },
       // campos novos da aparência ficam com o valor por omissão

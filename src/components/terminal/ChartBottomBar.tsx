@@ -92,7 +92,7 @@ export function ChartBottomBar() {
   const chartId = () => useWorkspace.getState().charts[active]?.id;
 
   return (
-    <div className="flex h-[30px] shrink-0 items-center gap-0.5 overflow-x-auto border-t border-line bg-panel px-1.5 text-[12px] no-select" data-testid="chart-bottom-bar">
+    <div className="flex h-[30px] shrink-0 items-center gap-0.5 overflow-x-auto border-t border-line bg-panel px-1.5 text-[12px] no-select max-sm:hidden" data-testid="chart-bottom-bar">
       {RANGES.map((r) => (
         <button
           key={r.id}

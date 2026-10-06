@@ -68,6 +68,19 @@ export function SettingsDialog() {
           <Row label="Lupa ao desenhar com o dedo">
             <Switch checked={s.loupe} onChange={(v) => s.set({ loupe: v })} />
           </Row>
+          <Row label="Escala de preços automática (ajusta-se aos dados à vista)">
+            <Switch checked={s.autoFit} onChange={(v) => s.set({ autoFit: v })} />
+          </Row>
+          <Row label="Ir para uma data no gráfico">
+            <Button
+              size="sm"
+              onClick={() => {
+                useUi.getState().set({ settings: false, gotoDate: true });
+              }}
+            >
+              Abrir
+            </Button>
+          </Row>
           <Row label="Vibração ao rodar símbolo e intervalo">
             <Switch checked={s.haptics} onChange={(v) => s.set({ haptics: v })} />
           </Row>

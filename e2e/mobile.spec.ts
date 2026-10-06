@@ -122,16 +122,15 @@ test('zoom com dois dedos é rápido: afastar os dedos 2× aproxima mais de 2,5�
   expect(w0 / w1).toBeLessThan(60);
 });
 
-test('esconder as barras de baixo dá mais espaço ao gráfico', async ({ page }) => {
+test('mostrar as barras de baixo (recolhidas por defeito) tira espaço ao gráfico; esconder devolve-o', async ({ page }) => {
   await setup(page);
-  await expect(page.getByTestId('chart-bottom-bar')).toBeVisible();
+  await expect(page.getByTestId('bottom-tab-journal')).toBeHidden();
   const h0 = (await page.getByTestId('chart-0').boundingBox())!.height;
   await page.getByTestId('toggle-bottom').click();
-  await expect(page.getByTestId('chart-bottom-bar')).toBeHidden();
-  await expect(page.getByTestId('bottom-tab-journal')).toBeHidden();
-  expect((await page.getByTestId('chart-0').boundingBox())!.height).toBeGreaterThan(h0 + 60);
+  await expect(page.getByTestId('bottom-tab-journal')).toBeVisible();
+  expect((await page.getByTestId('chart-0').boundingBox())!.height).toBeLessThan(h0 - 20);
   await page.getByTestId('toggle-bottom').click();
-  await expect(page.getByTestId('chart-bottom-bar')).toBeVisible();
+  await expect(page.getByTestId('bottom-tab-journal')).toBeHidden();
 });
 
 test('replay no telemóvel: arrastar a linha, ajuste fino e confirmar', async ({ page }) => {
@@ -258,21 +257,23 @@ test('faixa de baixo: roda de símbolo e intervalo com arrasto; toque abre a pes
   await expect.poll(tf).toBe('1h');
 });
 
-test('a faixa de símbolo e intervalo fica sempre visível, mesmo com as barras de baixo escondidas', async ({ page }) => {
+test('telemóvel: barras de baixo recolhidas por defeito, sem linha de escalas; faixa e navegação sempre visíveis', async ({ page }) => {
   await setup(page);
+  // recolhidas por defeito: sem separadores do Diário/Testador e sem linha de escalas
+  await expect(page.getByTestId('chart-bottom-bar')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Mostrar as barras de baixo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Testador de estratégias' })).toBeHidden();
+  // a faixa de símbolo/intervalo e a navegação ficam sempre
   await expect(page.getByTestId('mobile-strip')).toBeVisible();
-  await page.getByRole('button', { name: 'Esconder as barras de baixo' }).click();
+  await expect(page.getByRole('button', { name: 'Lista de observação' })).toBeVisible();
+  // mostrar: aparecem os separadores, mas a linha de escalas nunca existe no telemóvel
+  await page.getByRole('button', { name: 'Mostrar as barras de baixo' }).click();
+  await expect(page.getByRole('button', { name: /Testador de estratégias/ })).toBeVisible();
   await expect(page.getByTestId('chart-bottom-bar')).toBeHidden();
   await expect(page.getByTestId('mobile-strip')).toBeVisible();
-  await page.getByRole('button', { name: 'Mostrar as barras de baixo' }).click();
-  await expect(page.getByTestId('chart-bottom-bar')).toBeVisible();
-});
-
-test('no telemóvel a barra de escalas fica só com o calendário e o auto', async ({ page }) => {
-  await setup(page);
-  const bar = page.getByTestId('chart-bottom-bar');
-  await expect(bar.getByTestId('range-1D')).toBeHidden();
-  await expect(bar.getByTestId('clock')).toBeHidden();
-  await expect(bar.getByRole('button', { name: 'Ir para data' })).toBeVisible();
-  await expect(bar.getByTestId('auto-fit')).toBeVisible();
+  // o que restava da linha (escala automática, ir para data) está nas Definições
+  await page.getByRole('button', { name: 'Definições', exact: true }).first().click();
+  await page.getByRole('tab', { name: 'Geral' }).click().catch(async () => page.getByText('Geral', { exact: true }).first().click());
+  await expect(page.getByText('Escala de preços automática')).toBeVisible();
+  await expect(page.getByText('Ir para uma data no gráfico')).toBeVisible();
 });

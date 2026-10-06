@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
@@ -149,7 +149,17 @@ export function Terminal() {
   const theme = useSettings((s) => s.theme);
   const user = useAuth((s) => s.user);
   const mobileTools = useUi((s) => s.mobileTools);
-  const hideBottom = useSettings((s) => s.hideBottomBars);
+  // esconder as barras de baixo só vale no telemóvel (no computador não há botão para as voltar a mostrar)
+  const narrow = useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia('(max-width: 639px)');
+      mq.addEventListener('change', cb);
+      return () => mq.removeEventListener('change', cb);
+    },
+    () => window.matchMedia('(max-width: 639px)').matches,
+    () => false,
+  );
+  const hideBottom = useSettings((s) => s.hideBottomBars) && narrow;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -218,7 +228,7 @@ export function Terminal() {
         <RightIconBar />
       </div>
       <MobileStrip />
-      {!hideBottom && <MobileNav />}
+      <MobileNav />
       <SymbolSearch />
       <IndicatorsDialog />
       <IndicatorSettings />
