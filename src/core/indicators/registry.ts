@@ -998,6 +998,8 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('sens', 'Sensibilidade (ATR por oscilação)', 2.5, 0.25, 1, 10),
       { key: 'top', label: 'Pernadas longas: melhores %', type: 'int', default: 25, min: 10, max: 50, step: 5 },
       { key: 'h', label: 'Horizonte (velas à frente)', type: 'int', default: 6, min: 2, max: 50, step: 1 },
+      { key: 'signals', label: 'Sinais de entrada (com stop e alvo)', type: 'bool', default: true },
+      numInput('ratio', 'Exigência: chance vs média (×)', 1.5, 0.1, 1, 5),
     ],
     outputs: [
       { key: 'd1hi', label: 'Procura 1 (cima)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
@@ -1008,19 +1010,24 @@ export const INDICATORS: IndicatorDef[] = [
       { key: 's1lo', label: 'Oferta 1 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
       { key: 's2hi', label: 'Oferta 2 (cima)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
       { key: 's2lo', label: 'Oferta 2 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'entry', label: 'Entrada', style: 'line', color: '#b0b3bd', width: 1, hiddenByDefault: true },
+      { key: 'sl', label: 'Stop', style: 'line', color: '#f23645', width: 1, hiddenByDefault: true },
+      { key: 'tp', label: 'Alvo', style: 'line', color: '#089981', width: 1, hiddenByDefault: true },
     ],
     fills: [
       { a: 'd1hi', b: 'd1lo', color: 'rgba(8,153,129,0.2)' },
       { a: 'd2hi', b: 'd2lo', color: 'rgba(8,153,129,0.2)' },
       { a: 's1hi', b: 's1lo', color: 'rgba(242,54,69,0.2)' },
       { a: 's2hi', b: 's2lo', color: 'rgba(242,54,69,0.2)' },
+      { a: 'tp', b: 'entry', color: 'rgba(8,153,129,0.3)' },
+      { a: 'entry', b: 'sl', color: 'rgba(242,54,69,0.3)' },
     ],
     compute(bars, p) {
-      const r = apocalypse(bars, { sensitivity: n(p, 'sens'), topPct: n(p, 'top'), horizon: n(p, 'h') });
+      const r = apocalypse(bars, { sensitivity: n(p, 'sens'), topPct: n(p, 'top'), horizon: n(p, 'h'), signals: p.signals !== false, ratio: n(p, 'ratio') });
       const N = bars.length;
       const nan = () => new Array<number>(N).fill(NaN);
       const values: Record<string, number[]> = {};
-      for (const k of ['d1hi', 'd1lo', 'd2hi', 'd2lo', 's1hi', 's1lo', 's2hi', 's2lo']) values[k] = nan();
+      for (const k of ['d1hi', 'd1lo', 'd2hi', 'd2lo', 's1hi', 's1lo', 's2hi', 's2lo', 'entry', 'sl', 'tp']) values[k] = nan();
       const price = N ? bars[N - 1].close : 0;
       // as duas zonas de cada tipo mais perto do preço atual
       for (const [kind, prefix] of [['demand', 'd'], ['supply', 's']] as const) {
@@ -1043,8 +1050,18 @@ export const INDICATORS: IndicatorDef[] = [
             ? { index: l.from.idx, position: 'below' as const, shape: 'arrowUp' as const, color: UP }
             : { index: l.from.idx, position: 'above' as const, shape: 'arrowDown' as const, color: DOWN },
         );
+      // sinais de entrada: entrada, stop e alvo desenhados enquanto a operação dura
+      for (const sg of r.signals) {
+        for (let i = sg.idx; i <= sg.exitIdx; i++) {
+          values.entry[i] = sg.entry;
+          values.sl[i] = sg.stop;
+          values.tp[i] = sg.target;
+        }
+        markers.push({ index: sg.idx, position: sg.dir === 1 ? 'below' : 'above', shape: sg.dir === 1 ? 'arrowUp' : 'arrowDown', color: sg.dir === 1 ? UP : DOWN, text: `${sg.dir === 1 ? 'COMPRA' : 'VENDA'} 1:${sg.rr.toFixed(1)}` });
+        if (sg.outcome === 'tp' || sg.outcome === 'sl') markers.push({ index: sg.exitIdx, position: sg.dir === 1 ? 'above' : 'below', shape: 'circle', color: sg.outcome === 'tp' ? UP : DOWN, text: sg.outcome === 'tp' ? 'alvo' : 'stop' });
+      }
       // a leitura atual: uma linha curta por marcador, empilhadas por cima da última vela
-      if (N) readingLines(r.reading, r.typical).forEach((text, k) => markers.push({ index: N - 1, position: 'above', shape: k === 0 ? 'circle' : 'square', color: '#b39ddb', text }));
+      if (N) readingLines(r.reading, r.typical, r.signals).forEach((text, k) => markers.push({ index: N - 1, position: 'above', shape: k === 0 ? 'circle' : 'square', color: '#b39ddb', text }));
       return { values, markers };
     },
   },

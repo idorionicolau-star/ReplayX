@@ -182,7 +182,7 @@ describe('Apocalypse no gráfico', () => {
     expect(r.markers!.length).toBeGreaterThan(5);
     const onLast = r.markers!.filter((m) => m.index === bars.length - 1 && m.text);
     expect(onLast.length).toBeGreaterThanOrEqual(1);
-    expect(onLast.length).toBeLessThanOrEqual(3);
+    expect(onLast.length).toBeLessThanOrEqual(4);
     // cada linha cabe na margem à direita do gráfico
     onLast.forEach((m) => expect(m.text!.length).toBeLessThanOrEqual(34));
     expect(r.markers!.some((m) => m.shape === 'arrowUp' && m.position === 'below')).toBe(true);
@@ -199,5 +199,111 @@ describe('Apocalypse no gráfico', () => {
     const t0 = performance.now();
     def.compute(big, defaultParams(def));
     expect(performance.now() - t0).toBeLessThan(1000);
+  });
+});
+
+describe('Apocalypse: sinais de entrada', () => {
+  const { bars } = build(70, 20, 0.03);
+  const r = apocalypse(bars);
+
+  it('há sinais e cada um tem stop, entrada e alvo coerentes com a direção', () => {
+    expect(r.signals.length).toBeGreaterThan(5);
+    for (const s of r.signals) {
+      if (s.dir === 1) {
+        expect(s.stop).toBeLessThan(s.entry);
+        expect(s.target).toBeGreaterThan(s.entry);
+      } else {
+        expect(s.stop).toBeGreaterThan(s.entry);
+        expect(s.target).toBeLessThan(s.entry);
+      }
+      expect(s.rr).toBeGreaterThanOrEqual(1);
+      expect(s.exitIdx).toBeGreaterThanOrEqual(s.idx);
+      expect(s.entry).toBe(bars[s.idx].close);
+    }
+  });
+
+  it('só dá sinal com chance acima da exigência, com casos suficientes e sem operações sobrepostas', () => {
+    let lastExit = -1;
+    for (const s of r.signals) {
+      expect(s.cases).toBeGreaterThanOrEqual(MIN_CASES);
+      expect(s.chance).toBeGreaterThanOrEqual(1.5 * s.base);
+      expect(s.idx).toBeGreaterThan(lastExit);
+      lastExit = s.exitIdx;
+    }
+  });
+
+  it('o resultado de cada operação corresponde ao que o preço fez', () => {
+    for (const s of r.signals) {
+      if (s.outcome === 'open' || s.outcome === 'timeout') continue;
+      const b = bars[s.exitIdx];
+      if (s.outcome === 'tp') expect(s.dir === 1 ? b.high >= s.target : b.low <= s.target).toBe(true);
+      if (s.outcome === 'sl') expect(s.dir === 1 ? b.low <= s.stop : b.high >= s.stop).toBe(true);
+      // antes da saída nem o stop nem o alvo foram tocados
+      for (let j = s.idx + 1; j < s.exitIdx; j++) {
+        if (s.dir === 1) {
+          expect(bars[j].low).toBeGreaterThan(s.stop);
+          expect(bars[j].high).toBeLessThan(s.target);
+        } else {
+          expect(bars[j].high).toBeLessThan(s.stop);
+          expect(bars[j].low).toBeGreaterThan(s.target);
+        }
+      }
+    }
+  });
+
+  it('as compras da série construída acertam o alvo na maioria dos casos', () => {
+    const longs = r.signals.filter((s) => s.dir === 1 && (s.outcome === 'tp' || s.outcome === 'sl'));
+    expect(longs.length).toBeGreaterThan(5);
+    expect(longs.filter((s) => s.outcome === 'tp').length / longs.length).toBeGreaterThan(0.7);
+  });
+
+  it('sem olhar para o futuro: cortar o gráfico mais cedo dá os mesmos sinais já fechados', () => {
+    const cut = 1400;
+    const short = apocalypse(bars.slice(0, cut));
+    const closed = short.signals.filter((s) => (s.outcome === 'tp' || s.outcome === 'sl') && s.exitIdx < cut - 1);
+    expect(closed.length).toBeGreaterThan(3);
+    for (const s of closed) {
+      const same = r.signals.find((x) => x.idx === s.idx);
+      expect(same, `sinal em ${s.idx}`).toBeDefined();
+      expect(same).toMatchObject({ dir: s.dir, entry: s.entry, stop: s.stop, target: s.target, exitIdx: s.exitIdx, outcome: s.outcome });
+    }
+  });
+
+  it('exigir mais da chance dá menos sinais, e desligar os sinais não dá nenhum', () => {
+    expect(apocalypse(bars, { ratio: 5 }).signals.length).toBeLessThan(r.signals.length);
+    expect(apocalypse(bars, { signals: false }).signals).toHaveLength(0);
+  });
+
+  it('no gráfico: entrada, stop e alvo só existem durante a operação, com marcas COMPRA/VENDA e as bandas', () => {
+    const def = getIndicator('apocalypse')!;
+    const res = def.compute(bars, defaultParams(def));
+    const s0 = r.signals[0];
+    expect(Number.isNaN(res.values.entry[s0.idx - 1])).toBe(true);
+    expect(res.values.entry[s0.idx]).toBe(s0.entry);
+    expect(res.values.sl[s0.exitIdx]).toBe(s0.stop);
+    expect(res.values.tp[s0.exitIdx]).toBe(s0.target);
+    expect(Number.isNaN(res.values.tp[s0.exitIdx + 1]) || r.signals.some((x) => x.idx === s0.exitIdx + 1)).toBe(true);
+    const texts = res.markers!.map((m) => m.text ?? '');
+    expect(texts.some((t) => /^COMPRA 1:\d+\.\d$/.test(t))).toBe(true);
+    expect(texts.some((t) => /^VENDA 1:\d+\.\d$/.test(t))).toBe(true);
+    expect(texts).toContain('alvo');
+    expect(def.fills!.map((f) => `${f.a}/${f.b}`)).toEqual(expect.arrayContaining(['tp/entry', 'entry/sl']));
+    // desligados, não desenha nada
+    const off = def.compute(bars, { ...defaultParams(def), signals: false });
+    expect(off.values.entry.every((v) => Number.isNaN(v))).toBe(true);
+    expect(off.markers!.some((m) => /COMPRA|VENDA/.test(m.text ?? ''))).toBe(false);
+  });
+});
+
+describe('Apocalypse: resumo dos sinais na etiqueta', () => {
+  it('conta os alvos e os stops das operações já fechadas', () => {
+    const { bars } = build(70, 20, 0.03);
+    const r = apocalypse(bars);
+    const won = r.signals.filter((x) => x.outcome === 'tp').length;
+    const lost = r.signals.filter((x) => x.outcome === 'sl').length;
+    expect(won + lost).toBeGreaterThan(0);
+    expect(readingLines(r.reading, r.typical, r.signals)).toContain(`sinais: ${won} alvo · ${lost} stop`);
+    // sem sinais fechados não há essa linha
+    expect(readingLines(r.reading, r.typical, []).some((l) => l.startsWith('sinais:'))).toBe(false);
   });
 });
