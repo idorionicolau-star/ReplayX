@@ -29,8 +29,23 @@ function Btn({ label, onClick, children, disabled, className, testid }: { label:
   );
 }
 
+/** "A processar" só aparece quando um passo demora de facto: a velocidades altas o ícone deixa de piscar. */
+function useSlowBusy(busy: boolean, delay = 350) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) return;
+    const t = setTimeout(() => setSlow(true), delay);
+    return () => {
+      clearTimeout(t);
+      setSlow(false);
+    };
+  }, [busy, delay]);
+  return busy && slow;
+}
+
 export function ReplayBar() {
   const st = useReplay();
+  const slowBusy = useSlowBusy(st.busy);
   const cfg = useWorkspace((s) => s.charts[s.active]);
   const tz = useSettings((s) => s.timezone);
   const rawQty = useSettings((s) => s.trading.defaultQty);
@@ -148,10 +163,10 @@ export function ReplayBar() {
           <SkipBack size={17} />
         </Btn>
         <Btn label={st.playing ? 'Pausa (Shift+↓)' : 'Reproduzir (Shift+↓)'} onClick={() => replay.toggle()} className={cn('w-9', st.playing && 'text-accent')} testid="replay-play">
-          {st.busy && st.playing ? <Spinner size={15} className="text-accent" /> : st.playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+          {slowBusy && st.playing ? <Spinner size={15} className="text-accent" /> : st.playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
         </Btn>
         <Btn label="Avançar uma barra (Shift+→)" onClick={() => void replay.stepForward()} disabled={st.busy && !st.playing} testid="replay-forward">
-          {st.busy && !st.playing ? <Spinner size={15} className="text-accent" /> : <SkipForward size={17} />}
+          {slowBusy && !st.playing ? <Spinner size={15} className="text-accent" /> : <SkipForward size={17} />}
         </Btn>
         <button ref={speedRef} type="button" onClick={() => setMenu(menu === 'speed' ? null : 'speed')} className="flex h-8 items-center gap-1 rounded-md px-1.5 text-[13px] hover:bg-hover" title="Velocidade">
           <Gauge size={15} className="text-muted" />

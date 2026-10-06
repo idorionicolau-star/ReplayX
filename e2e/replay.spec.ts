@@ -253,3 +253,40 @@ test('definições: regras de lote por tipo de mercado e ajuste do lote ao envia
   await page.getByTestId('replay-buy').click();
   await expect(page.getByText('Compra executada')).toBeVisible();
 });
+
+test('com posição aberta e internet lenta o replay mantém o ritmo (dados finos carregados à frente)', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('rx-replay', JSON.stringify({ state: { pauseOnFill: false }, version: 1 })));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-VOL', 'DEMO:SIMVOL');
+  await waitBars(page, 500);
+  await page.click('[data-testid=replay-button]');
+  // começa umas semanas atrás, para haver caminho de sobra
+  await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { chart: { timeScale(): { setVisibleLogicalRange(r: { from: number; to: number }): void } } }> }).__rxCharts.values()][0];
+    c.chart.timeScale().setVisibleLogicalRange({ from: 20, to: 140 });
+  });
+  await page.waitForTimeout(500);
+  await page.mouse.click(300, 450);
+  await expect(page.getByTestId('replay-bar')).toBeVisible();
+  await page.waitForTimeout(1200);
+  // cada pedido ao fornecedor demora 1,5 s
+  await page.evaluate(() => {
+    const w = window as unknown as { __rxCharts: Map<string, { symbol: unknown }>; __rxFeed: () => { provider(s: unknown): { fetch: (...a: unknown[]) => Promise<unknown> } } };
+    const p = w.__rxFeed().provider([...w.__rxCharts.values()][0].symbol);
+    const orig = p.fetch.bind(p);
+    p.fetch = async (...a: unknown[]) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      return orig(...a);
+    };
+  });
+  await page.getByTitle('Velocidade').click();
+  await page.getByText('Máx.', { exact: true }).click();
+  await page.getByTestId('replay-buy').click();
+  const c0 = (await chartInfo(page)).cursor!;
+  await page.getByTestId('replay-play').click();
+  await page.waitForTimeout(6000);
+  await page.getByTestId('replay-play').click();
+  const steps = ((await chartInfo(page)).cursor! - c0) / 900;
+  // antes da correção: ~78 passos em 6 s (parava a cada pedido); agora ~170
+  expect(steps).toBeGreaterThan(110);
+});
