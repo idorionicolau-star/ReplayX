@@ -28,7 +28,7 @@ import {
 } from 'lightweight-charts';
 import type { Bar, ChartType, SymbolInfo } from '@/core/types';
 import { heikinAshi, lowerBound, mergeBars, upperBound } from '@/core/bars';
-import { alignTime, tfSeconds, tfShort } from '@/core/timeframes';
+import { alignTime, parseTf, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
 import { nowSec } from '@/core/feed/provider';
 import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance, type ParamValue } from '@/core/indicators/registry';
@@ -275,7 +275,7 @@ export class ChartController {
       timeScale: {
         borderColor: a.border,
         timeVisible: true,
-        secondsVisible: false,
+        secondsVisible: this.secs,
         rightOffset: 12,
         barSpacing: 8,
         minBarSpacing: MIN_BAR_SPACING,
@@ -298,7 +298,7 @@ export class ChartController {
       },
       localization: {
         locale: 'pt-PT',
-        timeFormatter: (time: Time) => fmtDateTime(time as number, tz),
+        timeFormatter: (time: Time) => fmtDateTime(time as number, tz, this.secs),
       },
       kineticScroll: { mouse: false, touch: true },
       handleScale: { mouseWheel: true, pinch: false, axisPressedMouseMove: true },
@@ -310,7 +310,7 @@ export class ChartController {
     this.theme = t;
     if (!changed) return;
     this.chart.applyOptions(this.chartOptions(t));
-    this.overlay.fmtTime = (tt) => fmtDateTime(tt, t.timezone);
+    this.overlay.fmtTime = (tt) => fmtDateTime(tt, t.timezone, this.secs);
     this.applyMainStyle();
     this.updateWatermark();
     this.rebuildIndicators();
@@ -589,12 +589,23 @@ export class ChartController {
     return p;
   }
 
+  /** Em intervalos de segundos o eixo e a etiqueta da mira mostram os segundos. */
+  private secs = false;
+  private setSecondsAxis(on: boolean) {
+    if (on === this.secs) return;
+    this.secs = on;
+    const tz = this.theme.timezone;
+    this.chart.applyOptions({ timeScale: { secondsVisible: on }, localization: { timeFormatter: (time: Time) => fmtDateTime(time as number, tz, on) } });
+    this.overlay.fmtTime = (tt) => fmtDateTime(tt, tz, on);
+  }
+
   private async loadInner(symbol: SymbolInfo, tf: string, cursor: number | null) {
     const same = this.symbol?.id === symbol.id && this.tf === tf && this.cursor === cursor && this.bars.length > 0;
     if (same) return;
     const symbolChanged = this.symbol?.id !== symbol.id;
     this.symbol = symbol;
     this.tf = tf;
+    this.setSecondsAxis(parseTf(tf).unit === 's');
     this.vpCache = null;
     this.applyMainStyle();
     this.updateWatermark();
@@ -633,7 +644,7 @@ export class ChartController {
     this.replayBars = [];
     this.setStatus({ state: 'loading' });
     try {
-      const res = await dataFeed().history(sym, tf, nowSec() + tfSeconds(tf), HISTORY_COUNT);
+      const res = await dataFeed().history(sym, tf, nowSec() + tfSeconds(tf), dataFeed().historyCount(sym, tf, HISTORY_COUNT));
       if (gen !== this.gen || this.destroyed) return;
       this.startReached = res.startReached;
       this.setBars(res.bars, true);
@@ -739,7 +750,7 @@ export class ChartController {
     try {
       const first = (this.cursor !== null ? this.replayBars[0] : this.bars[0])?.time;
       if (first === undefined) return;
-      const res = await dataFeed().history(sym, tf, first, MORE_COUNT);
+      const res = await dataFeed().history(sym, tf, first, dataFeed().historyCount(sym, tf, MORE_COUNT));
       if (gen !== this.gen || this.destroyed || this.symbol?.id !== sym.id || this.tf !== tf) return;
       this.startReached = res.startReached || res.bars.length === 0;
       const older = res.bars.filter((b) => b.time < first);
@@ -782,7 +793,7 @@ export class ChartController {
     if (outside || (before < 300 && !this.startReached)) {
       if (outside && this.status.state !== 'loading') this.setStatus({ state: 'loading' });
       tasks.push(
-        feed.history(sym, tf, cursor, HISTORY_COUNT).then((r) => {
+        feed.history(sym, tf, cursor, feed.historyCount(sym, tf, HISTORY_COUNT)).then((r) => {
           if (this.symbol?.id !== sym.id || this.tf !== tf) return;
           this.startReached = r.startReached;
           this.replayBars = mergeBars(r.bars, this.replayBars);

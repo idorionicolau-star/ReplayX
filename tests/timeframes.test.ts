@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignTime, divides, nextBarTime, normalizeTf, parseTf, prevBarTime, tfSeconds, tfShort } from '@/core/timeframes';
+import { SECOND_TFS, tfLabel, alignTime, divides, nextBarTime, normalizeTf, parseTf, prevBarTime, tfSeconds, tfShort } from '@/core/timeframes';
 import { aggregate, combine, heikinAshi, mergeBars, sanitize } from '@/core/bars';
 
 const T = (iso: string) => Date.parse(iso) / 1000;
@@ -43,6 +43,47 @@ describe('timeframes', () => {
     expect(divides(parseTf('1D'), parseTf('1M'))).toBe(true);
     expect(divides(parseTf('7m'), parseTf('1h'))).toBe(false);
     expect(tfSeconds('1W')).toBe(604800);
+  });
+});
+
+describe('segundos', () => {
+  it('interpreta, normaliza e rotula', () => {
+    expect(parseTf('5s')).toEqual({ n: 5, unit: 's' });
+    expect(parseTf('s')).toEqual({ n: 1, unit: 's' });
+    expect(normalizeTf('60s')).toBe('1m');
+    expect(normalizeTf('30s')).toBe('30s');
+    expect(tfShort('15s')).toBe('15s');
+    expect(tfSeconds('30s')).toBe(30);
+    expect(tfLabel('1s')).toBe('1 segundo');
+    expect(tfLabel('15s')).toBe('15 segundos');
+    // "5S" e "5M" continuam a ser coisas diferentes: maiúscula é mês
+    expect(parseTf('5M')).toEqual({ n: 5, unit: 'M' });
+  });
+
+  it('alinha ao segundo e encaixa em minutos', () => {
+    const t = T('2024-03-13T10:37:21Z');
+    expect(alignTime(t, '1s')).toBe(t);
+    expect(alignTime(t, '5s')).toBe(T('2024-03-13T10:37:20Z'));
+    expect(alignTime(t, '15s')).toBe(T('2024-03-13T10:37:15Z'));
+    expect(alignTime(t, '30s')).toBe(T('2024-03-13T10:37:00Z'));
+    expect(nextBarTime(T('2024-03-13T10:37:45Z'), '15s')).toBe(T('2024-03-13T10:38:00Z'));
+    expect(prevBarTime(T('2024-03-13T10:37:00Z'), '30s')).toBe(T('2024-03-13T10:36:30Z'));
+    expect(divides(parseTf('1s'), parseTf('1m'))).toBe(true);
+    expect(divides(parseTf('30s'), parseTf('1m'))).toBe(true);
+    expect(divides(parseTf('1s'), parseTf('30s'))).toBe(true);
+    expect(divides(parseTf('1m'), parseTf('30s'))).toBe(false);
+    expect(divides(parseTf('15s'), parseTf('1D'))).toBe(true);
+    expect(divides(parseTf('5s'), parseTf('1W'))).toBe(true);
+    expect(SECOND_TFS.every((t) => parseTf(t).unit === 's')).toBe(true);
+  });
+
+  it('agrega segundos em velas maiores', () => {
+    const t0 = T('2024-03-13T10:37:00Z');
+    const secs = Array.from({ length: 30 }, (_, i) => ({ time: t0 + i, open: 100 + i, high: 101 + i, low: 99 + i, close: 100.5 + i, volume: 2 }));
+    const out = aggregate(secs, parseTf('15s'));
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ time: t0, open: 100, high: 115, low: 99, close: 114.5, volume: 30 });
+    expect(out[1].time).toBe(t0 + 15);
   });
 });
 

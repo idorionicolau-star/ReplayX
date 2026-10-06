@@ -17,7 +17,7 @@ export const DERIV_ENDPOINTS = [
 ];
 
 const GRANULARITIES = [60, 120, 180, 300, 600, 900, 1800, 3600, 7200, 14400, 28800, 86400];
-const NATIVE: Timeframe[] = ['1m', '2m', '3m', '5m', '10m', '15m', '30m', '1h', '2h', '4h', '8h', '1D'].map(parseTf);
+const NATIVE: Timeframe[] = ['1s', '1m', '2m', '3m', '5m', '10m', '15m', '30m', '1h', '2h', '4h', '8h', '1D'].map(parseTf);
 
 type DerivMsg = Record<string, unknown> & {
   req_id?: number;
@@ -489,6 +489,46 @@ async function fetchCandles(symbol: SymbolInfo, tf: Timeframe, args: FetchArgs):
   return args.from === undefined ? bars.slice(-args.limit) : bars;
 }
 
+/** A Deriv só tem velas a partir de 1 minuto: os segundos montam-se a partir dos ticks. */
+async function fetchTickBars(symbol: SymbolInfo, tf: Timeframe, args: FetchArgs): Promise<Bar[]> {
+  const now = nowSec();
+  const req: Record<string, unknown> = {
+    ticks_history: symbol.ticker,
+    style: 'ticks',
+    end: args.to > now ? 'latest' : args.to,
+    count: Math.max(1, Math.min(5000, args.limit + 1)),
+  };
+  if (args.from !== undefined) req.start = args.from;
+  else req.adjust_start_time = 1;
+  const msg = await derivClient().send(req, 30000);
+  const h = msg.history as { times?: (number | string)[]; prices?: (number | string)[] } | undefined;
+  return ticksToBars(h?.times ?? [], h?.prices ?? [], tf, args);
+}
+
+/** Junta ticks em velas de `tf` (sem volume). Segundos sem ticks ficam sem vela. */
+export function ticksToBars(times: (number | string)[], prices: (number | string)[], tf: Timeframe, args: FetchArgs): Bar[] {
+  const bars: Bar[] = [];
+  let cur: Bar | null = null;
+  const n = Math.min(times.length, prices.length);
+  for (let i = 0; i < n; i++) {
+    const t = Number(times[i]);
+    const p = Number(prices[i]);
+    if (!Number.isFinite(t) || !Number.isFinite(p)) continue;
+    const open = alignTime(t, tf);
+    if (open >= args.to || (args.from !== undefined && open < args.from)) continue;
+    if (!cur || open !== cur.time) {
+      cur = { time: open, open: p, high: p, low: p, close: p };
+      bars.push(cur);
+    } else {
+      cur.high = Math.max(cur.high, p);
+      cur.low = Math.min(cur.low, p);
+      cur.close = p;
+    }
+  }
+  bars.sort((a, b) => a.time - b.time);
+  return args.from === undefined ? bars.slice(-args.limit) : bars;
+}
+
 export const derivProvider: Provider = {
   id: 'deriv',
   maxPerRequest: 4000,
@@ -497,7 +537,7 @@ export const derivProvider: Provider = {
     return NATIVE;
   },
 
-  fetch: fetchCandles,
+  fetch: (symbol, tf, args) => (tf.unit === 's' ? fetchTickBars(symbol, tf, args) : fetchCandles(symbol, tf, args)),
 
   subscribe(symbol, tf, onBar, seed) {
     let cur: Bar | null = seed ? { ...seed } : null;

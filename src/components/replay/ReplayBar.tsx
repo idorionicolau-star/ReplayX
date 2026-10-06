@@ -8,7 +8,8 @@ import { useTrading, specFor } from '@/store/trading';
 import { useUi } from '@/store/ui';
 import { resolveSymbol } from '@/core/symbols';
 import { unrealized } from '@/core/trading/engine';
-import { tfLabel, tfShort, STANDARD_TFS } from '@/core/timeframes';
+import { tfsFor } from '@/core/feed/datafeed';
+import { tfLabel, tfShort } from '@/core/timeframes';
 import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { submitOrder } from '@/trading/actions';
 import { QtyStepper } from '@/components/ui/QtyStepper';
@@ -189,7 +190,7 @@ export function ReplayBar() {
           <MenuList className="w-[230px]">
             <MenuHeader>Intervalo de atualização</MenuHeader>
             <MenuItem label="Igual ao gráfico" active={!stepTf} onClick={() => (replay.setStepTf(null), setMenu(null))} />
-            {STANDARD_TFS.filter((t) => t !== '45m').map((t) => (
+            {tfsFor(cfg.symbolId ? resolveSymbol(cfg.symbolId) : null).filter((t) => t !== '45m').map((t) => (
               <MenuItem key={t} label={tfLabel(t)} active={stepTf === t} onClick={() => (replay.setStepTf(t), setMenu(null))} />
             ))}
             <div className="px-3 pt-1 pb-1 text-[11px] leading-snug text-muted">Ex.: gráfico de 4h com atualização de 15m mostra a vela de 4h a formar-se a cada 15 minutos.</div>

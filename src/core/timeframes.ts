@@ -2,13 +2,14 @@
  * Timeframes ao estilo TradingView: "1m", "15m", "4h", "1D", "1W", "1M".
  * Todas as contas são feitas em segundos UTC.
  */
-export type TfUnit = 'm' | 'h' | 'D' | 'W' | 'M';
+export type TfUnit = 's' | 'm' | 'h' | 'D' | 'W' | 'M';
 
 export interface Timeframe {
   n: number;
   unit: TfUnit;
 }
 
+export const SECOND = 1;
 export const MINUTE = 60;
 export const HOUR = 3600;
 export const DAY = 86400;
@@ -17,6 +18,7 @@ export const WEEK = 7 * DAY;
 const WEEK_ORIGIN = 4 * DAY;
 
 const UNIT_SECONDS: Record<Exclude<TfUnit, 'M'>, number> = {
+  s: SECOND,
   m: MINUTE,
   h: HOUR,
   D: DAY,
@@ -29,10 +31,13 @@ export const STANDARD_TFS = [
   '1D', '1W', '1M',
 ] as const;
 
+/** Intervalos em segundos (só em fontes que os têm: ver `DataFeed.supports`). */
+export const SECOND_TFS = ['1s', '5s', '15s', '30s'] as const;
+
 export const DEFAULT_FAVORITE_TFS = ['1m', '5m', '15m', '1h', '4h', '1D'];
 
 export function parseTf(s: string): Timeframe {
-  const m = /^(\d+)?\s*(m|h|D|W|M|d|w)$/.exec(s.trim());
+  const m = /^(\d+)?\s*(s|m|h|D|W|M|d|w)$/.exec(s.trim());
   if (!m) throw new Error(`Timeframe inválido: ${s}`);
   const n = m[1] ? parseInt(m[1], 10) : 1;
   let unit = m[2] as TfUnit | 'd' | 'w';
@@ -58,6 +63,7 @@ export function tfToString(tf: Timeframe): string {
 /** Normaliza (ex.: "60m" → "1h", "24h" → "1D"). */
 export function normalizeTf(s: string): string {
   const tf = parseTf(s);
+  if (tf.unit === 's' && tf.n % 60 === 0) return normalizeTf(`${tf.n / 60}m`);
   if (tf.unit === 'm' && tf.n % 60 === 0) return normalizeTf(`${tf.n / 60}h`);
   if (tf.unit === 'h' && tf.n % 24 === 0) return `${tf.n / 24}D`;
   return tfToString(tf);
@@ -144,6 +150,8 @@ export function tfLabel(s: string): string {
   const tf = parseTf(s);
   const plural = tf.n > 1;
   switch (tf.unit) {
+    case 's':
+      return `${tf.n} segundo${plural ? 's' : ''}`;
     case 'm':
       return `${tf.n} minuto${plural ? 's' : ''}`;
     case 'h':

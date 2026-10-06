@@ -1,6 +1,6 @@
 import type { Bar, ProviderId, SymbolInfo } from '../types';
 import { aggregate, combine, lowerBound } from '../bars';
-import { alignTime, divides, nextBarTime, parseTf, tfSeconds, tfToString, type Timeframe } from '../timeframes';
+import { alignTime, divides, nextBarTime, parseTf, SECOND_TFS, STANDARD_TFS, tfSeconds, tfToString, type Timeframe } from '../timeframes';
 import { BarStore } from './store';
 import type { Provider, Quote } from './provider';
 import { nowSec } from './provider';
@@ -44,6 +44,24 @@ export class DataFeed {
       if (divides(n, t) && (!best || tfSeconds(n) > tfSeconds(best))) best = n;
     }
     return best ?? natives[0];
+  }
+
+  /** A fonte do símbolo consegue dar este timeframe (nativo ou agregado de um nativo que o divide). */
+  supports(sym: SymbolInfo, tfIn: TfLike): boolean {
+    const t = asTf(tfIn);
+    return this.provider(sym)
+      .nativeTfs(sym)
+      .some((n) => (n.unit === t.unit && n.n === t.n) || divides(n, t));
+  }
+
+  /**
+   * Barras a pedir por carga. Em segundos limita as barras nativas (cada carga é um pedido de rede):
+   * 5s/15s/30s montam-se de barras de 1s, por isso pedem menos barras do que os outros intervalos.
+   */
+  historyCount(sym: SymbolInfo, tfIn: TfLike, base: number): number {
+    const t = asTf(tfIn);
+    if (t.unit !== 's') return base;
+    return Math.max(200, Math.min(base, Math.floor(6000 / this.ratio(this.nativeTf(sym, t), t))));
   }
 
   /** Timeframes nativos mais finos que `tf`, do maior para o menor. */
@@ -263,6 +281,12 @@ export const PROVIDERS: Record<ProviderId, Provider> = {
   yahoo: yahooProvider,
   demo: demoProvider,
 };
+
+/** Intervalos que o símbolo permite: segundos só nas fontes que os têm, depois os habituais. */
+export function tfsFor(sym: SymbolInfo | null | undefined): string[] {
+  const secs = sym ? SECOND_TFS.filter((t) => dataFeed().supports(sym, t)) : [];
+  return [...secs, ...STANDARD_TFS];
+}
 
 let feed: DataFeed | null = null;
 export function dataFeed(): DataFeed {
