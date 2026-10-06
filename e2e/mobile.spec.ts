@@ -267,3 +267,12 @@ test('a faixa de símbolo e intervalo fica sempre visível, mesmo com as barras 
   await page.getByRole('button', { name: 'Mostrar as barras de baixo' }).click();
   await expect(page.getByTestId('chart-bottom-bar')).toBeVisible();
 });
+
+test('no telemóvel a barra de escalas fica só com o calendário e o auto', async ({ page }) => {
+  await setup(page);
+  const bar = page.getByTestId('chart-bottom-bar');
+  await expect(bar.getByTestId('range-1D')).toBeHidden();
+  await expect(bar.getByTestId('clock')).toBeHidden();
+  await expect(bar.getByRole('button', { name: 'Ir para data' })).toBeVisible();
+  await expect(bar.getByTestId('auto-fit')).toBeVisible();
+});

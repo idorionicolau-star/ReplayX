@@ -107,18 +107,18 @@ export function ChartBottomBar() {
               setBusy(null);
             }
           }}
-          className={cn('h-6 shrink-0 rounded px-1.5 font-medium transition-colors hover:bg-hover', busy === r.id ? 'text-accent' : 'text-text')}
+          className={cn('h-6 shrink-0 rounded px-1.5 font-medium transition-colors hover:bg-hover max-sm:hidden', busy === r.id ? 'text-accent' : 'text-text')}
           data-testid={`range-${r.id}`}
         >
           {r.label}
         </button>
       ))}
-      <span className="mx-1 h-4 w-px shrink-0 bg-line" />
+      <span className="mx-1 h-4 w-px shrink-0 bg-line max-sm:hidden" />
       <button type="button" title="Ir para data" aria-label="Ir para data" onClick={() => useUi.getState().set({ gotoDate: true })} className="flex h-6 w-7 shrink-0 items-center justify-center rounded text-text hover:bg-hover">
         <CalendarClock size={15} />
       </button>
       <div className="flex-1" />
-      <button ref={tzRef} type="button" title="Fuso horário" onClick={() => setTzOpen((o) => !o)} className="h-6 shrink-0 rounded px-2 tnum text-muted hover:bg-hover hover:text-text" data-testid="clock">
+      <button ref={tzRef} type="button" title="Fuso horário" onClick={() => setTzOpen((o) => !o)} className="h-6 shrink-0 rounded px-2 tnum text-muted hover:bg-hover hover:text-text max-sm:hidden" data-testid="clock">
         {clock}
       </button>
       <Popover anchor={tzRef} open={tzOpen} onClose={() => setTzOpen(false)} placement="top-end">
@@ -138,10 +138,10 @@ export function ChartBottomBar() {
         </MenuList>
       </Popover>
       <span className="mx-1 h-4 w-px shrink-0 bg-line" />
-      <button type="button" title="Escala em percentagem" onClick={() => setScale('percent')} className={cn('h-6 shrink-0 rounded px-1.5', scaleMode === 'percent' ? 'text-accent' : 'text-muted hover:bg-hover hover:text-text')}>
+      <button type="button" title="Escala em percentagem" onClick={() => setScale('percent')} className={cn('h-6 shrink-0 rounded px-1.5 max-sm:hidden', scaleMode === 'percent' ? 'text-accent' : 'text-muted hover:bg-hover hover:text-text')}>
         %
       </button>
-      <button type="button" title="Escala logarítmica" onClick={() => setScale('log')} className={cn('h-6 shrink-0 rounded px-1.5', scaleMode === 'log' ? 'text-accent' : 'text-muted hover:bg-hover hover:text-text')}>
+      <button type="button" title="Escala logarítmica" onClick={() => setScale('log')} className={cn('h-6 shrink-0 rounded px-1.5 max-sm:hidden', scaleMode === 'log' ? 'text-accent' : 'text-muted hover:bg-hover hover:text-text')}>
         log
       </button>
       <button
