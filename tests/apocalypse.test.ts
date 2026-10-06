@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apocalypse, buildLegs, buildZones, findPivots, MIN_CASES, MIN_LEGS, readingLines, readingText, situationAt } from '@/core/indicators/apocalypse';
+import { apocalypse, chanceZ, MIN_RR, MIN_STOP_ATR, SIGNAL_MIN_Z, buildLegs, buildZones, findPivots, MIN_CASES, MIN_LEGS, readingLines, readingText, situationAt } from '@/core/indicators/apocalypse';
 import { getIndicator, defaultParams } from '@/core/indicators/registry';
 import * as ta from '@/core/indicators/ta';
 import type { Bar } from '@/core/types';
@@ -258,10 +258,10 @@ describe('Apocalypse: sinais de entrada', () => {
   });
 
   it('sem olhar para o futuro: cortar o gráfico mais cedo dá os mesmos sinais já fechados', () => {
-    const cut = 1400;
+    const cut = Math.round(bars.length * 0.7);
     const short = apocalypse(bars.slice(0, cut));
     const closed = short.signals.filter((s) => (s.outcome === 'tp' || s.outcome === 'sl') && s.exitIdx < cut - 1);
-    expect(closed.length).toBeGreaterThan(3);
+    expect(closed.length).toBeGreaterThan(1);
     for (const s of closed) {
       const same = r.signals.find((x) => x.idx === s.idx);
       expect(same, `sinal em ${s.idx}`).toBeDefined();
@@ -305,5 +305,86 @@ describe('Apocalypse: resumo dos sinais na etiqueta', () => {
     expect(readingLines(r.reading, r.typical, r.signals)).toContain(`sinais: ${won} alvo · ${lost} stop`);
     // sem sinais fechados não há essa linha
     expect(readingLines(r.reading, r.typical, []).some((l) => l.startsWith('sinais:'))).toBe(false);
+  });
+});
+
+/** Passeio aleatório com ruído dentro da vela: um mercado em que NÃO há padrão nenhum. */
+function randomWalk(n: number, seed: number): Bar[] {
+  let st = seed >>> 0;
+  const rnd = () => {
+    st = (Math.imul(st, 1664525) + 1013904223) >>> 0;
+    return st / 4294967296;
+  };
+  const gauss = () => {
+    let u = 0;
+    for (let i = 0; i < 6; i++) u += rnd();
+    return (u - 3) / 0.7071;
+  };
+  const out: Bar[] = [];
+  let p = 1000;
+  for (let i = 0; i < n; i++) {
+    const o = p;
+    const path = [o];
+    for (let k = 0; k < 8; k++) path.push(path[k] + gauss() * 0.4);
+    p = path[8];
+    out.push({ time: T0 + i * 900, open: o, high: Math.max(...path), low: Math.min(...path), close: p, volume: 100 });
+  }
+  return out;
+}
+
+describe('Apocalypse: honestidade estatística', () => {
+  it('num mercado sem padrão nenhum (passeio aleatório) praticamente não dá sinais', () => {
+    let bars = 0;
+    let signals = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const b = randomWalk(3000, seed);
+      bars += b.length;
+      signals += apocalypse(b).signals.length;
+    }
+    // antes de exigir significância estatística eram ~3,5 por 1000 velas e quase todos perdiam
+    expect((signals / bars) * 1000).toBeLessThan(0.3);
+  });
+
+  it('a etiqueta avisa quando o mercado não tem vantagem estatística e não avisa quando tem', () => {
+    const noise = apocalypse(randomWalk(3000, 3));
+    expect(noise.reading.edge).toBe(false);
+    expect(readingLines(noise.reading, noise.typical, noise.signals)).toContain('sem vantagem estatística');
+    const pattern = apocalypse(build(70, 20, 0.03).bars);
+    expect(pattern.reading.edge).toBe(true);
+    expect(readingLines(pattern.reading, pattern.typical, pattern.signals)).not.toContain('sem vantagem estatística');
+    expect(apocalypse(cycles(2)).reading.edge).toBeNull();
+  });
+
+  it('as zonas não crescem em cadeia: a altura de cada uma fica perto de 1 ATR', () => {
+    const b = randomWalk(3000, 7);
+    const r = apocalypse(b);
+    const atr = ta.atr(b, 14);
+    expect(r.zones.length).toBeGreaterThan(5);
+    for (const z of r.zones) {
+      const a = atr[Math.min(b.length - 1, z.lastIdx)] || 1;
+      expect(z.hi - z.lo).toBeLessThanOrEqual(2.2 * a);
+    }
+  });
+
+  it('a significância conta os casos independentes, não as velas sobrepostas', () => {
+    // 20 acertos em 200 velas (10%) contra 3% de média: com janela de 6 velas são só ~33 casos independentes
+    const z6 = chanceZ(20, 200, 0.03, 6);
+    const z1 = chanceZ(20, 200, 0.03, 1);
+    expect(z1).toBeGreaterThan(z6);
+    expect(z6).toBeGreaterThan(2);
+    // a mesma percentagem com muito menos casos já não chega ao limite
+    expect(chanceZ(2, 20, 0.03, 6)).toBeLessThan(SIGNAL_MIN_Z);
+    expect(chanceZ(0, 100, 0.03, 6)).toBeLessThan(0);
+  });
+
+  it('o stop nunca fica a menos de 1 ATR e o alvo vale pelo menos 1,5 vezes o risco', () => {
+    const b = build(70, 20, 0.03).bars;
+    const atrs = ta.atr(b, 14);
+    const r = apocalypse(b);
+    expect(r.signals.length).toBeGreaterThan(0);
+    for (const sg of r.signals) {
+      expect(Math.abs(sg.entry - sg.stop)).toBeGreaterThanOrEqual(atrs[sg.idx] * MIN_STOP_ATR - 1e-9);
+      expect(sg.rr).toBeGreaterThanOrEqual(MIN_RR - 1e-9);
+    }
   });
 });

@@ -33,6 +33,26 @@ export const APOCALYPSE_DEFAULTS: ApocalypseOptions = { sensitivity: 2.5, topPct
 export const MIN_LEGS = 8;
 /** Velas de histórico com situação parecida necessárias para mostrar uma percentagem. */
 export const MIN_CASES = 30;
+/** Para dar um sinal pede-se mais: velas parecidas, acertos e significância estatística. */
+export const SIGNAL_MIN_CASES = 60;
+export const SIGNAL_MIN_HITS = 5;
+/** Quantos desvios-padrão acima da média tem de estar a chance (≈ 1 em 700 por acaso, já com as velas sobrepostas contadas como uma). */
+export const SIGNAL_MIN_Z = 3;
+/** Fração da pernada longa típica usada como alvo (entra-se depois do início, por isso não se conta com ela toda). */
+export const TARGET_FRACTION = 0.6;
+/** O stop nunca fica a menos de 1 ATR da entrada e o alvo tem de valer pelo menos 1,5 vezes o risco. */
+export const MIN_STOP_ATR = 1;
+export const MIN_RR = 1.5;
+
+/**
+ * Quantos desvios-padrão a chance observada está acima da média. As velas de uma janela de `horizon` velas
+ * partilham o mesmo resultado, por isso o número de casos independentes é n / horizon.
+ */
+export function chanceZ(hits: number, n: number, base: number, horizon: number): number {
+  if (!(base > 0) || base >= 1 || n <= 0) return 0;
+  const effective = Math.max(1, n / Math.max(1, horizon));
+  return (hits / n - base) / Math.sqrt((base * (1 - base)) / effective);
+}
 
 export interface Pivot {
   idx: number;
@@ -85,6 +105,8 @@ export interface Reading {
   baseUp: number | null;
   baseDown: number | null;
   enough: boolean;
+  /** Alguma situação do histórico tem chance de pernada longa claramente acima da média? null = ainda sem histórico para dizer. */
+  edge: boolean | null;
 }
 
 export interface Signal {
@@ -239,7 +261,8 @@ export function buildZones(legs: readonly Leg[], atr: readonly number[]): Zone[]
       group = [];
     };
     for (const p of pts) {
-      if (group.length && p.price - group[group.length - 1].price > 0.75 * Math.max(p.a, group[group.length - 1].a)) flush();
+      // ligação completa: o ponto tem de ficar a menos de 1 ATR do mais baixo do grupo, para a zona não crescer em cadeia
+      if (group.length && p.price - group[0].price > 1.0 * Math.max(p.a, group[0].a)) flush();
       group.push(p);
     }
     flush();
@@ -290,7 +313,7 @@ const keyOf = (s: Situation) => (s.compression ? 1 : 0) | (s.atLevel ? 2 : 0) | 
 export function apocalypse(bars: readonly Bar[], options: Partial<ApocalypseOptions> = {}): ApocalypseResult {
   const o = { ...APOCALYPSE_DEFAULTS, ...options };
   const n = bars.length;
-  const empty: Reading = { situation: { compression: false, atLevel: false, pullback: false }, cases: 0, pUp: null, pDown: null, baseUp: null, baseDown: null, enough: false };
+  const empty: Reading = { situation: { compression: false, atLevel: false, pullback: false }, cases: 0, pUp: null, pDown: null, baseUp: null, baseDown: null, enough: false, edge: null };
   if (n < 30) return { pivots: [], legs: [], zones: [], signals: [], reading: empty, typical: null };
   const atr = atrFilled(bars, o.atrLen);
   const pivots = findPivots(bars, atr, o.sensitivity);
@@ -323,6 +346,17 @@ export function apocalypse(bars: readonly Bar[], options: Partial<ApocalypseOpti
     total.up += up;
     total.down += down;
   }
+  // há alguma situação com chance significativamente acima da média? (se não houver, o ativo comporta-se como ruído)
+  let edge: boolean | null = null;
+  if (total.n >= SIGNAL_MIN_CASES) {
+    edge = false;
+    for (const st of bySit.values()) {
+      if (st.n < SIGNAL_MIN_CASES) continue;
+      for (const [hits, base] of [[st.up, total.up / total.n], [st.down, total.down / total.n]] as const) {
+        if (hits >= SIGNAL_MIN_HITS && chanceZ(hits, st.n, base, o.horizon) >= SIGNAL_MIN_Z) edge = true;
+      }
+    }
+  }
   const now = situationAt(bars, atr, pivots, n - 1);
   const stat = bySit.get(keyOf(now));
   const enough = !!stat && stat.n >= MIN_CASES;
@@ -334,6 +368,7 @@ export function apocalypse(bars: readonly Bar[], options: Partial<ApocalypseOpti
     baseUp: total.n >= MIN_CASES ? total.up / total.n : null,
     baseDown: total.n >= MIN_CASES ? total.down / total.n : null,
     enough,
+    edge,
   };
 
   const longs = legs.filter((l) => l.long);
@@ -404,9 +439,9 @@ export function entrySignals(bars: readonly Bar[], atr: readonly number[], pivot
       total.up += up;
       total.down += down;
     }
-    if (i <= busyUntil || total.n < MIN_CASES || knownLong.length < 3) continue;
+    if (i <= busyUntil || total.n < SIGNAL_MIN_CASES || knownLong.length < 3) continue;
     const st = bySit.get(keyOf(situationAt(bars, atr, pivots, i)));
-    if (!st || st.n < MIN_CASES) continue;
+    if (!st || st.n < SIGNAL_MIN_CASES) continue;
     const b = bars[i];
     const range = b.high - b.low;
     if (!(range > 0)) continue;
@@ -417,7 +452,7 @@ export function entrySignals(bars: readonly Bar[], atr: readonly number[], pivot
       const hits = dir === 1 ? st.up : st.down;
       const chance = hits / st.n;
       const base = (dir === 1 ? total.up : total.down) / total.n;
-      if (hits < 3 || !(base > 0) || chance < ratio * base) continue;
+      if (hits < SIGNAL_MIN_HITS || !(base > 0) || chance < ratio * base || chanceZ(hits, st.n, base, horizon) < SIGNAL_MIN_Z) continue;
       const kind = dir === 1 ? 'demand' : 'supply';
       const zone = zones.find((z) => z.kind === kind && z.count >= 2 && b.low <= z.hi && b.high >= z.lo);
       if (!zone) continue;
@@ -428,12 +463,14 @@ export function entrySignals(bars: readonly Bar[], atr: readonly number[], pivot
     }
     if (!best) continue;
     const entry = b.close;
-    const stop = best.dir === 1 ? best.zone.lo - 0.25 * atr[i] : best.zone.hi + 0.25 * atr[i];
-    const target = entry + best.dir * typicalSize * atr[i];
+    // stop do outro lado da zona, mas nunca a menos de 1 ATR da entrada; alvo conservador
+    const zoneStop = best.dir === 1 ? best.zone.lo - 0.25 * atr[i] : best.zone.hi + 0.25 * atr[i];
+    const stop = best.dir === 1 ? Math.min(zoneStop, entry - MIN_STOP_ATR * atr[i]) : Math.max(zoneStop, entry + MIN_STOP_ATR * atr[i]);
+    const target = entry + best.dir * TARGET_FRACTION * typicalSize * atr[i];
     const risk = Math.abs(entry - stop);
-    if (!(risk > 0) || Math.abs(target - entry) < risk) continue;
+    if (!(risk > 0) || Math.abs(target - entry) < MIN_RR * risk) continue;
     // o que aconteceu depois (para desenhar); o stop ganha se ambos forem tocados na mesma vela
-    const maxBars = Math.max(50, Math.round(3 * typicalDur));
+    const maxBars = Math.max(30, Math.round(2 * typicalDur));
     let exitIdx = Math.min(n - 1, i + maxBars);
     let outcome: Signal['outcome'] = i + maxBars < n ? 'timeout' : 'open';
     for (let j = i + 1; j < n && j <= i + maxBars; j++) {
@@ -457,6 +494,7 @@ export function readingLines(r: Reading, typical: ApocalypseResult['typical'], s
   const flags = [r.situation.compression && 'compressão', r.situation.atLevel && 'num nível', r.situation.pullback && 'recuo'].filter(Boolean).join(' + ');
   const lines = [r.enough ? `↑${pct(r.pUp)} ↓${pct(r.pDown)} (média ${pct(r.baseUp)}·${pct(r.baseDown)}) n=${r.cases}` : `poucos casos (${r.cases})`];
   if (flags) lines.push(flags);
+  if (r.edge === false) lines.push('sem vantagem estatística');
   if (typical) lines.push(`longa típica ${typical.size.toFixed(1)} ATR · ${Math.round(typical.dur)} velas`);
   // como os sinais se portaram neste gráfico (só as operações já fechadas)
   const won = signals.filter((x) => x.outcome === 'tp').length;
