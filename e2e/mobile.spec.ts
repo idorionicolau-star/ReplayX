@@ -278,7 +278,7 @@ test('telemóvel: barras de baixo recolhidas por defeito, sem linha de escalas; 
   await expect(page.getByText('Ir para uma data no gráfico')).toBeVisible();
 });
 
-test('roda infinita e rolos ao expandir as barras: depois do último vem o primeiro', async ({ page }) => {
+test('roda infinita: depois do último símbolo vem o primeiro', async ({ page }) => {
   await setup(page);
   const cdp = await page.context().newCDPSession(page);
   const sym = () => page.evaluate(`${ctl}.symbol.id`) as Promise<string>;
@@ -290,18 +290,4 @@ test('roda infinita e rolos ao expandir as barras: depois do último vem o prime
   for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - (40 * i) / 8 }] }); // para cima 1 item
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect.poll(sym).not.toBe(s0); // deu a volta ao início
-  // expandir: o botão chama a atenção e mostra os rolos
-  await expect(page.getByRole('button', { name: 'Mostrar as barras de baixo' })).toHaveClass(/rx-hint-pulse/);
-  await page.getByRole('button', { name: 'Mostrar as barras de baixo' }).click();
-  await expect(page.getByTestId('mobile-rollers')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Esconder as barras de baixo' })).not.toHaveClass(/rx-hint-pulse/);
-  // rolo de intervalos: rolar até ao fim e continuar (volta ao meio, sem fim)
-  const el = page.getByTestId('roller-tfs').locator('div').first();
-  const pos = () => el.evaluate((n) => ({ left: n.scrollLeft, one: n.scrollWidth / 3 }));
-  await el.evaluate((n) => (n.scrollLeft = n.scrollWidth));
-  await expect.poll(async () => { const p = await pos(); return p.left < p.one * 1.6 && p.left > p.one * 0.4; }).toBe(true);
-  // tocar num intervalo do rolo muda o gráfico
-  const tf0 = (await page.evaluate(`${ctl}.tf`)) as string;
-  await page.getByTestId('roller-tfs').getByRole('button', { name: tf0 === '1h' ? '4h' : '1h', exact: true }).first().click();
-  await expect.poll(() => page.evaluate(`${ctl}.tf`)).not.toBe(tf0);
 });

@@ -60,8 +60,6 @@ export interface SettingsState {
   autoFit: boolean;
   /** Vibração ao rodar o seletor de símbolo/intervalo (Android). */
   haptics: boolean;
-  /** O utilizador já usou o botão de expandir/recolher as barras de baixo (para parar o chamariz). */
-  bottomHintSeen: boolean;
   /** Esconde as barras de baixo (separadores, períodos, navegação) para ver mais gráfico. */
   hideBottomBars: boolean;
   /** Aparência do gráfico (cores do símbolo, fundo, grelha, escalas…). */
@@ -114,7 +112,6 @@ export const useSettings = create<SettingsState>()(
       loupePos: 'top-right',
       autoFit: true,
       haptics: true,
-      bottomHintSeen: false,
       // no telemóvel as barras de baixo começam recolhidas (o botão no canto do gráfico mostra-as)
       hideBottomBars: typeof window !== 'undefined' && window.innerWidth < 640,
       appearance: DEFAULT_APPEARANCE,

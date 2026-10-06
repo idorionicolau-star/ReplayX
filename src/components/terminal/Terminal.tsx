@@ -28,7 +28,6 @@ import { TfQuickInput } from './TfQuickInput';
 import { useAlertMonitor } from './useAlertMonitor';
 import { ReplayBar } from '@/components/replay/ReplayBar';
 import { MobileStrip } from './MobileStrip';
-import { MobileRollers } from './MobileRollers';
 import { SymbolSearch } from '@/components/dialogs/SymbolSearch';
 import { IndicatorsDialog } from '@/components/dialogs/IndicatorsDialog';
 import { IndicatorSettings } from '@/components/dialogs/IndicatorSettings';
@@ -228,7 +227,6 @@ export function Terminal() {
         <RightPanel />
         <RightIconBar />
       </div>
-      {!hideBottom && <MobileRollers />}
       <MobileStrip />
       <MobileNav />
       <SymbolSearch />
@@ -266,15 +264,14 @@ function MobileNav() {
 /** No telemóvel: esconde/mostra as barras de baixo para ter o gráfico todo à vista. */
 function HideBottomButton({ hidden }: { hidden: boolean }) {
   const picking = useReplay((s) => s.active && s.selecting);
-  const seen = useSettings((s) => s.bottomHintSeen);
   if (picking) return null; // o painel de escolha do replay ocupa esse canto
   return (
     <button
       type="button"
       aria-label={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
       title={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
-      onClick={() => useSettings.getState().set({ hideBottomBars: !hidden, bottomHintSeen: true })}
-      className={cn('absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elev/90 text-muted shadow-sm active:bg-hover sm:hidden', !seen && hidden && 'rx-hint-pulse border-accent text-accent')}
+      onClick={() => useSettings.getState().set({ hideBottomBars: !hidden })}
+      className="absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elev/90 text-muted shadow-sm active:bg-hover sm:hidden"
       data-testid="toggle-bottom"
     >
       {hidden ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
