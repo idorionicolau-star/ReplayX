@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react';
 import { FunctionSquare, Rewind, Undo2 } from 'lucide-react';
 import { useWorkspace } from '@/store/workspace';
+import { useSettings } from '@/store/settings';
+import { getChart } from '@/chart/registry';
 import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { useReplay, replay } from '@/replay/engine';
@@ -48,6 +50,8 @@ export function MobileStrip() {
   const cfg = useWorkspace((s) => s.charts[s.active]);
   const replayActive = useReplay((s) => s.active);
   const undo = useDrawings((s) => s.undo);
+  const autoFit = useSettings((s) => s.autoFit);
+  const setSettings = useSettings((s) => s.set);
   const symWheel = useSymbolWheel(active);
   const tfWheel = useTfWheel(active);
   const tfRef = useRef<HTMLButtonElement>(null);
@@ -90,6 +94,19 @@ export function MobileStrip() {
       </button>
       <button type="button" aria-label="Bar Replay" onClick={() => (replayActive ? replay.exit() : replay.enter())} className={cn('flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover', replayActive && 'bg-accent text-white')}>
         <Rewind size={19} />
+      </button>
+      <button
+        type="button"
+        aria-label={autoFit ? 'Escala automática: ligada' : 'Escala automática: desligada'}
+        title="Escala de preços automática: desligada quando muda a escala à mão; toque para ligar e ajustar"
+        data-testid="mobile-auto"
+        onClick={() => {
+          setSettings({ autoFit: !autoFit });
+          if (!autoFit) getChart(cfg.id)?.fitView();
+        }}
+        className={cn('flex h-9 min-w-9 items-center justify-center rounded-lg px-1 text-[12px] font-bold active:bg-hover', autoFit ? 'text-accent' : 'text-muted')}
+      >
+        Auto
       </button>
       <button type="button" aria-label="Desfazer" onClick={() => undo(cfg.symbolId)} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
         <Undo2 size={19} />

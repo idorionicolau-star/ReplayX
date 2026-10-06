@@ -79,6 +79,7 @@ export function ChartPane({ index }: { index: number }) {
         onLegend: setLegend,
         onPanes: setPanes,
         onBars: () => setBarsVersion((v) => v + 1),
+        onManualScale: () => useSettings.getState().set({ autoFit: false }),
         getCursor: () => {
           const r = useReplay.getState();
           return r.active && !r.selecting ? r.cursor : null;
