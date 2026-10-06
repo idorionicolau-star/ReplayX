@@ -104,7 +104,7 @@ interface IndicatorView {
   key: string;
   def: IndicatorDef | null;
   script?: ScriptIndicatorResult;
-  series: { key: string; label: string; s: ISeriesApi<SeriesType>; color: string; style: PlotStyle; offset: number; sparse: boolean }[];
+  series: { key: string; label: string; s: ISeriesApi<SeriesType>; color: string; style: PlotStyle; offset: number; sparse: boolean; visible?: boolean }[];
   fills: { fill: BandFill; a: string; b: string }[];
   lines: IPriceLine[];
   values: Record<string, number[]>;
@@ -1041,7 +1041,7 @@ export class ChartController {
           } as never,
           pane,
         ) as AnySeries;
-      view.series.push({ key: o.key, label: o.label, s, color: o.color, style: o.style, offset: o.offset, sparse: o.sparse });
+      view.series.push({ key: o.key, label: o.label, s, color: o.color, style: o.style, offset: o.offset, sparse: o.sparse, visible: o.visible });
     }
     if (def?.overlayScale === 'volume') {
       try {
@@ -1297,7 +1297,8 @@ export class ChartController {
       const v = this.indicators.get(uid);
       if (!v) continue;
       const label = v.def ? instanceLabel(v.def, v.inst.params) : v.script?.title ?? 'Script';
-      const values: LegendValue[] = v.series.map((s) => {
+      // os traços escondidos (ex.: limites das zonas do Apocalypse) não entram na legenda
+      const values: LegendValue[] = v.series.filter((s) => s.visible !== false).map((s) => {
         const arr = v.values[s.key];
         const src = i - s.offset;
         const val = arr && src >= 0 && src < arr.length ? arr[src] : NaN;
