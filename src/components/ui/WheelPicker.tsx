@@ -11,6 +11,9 @@ export interface WheelItem {
   icon?: ReactNode;
 }
 
+/** Índice circular: depois do último vem o primeiro (e vice-versa). */
+export const wrapIndex = (i: number, n: number) => (n > 0 ? ((i % n) + n) % n : 0);
+
 const ROW = 38;
 const STEP = 34; // px de arrasto por item
 
@@ -48,7 +51,7 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
         vibrate(10);
       }
       // arrastar para cima avança na lista (como girar a roda)
-      const next = Math.max(0, Math.min(its.length - 1, start + Math.round(dy / STEP)));
+      const next = start + Math.round(dy / STEP); // sem limites: a roda é infinita
       if (next !== idx) {
         idx = next;
         vibrate(7);
@@ -61,9 +64,10 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
       if (opened) {
         suppress.current = true;
         setTimeout(() => (suppress.current = false), 400);
-        const item = live.current.items[idx];
+        const its = live.current.items;
+        const item = its[wrapIndex(idx, its.length)];
         setState(null);
-        if (item && idx !== start) {
+        if (item && wrapIndex(idx, its.length) !== wrapIndex(start, its.length)) {
           vibrate([12, 30, 12]);
           live.current.onSelect(item);
         }
@@ -109,12 +113,12 @@ function Wheel({ items, index, rect }: { items: WheelItem[]; index: number; rect
     <div className="pointer-events-none fixed inset-0 z-[200]" data-testid="wheel-picker">
       <div className="absolute rounded-2xl border border-line bg-elev/90 shadow-pop backdrop-blur-md" style={{ left, top, width, height, overflow: 'hidden' }}>
         <div className="absolute inset-x-2 rounded-lg bg-accent-soft" style={{ top: ROW * 2, height: ROW }} />
-        {items.map((it, i) => {
-          const d = i - index;
-          if (Math.abs(d) > 3) return null;
+        {[-3, -2, -1, 0, 1, 2, 3].map((d) => {
+          const it = items[wrapIndex(index + d, items.length)];
+          if (!it) return null;
           return (
             <div
-              key={it.id}
+              key={d}
               className={cn('absolute inset-x-0 flex items-center gap-2 px-4 transition-[transform,opacity] duration-100', d === 0 ? 'font-semibold text-text' : 'text-muted')}
               style={{ height: ROW, top: ROW * 2, transform: `translateY(${d * ROW}px) scale(${1 - Math.abs(d) * 0.06})`, opacity: Math.max(0.12, 1 - Math.abs(d) * 0.38) }}
               data-active={d === 0 ? 'true' : undefined}
