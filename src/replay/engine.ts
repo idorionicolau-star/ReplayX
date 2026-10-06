@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Bar, SymbolInfo } from '@/core/types';
-import { alignTime, parseTf, tfSeconds } from '@/core/timeframes';
+import { alignTime, parseTf, tfSeconds, tfToString, type Timeframe } from '@/core/timeframes';
+import { FINE_FIRST_BARS, fineAheadPlan } from './fineAhead';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
 import { nowSec } from '@/core/feed/provider';
 import { resolveSymbol } from '@/core/symbols';
@@ -91,6 +92,43 @@ class ReplayEngine {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stepping: Promise<void> | null = null;
   private listeners = new Set<(fills: Fill[]) => void>();
+  private fineJobs = new Map<string, Promise<void>>();
+
+  /** Timeframe fino com que as ordens são executadas num passo de `span` segundos (no máximo ~240 barras). */
+  private fineTfFor(sym: SymbolInfo, span: number): Timeframe {
+    const natives = dataFeed().provider(sym).nativeTfs(sym).filter((t) => t.unit !== 'W' && t.unit !== 'M');
+    return natives.find((t) => span / tfSeconds(t) <= 240) ?? natives[natives.length - 1];
+  }
+
+  /**
+   * Com ordens ou posições abertas, carrega os dados finos à frente do cursor em segundo plano.
+   * Assim os passos seguintes só leem da memória e o replay não pára à espera da rede.
+   */
+  prefetchFine(cursor: number, span: number, ahead?: number) {
+    if (!useSettings.getState().replayIntrabar) return;
+    const acc = useTrading.getState().replay;
+    const ids = new Set<string>([...acc.positions.map((p) => p.symbolId), ...acc.orders.map((o) => o.symbolId)]);
+    const feed = dataFeed();
+    for (const id of ids) {
+      const sym = resolveSymbol(id);
+      const f = this.fineTfFor(sym, span);
+      const plan = fineAheadPlan({ cursor, barSec: tfSeconds(f), now: nowSec(), ahead, covered: (a, b) => feed.isCovered(sym, f, a, b) });
+      if (!plan) continue;
+      const key = `${id}|${tfToString(f)}`;
+      if (this.fineJobs.has(key)) continue;
+      const job = feed
+        .range(sym, f, plan.from, plan.to)
+        .then(() => undefined, () => undefined)
+        .finally(() => this.fineJobs.delete(key));
+      this.fineJobs.set(key, job);
+    }
+  }
+
+  /** Comprimento típico de um passo (para escolher o timeframe fino ao abrir uma ordem). */
+  stepSpan(): number {
+    const d = this.driver();
+    return d ? tfSeconds(parseTf(d.tf)) : 900;
+  }
 
   register(id: string, chart: ReplayChart) {
     this.charts.set(id, chart);
@@ -316,9 +354,8 @@ class ReplayEngine {
       let path: Bar[] | null = null;
       if (intrabar) {
         // granularidade com no máximo ~240 barras por passo
-        const natives = feed.provider(sym).nativeTfs(sym).filter((t) => t.unit !== 'W' && t.unit !== 'M');
         const span = c1 - c0;
-        const f = natives.find((t) => span / tfSeconds(t) <= 240) ?? natives[natives.length - 1];
+        const f = this.fineTfFor(sym, span);
         path = feed.peekRange(sym, f, c0, c1);
         if (!path) {
           try {
@@ -342,6 +379,8 @@ class ReplayEngine {
       tr.setAccount('replay', next);
       if (fills.length) tr.addExecs('replay', fills);
     }
+    // repõe os dados finos à frente em segundo plano, antes de o próximo passo precisar deles
+    this.prefetchFine(c1, c1 - c0);
     return fills;
   }
 
@@ -376,8 +415,15 @@ class ReplayEngine {
       }
       if (prices[id] === undefined) {
         try {
-          const h = await feed.history(sym, natives[0], cursor, 2);
-          const last = h.bars.filter((b) => barEnd(b.time, natives[0]) <= cursor).pop();
+          // carrega com folga à frente: assim os passos seguintes leem da memória em vez de pedirem 2 barras à rede a cada passo
+          const f0 = natives[0];
+          const fs0 = tfSeconds(f0);
+          await feed.range(sym, f0, cursor - fs0 * 3, Math.min(cursor + fs0 * 400, nowSec() + fs0)).catch(() => undefined);
+          let last = feed.peekRange(sym, f0, cursor - fs0 * 3, cursor)?.filter((b) => barEnd(b.time, f0) <= cursor).pop();
+          if (!last) {
+            const h = await feed.history(sym, f0, cursor, 2);
+            last = h.bars.filter((b) => barEnd(b.time, f0) <= cursor).pop();
+          }
           if (last) prices[id] = last.close;
         } catch {
           /* sem preço */
@@ -517,3 +563,16 @@ class ReplayEngine {
 }
 
 export const replay = new ReplayEngine();
+
+// ao abrir uma ordem ou posição durante o replay, os dados finos começam a carregar logo
+if (typeof window !== 'undefined') {
+  let lastKey = '';
+  useTrading.subscribe((s) => {
+    const acc = s.replay;
+    const key = [...acc.positions.map((p) => p.symbolId), ...acc.orders.map((o) => o.symbolId)].sort().join(',');
+    if (key === lastKey) return;
+    lastKey = key;
+    const st = useReplay.getState();
+    if (key && st.active && !st.selecting && st.cursor !== null) replay.prefetchFine(st.cursor, replay.stepSpan(), FINE_FIRST_BARS);
+  });
+}
