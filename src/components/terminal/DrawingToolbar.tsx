@@ -1,29 +1,6 @@
 'use client';
 import { useRef, useState, type ComponentType } from 'react';
 import {
-  Crosshair,
-  MousePointer2,
-  TrendingUp,
-  MoveRight,
-  Minus,
-  ArrowRightFromLine,
-  SeparatorVertical,
-  Plus,
-  GitFork,
-  Square,
-  Circle,
-  Triangle,
-  Spline,
-  Brush,
-  Type,
-  MessageSquare,
-  Tag,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpRight,
-  Ruler,
-  CalendarRange,
-  MoveVertical,
   Magnet,
   Lock,
   LockOpen,
@@ -31,8 +8,6 @@ import {
   EyeOff,
   Trash2,
   PenLine,
-  Info,
-  Rows3,
   ChevronRight,
   ListTree,
   Star,
@@ -46,6 +21,7 @@ import { useWorkspace } from '@/store/workspace';
 import { useUi } from '@/store/ui';
 import { TOOL_GROUPS, toolDef } from '@/chart/drawings/tools';
 import type { ToolId } from '@/chart/drawings/types';
+import { ToolIconSet } from '@/components/ui/ToolIcons';
 import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuHeader } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
@@ -54,90 +30,7 @@ import { SavedElements } from '@/components/chart/SavedElements';
 
 type Icon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
-/** Linha de tendência: segmento inclinado com um círculo em cada ponta (como no TradingView). */
-function TrendIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
-      <path d="M7.5 16.5 16.5 7.5" />
-      <circle cx="5.5" cy="18.5" r="2.2" />
-      <circle cx="18.5" cy="5.5" r="2.2" />
-    </svg>
-  );
-}
-
-function FibIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-      <path d="M3 5h18M3 10h18M3 14h18M3 19h18" />
-      <path d="M5 19 19 5" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
-/** Risco-retorno: alvo (verde) e stop (vermelho) à volta da linha de entrada, com seta no sentido da operação. */
-function LongIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3.5" width="13" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
-      <rect x="3" y="11.5" width="13" height="5" rx="1" fill="rgba(242,54,69,0.32)" stroke="#f23645" />
-      <path d="M3 11.5h13" stroke="currentColor" strokeWidth={1.8} />
-      <path d="M20 19V8M17.2 10.8 20 8l2.8 2.8" stroke="#089981" strokeWidth={1.8} />
-    </svg>
-  );
-}
-
-function ShortIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="7.5" width="13" height="5" rx="1" fill="rgba(242,54,69,0.32)" stroke="#f23645" />
-      <rect x="3" y="12.5" width="13" height="8" rx="1" fill="rgba(8,153,129,0.35)" stroke="#089981" />
-      <path d="M3 12.5h13" stroke="currentColor" strokeWidth={1.8} />
-      <path d="M20 5v11M17.2 13.2 20 16l2.8-2.8" stroke="#f23645" strokeWidth={1.8} />
-    </svg>
-  );
-}
-
-function ChannelIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-      <path d="M3 14 14 3M10 21 21 10" />
-      <path d="M6.5 17.5 17.5 6.5" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
-export const TOOL_ICONS: Record<ToolId, Icon> = {
-  cross: Crosshair,
-  cursor: MousePointer2,
-  trendline: TrendIcon,
-  ray: MoveRight,
-  infoline: Info,
-  extended: PenLine,
-  arrowline: ArrowUpRight,
-  hline: Minus,
-  hray: ArrowRightFromLine,
-  vline: SeparatorVertical,
-  crossline: Plus,
-  channel: ChannelIcon as Icon,
-  fib: FibIcon as Icon,
-  fibext: Rows3,
-  pitchfork: GitFork,
-  rect: Square,
-  ellipse: Circle,
-  triangle: Triangle,
-  path: Spline,
-  brush: Brush,
-  text: Type,
-  note: MessageSquare,
-  pricelabel: Tag,
-  arrowup: ArrowUp,
-  arrowdown: ArrowDown,
-  long: LongIcon as Icon,
-  short: ShortIcon as Icon,
-  pricerange: MoveVertical,
-  daterange: CalendarRange,
-  measure: Ruler,
-};
+export const TOOL_ICONS: Record<ToolId, Icon> = ToolIconSet;
 
 /** No telemóvel a barra cobre o gráfico: fecha-se ao escolher uma ferramenta (para desenhar logo), não ao mudar opções. */
 function closeMobileTools() {
@@ -258,7 +151,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const [cursorOpen, setCursorOpen] = useState(false);
   const magRef = useRef<HTMLButtonElement>(null);
   const [magOpen, setMagOpen] = useState(false);
-  const CursorIco = tool === 'cursor' ? MousePointer2 : Crosshair;
+  const CursorIco = TOOL_ICONS[tool === 'cursor' ? 'cursor' : 'cross'];
 
   return (
     <aside className={cn('flex w-[46px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-line bg-panel py-1.5 no-select', className)}>
@@ -273,8 +166,8 @@ export function DrawingToolbar({ className }: { className?: string }) {
       </button>
       <Popover anchor={ref} open={cursorOpen} onClose={() => setCursorOpen(false)} placement="right-start">
         <MenuList>
-          <MenuItem icon={<Crosshair size={16} />} label="Mira" active={tool === 'cross'} onClick={() => (setTool('cross'), setCursorOpen(false))} />
-          <MenuItem icon={<MousePointer2 size={16} />} label="Seta" active={tool === 'cursor'} onClick={() => (setTool('cursor'), setCursorOpen(false))} />
+          <MenuItem icon={<TOOL_ICONS.cross size={16} />} label="Mira" active={tool === 'cross'} onClick={() => (setTool('cross'), setCursorOpen(false))} />
+          <MenuItem icon={<TOOL_ICONS.cursor size={16} />} label="Seta" active={tool === 'cursor'} onClick={() => (setTool('cursor'), setCursorOpen(false))} />
         </MenuList>
       </Popover>
       <span className="my-0.5 h-px w-7 bg-line" />
