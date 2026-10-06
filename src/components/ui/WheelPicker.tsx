@@ -1,8 +1,12 @@
 'use client';
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { vibrate } from '@/lib/haptics';
+import { Drum } from './Drum';
+import { shortestDelta, wrapIndex } from './wrapIndex';
 import { cn } from './cn';
+
+export { wrapIndex };
 
 export interface WheelItem {
   id: string;
@@ -11,67 +15,86 @@ export interface WheelItem {
   icon?: ReactNode;
 }
 
-/** Índice circular: depois do último vem o primeiro (e vice-versa). */
-export const wrapIndex = (i: number, n: number) => (n > 0 ? ((i % n) + n) % n : 0);
-
-const ROW = 38;
+const ROW = 40;
 const STEP = 34; // px de arrasto por item
 
 /**
  * Seletor em roda, como no TradingView do telemóvel: carregar num botão e arrastar para cima/baixo abre uma roda
  * por cima; cada item que passa no centro faz uma vibração curta; ao largar fica o item escolhido.
+ * A roda é um cilindro 3D contínuo (acompanha o dedo ao milímetro) e infinito: depois do último vem o primeiro.
  * Um toque simples (sem arrastar) continua a fazer o clique normal do botão.
  */
 export function useWheelPicker({ items, currentId, onSelect }: { items: WheelItem[]; currentId: string; onSelect: (item: WheelItem) => void }) {
-  const [state, setState] = useState<{ index: number; rect: DOMRect } | null>(null);
-  const live = useRef({ items, currentId, onSelect });
+  const n = items.length;
+  const curIdx = Math.max(0, items.findIndex((i) => i.id === currentId));
+  /** Posição "assentada" da roda (contínua e sem voltas: avança pelo caminho mais curto quando o item muda). */
+  const [base, setBase] = useState(curIdx);
+  const [drag, setDrag] = useState<{ off: number; rect: DOMRect } | null>(null);
+  const live = useRef({ items, currentId, onSelect, curIdx, n, base });
   useEffect(() => {
-    live.current = { items, currentId, onSelect };
+    live.current = { items, currentId, onSelect, curIdx, n, base };
   });
   const suppress = useRef(false);
   const cleanup = useRef<(() => void) | null>(null);
   useEffect(() => () => cleanup.current?.(), []);
+
+  // acompanha mudanças externas (ex.: escolher noutro sítio) a rodar pelo caminho mais curto
+  const reconcile = useCallback(() => {
+    const { curIdx: ci, n: nn } = live.current;
+    setBase((b) => {
+      const d = shortestDelta(wrapIndex(Math.round(b), nn), ci, nn);
+      return d === 0 ? b : b + d;
+    });
+  }, []);
+  useEffect(() => {
+    reconcile();
+  }, [curIdx, n, reconcile]);
 
   const onPointerDown = (e: RPointerEvent<HTMLElement>) => {
     if (e.pointerType === 'mouse' || e.button !== 0) return;
     const el = e.currentTarget;
     const id = e.pointerId;
     const y0 = e.clientY;
+    const start = live.current.base;
     let opened = false;
-    let idx = Math.max(0, live.current.items.findIndex((i) => i.id === live.current.currentId));
-    const start = idx;
+    let last = 0;
+    let off = 0;
     const move = (ev: PointerEvent) => {
       if (ev.pointerId !== id) return;
       const dy = y0 - ev.clientY;
       if (!opened && Math.abs(dy) < 10) return;
-      const its = live.current.items;
-      if (!its.length) return;
+      if (!live.current.n) return;
       if (!opened) {
         opened = true;
         vibrate(20);
       }
-      // arrastar para cima avança na lista (como girar a roda)
-      const next = start + Math.round(dy / STEP); // sem limites: a roda é infinita
-      if (next !== idx) {
-        idx = next;
+      // arrastar para cima avança na lista (como girar a roda); contínuo e sem limites
+      off = dy / STEP;
+      const r = Math.round(start + off);
+      if (r !== last) {
+        last = r;
         vibrate(14);
       }
-      setState({ index: idx, rect: el.getBoundingClientRect() });
+      setDrag({ off, rect: el.getBoundingClientRect() });
     };
     const end = (ev: PointerEvent) => {
       if (ev.pointerId !== id) return;
       cleanup.current?.();
-      if (opened) {
-        suppress.current = true;
-        setTimeout(() => (suppress.current = false), 400);
-        const its = live.current.items;
-        const item = its[wrapIndex(idx, its.length)];
-        setState(null);
-        if (item && wrapIndex(idx, its.length) !== wrapIndex(start, its.length)) {
-          vibrate([22, 40, 22]);
-          live.current.onSelect(item);
-        }
+      if (!opened) return;
+      suppress.current = true;
+      setTimeout(() => (suppress.current = false), 400);
+      const { items: its, n: nn } = live.current;
+      const steps = Math.round(off);
+      const item = its[wrapIndex(Math.round(start) + steps, nn)];
+      // assenta no item mais próximo (a mudança de posição é animada) e confirma
+      setBase(start + steps);
+      setDrag(null);
+      if (item && steps !== 0 && wrapIndex(steps, nn) !== 0) {
+        vibrate([22, 40, 22]);
+        live.current.onSelect(item);
       }
+      // se a escolha não foi aceite (ex.: limite do plano), a roda volta ao item que o gráfico tem
+      setTimeout(reconcile, 600);
     };
     cleanup.current = () => {
       window.removeEventListener('pointermove', move);
@@ -96,20 +119,14 @@ export function useWheelPicker({ items, currentId, onSelect }: { items: WheelIte
     style: { touchAction: 'none', WebkitTouchCallout: 'none' } as CSSProperties,
   };
 
+  const pos = base + (drag?.off ?? 0);
   const overlay =
-    state && typeof document !== 'undefined'
-      ? createPortal(<Wheel items={items} index={state.index} rect={state.rect} />, document.body)
-      : null;
-  // vizinhos do item atual (para mostrar a roda "espreitando" mesmo sem tocar)
-  const n = items.length;
-  const cur = Math.max(0, items.findIndex((i) => i.id === currentId));
-  const prev = n > 1 ? items[wrapIndex(cur - 1, n)] : undefined;
-  const next = n > 1 ? items[wrapIndex(cur + 1, n)] : undefined;
-  return { bind, overlay, open: state !== null, prev, next, current: items[cur] };
+    drag && typeof document !== 'undefined' ? createPortal(<Wheel items={items} pos={pos} rect={drag.rect} />, document.body) : null;
+  return { bind, overlay, open: drag !== null, pos, dragging: drag !== null };
 }
 
-function Wheel({ items, index, rect }: { items: WheelItem[]; index: number; rect: DOMRect }) {
-  const width = 210;
+function Wheel({ items, pos, rect }: { items: WheelItem[]; pos: number; rect: DOMRect }) {
+  const width = 220;
   const height = ROW * 5;
   const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left));
   // por baixo do botão; se não couber (faixa em baixo no telemóvel), por cima
@@ -118,22 +135,22 @@ function Wheel({ items, index, rect }: { items: WheelItem[]; index: number; rect
     <div className="pointer-events-none fixed inset-0 z-[200]" data-testid="wheel-picker">
       <div className="absolute rounded-2xl border border-line bg-elev/90 shadow-pop backdrop-blur-md" style={{ left, top, width, height, overflow: 'hidden' }}>
         <div className="absolute inset-x-2 rounded-lg bg-accent-soft" style={{ top: ROW * 2, height: ROW }} />
-        {[-3, -2, -1, 0, 1, 2, 3].map((d) => {
-          const it = items[wrapIndex(index + d, items.length)];
-          if (!it) return null;
-          return (
-            <div
-              key={d}
-              className={cn('absolute inset-x-0 flex items-center gap-2 px-4 transition-[transform,opacity] duration-100', d === 0 ? 'font-semibold text-text' : 'text-muted')}
-              style={{ height: ROW, top: ROW * 2, transform: `translateY(${d * ROW}px) scale(${1 - Math.abs(d) * 0.06})`, opacity: Math.max(0.12, 1 - Math.abs(d) * 0.38) }}
-              data-active={d === 0 ? 'true' : undefined}
-            >
+        <Drum
+          items={items}
+          pos={pos}
+          row={ROW}
+          reach={2}
+          step={30}
+          smooth={false}
+          style={{ position: 'absolute', inset: 0 }}
+          render={(it, rel) => (
+            <div className={cn('flex w-full items-center gap-2 px-4', Math.abs(rel) < 0.5 ? 'font-semibold text-text' : 'text-muted')}>
               {it.icon}
               <span className="min-w-0 flex-1 truncate text-[15px]">{it.label}</span>
               {it.hint && <span className="text-[11px] text-faint">{it.hint}</span>}
             </div>
-          );
-        })}
+          )}
+        />
       </div>
     </div>
   );

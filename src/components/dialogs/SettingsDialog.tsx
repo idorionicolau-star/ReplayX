@@ -12,6 +12,8 @@ import { Tabs, Segmented } from '@/components/ui/Tabs';
 import { dataFeed } from '@/core/feed/datafeed';
 import { toast } from '@/components/ui/Toast';
 import { LegalFooter } from '@/components/legal/LegalFooter';
+import { DEFAULT_LOT_RULES, LOT_CLASS_LABEL } from '@/core/trading/lots';
+import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 
 export function SettingsDialog() {
@@ -132,6 +134,31 @@ export function SettingsDialog() {
             </Select>
             {t.commission.type !== 'none' && <NumberInput className="w-24" value={t.commission.value} min={0} step={0.01} onChange={(v) => v !== undefined && s.setTrading({ commission: { ...t.commission, value: v } })} />}
           </Row>
+          <div className="py-3" data-testid="lot-rules">
+            <div className="mb-1 text-[13px] font-medium">Lote por tipo de mercado</div>
+            <div className="mb-2 text-xs text-muted">Mínimo, passo (múltiplos permitidos) e máximo. As ordens e o cálculo do lote pelo risco respeitam estes valores.</div>
+            <div className="grid grid-cols-[1fr_72px_72px_80px] items-center gap-x-2 gap-y-1.5 text-xs">
+              <span />
+              <span className="text-muted">Mínimo</span>
+              <span className="text-muted">Passo</span>
+              <span className="text-muted">Máximo</span>
+              {(Object.keys(DEFAULT_LOT_RULES) as AssetClass[]).map((cls) => {
+                const r = s.lotRules[cls];
+                const patch = (p: Partial<typeof r>) => s.set({ lotRules: { ...s.lotRules, [cls]: { ...r, ...p } } });
+                return (
+                  <div key={cls} className="contents">
+                    <span>{LOT_CLASS_LABEL[cls]}</span>
+                    <NumberInput className="w-[72px]" value={r.min} min={0.0001} step={r.step} onChange={(v) => v !== undefined && patch({ min: v })} />
+                    <NumberInput className="w-[72px]" value={r.step} min={0.0001} step={0.001} onChange={(v) => v !== undefined && patch({ step: v })} />
+                    <NumberInput className="w-[80px]" value={r.max} min={r.min} step={1} onChange={(v) => v !== undefined && patch({ max: v })} />
+                  </div>
+                );
+              })}
+            </div>
+            <Button size="sm" variant="ghost" className="mt-2" onClick={() => s.set({ lotRules: DEFAULT_LOT_RULES })}>
+              Repor regras de lote
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2 pt-3">
             <Button
               size="sm"
