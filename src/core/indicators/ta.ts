@@ -742,3 +742,161 @@ export function valueWhen(cond: boolean[], src: Series, occurrence = 0): Series 
 export function offset(src: Series, n: number): Series {
   return src.map((_, i) => (i - n >= 0 && i - n < src.length ? src[i - n] : NaN));
 }
+
+// ---------------------------------------------------------------- osciladores adicionais
+
+/** Accelerator Oscillator (Bill Williams): AO menos a sua média de 5. Mostra se o momento acelera. */
+export function accelerator(bars: readonly Bar[]): Series {
+  const ao = awesome(bars);
+  const avg = sma(ao, 5);
+  return ao.map((v, i) => v - avg[i]);
+}
+
+/** Ultimate Oscillator (Larry Williams): junta três horizontes para evitar sinais falsos. */
+export function ultimate(bars: readonly Bar[], a = 7, b = 14, c = 28): Series {
+  const bp = bars.map((x, i) => x.close - Math.min(x.low, i ? bars[i - 1].close : x.low));
+  const range = bars.map((x, i) => Math.max(x.high, i ? bars[i - 1].close : x.high) - Math.min(x.low, i ? bars[i - 1].close : x.low));
+  const avg = (n: number) => {
+    const sb = sum(bp, n);
+    const sr = sum(range, n);
+    return sb.map((v, i) => (sr[i] ? v / sr[i] : NaN));
+  };
+  const A = avg(a);
+  const B = avg(b);
+  const C = avg(c);
+  return A.map((v, i) => (100 * (4 * v + 2 * B[i] + C[i])) / 7);
+}
+
+/** Chande Momentum Oscillator: -100 a +100. */
+export function cmo(src: Series, len = 9): Series {
+  const up = src.map((v, i) => (i === 0 ? NaN : Math.max(v - src[i - 1], 0)));
+  const down = src.map((v, i) => (i === 0 ? NaN : Math.max(src[i - 1] - v, 0)));
+  const su = sum(up, len);
+  const sd = sum(down, len);
+  return su.map((u, i) => (u + sd[i] ? (100 * (u - sd[i])) / (u + sd[i]) : NaN));
+}
+
+/** Elder Ray: força dos compradores (máximo − EMA) e dos vendedores (mínimo − EMA). */
+export function elderRay(bars: readonly Bar[], len = 13) {
+  const e = ema(source(bars, 'close'), len);
+  return { bull: bars.map((b, i) => b.high - e[i]), bear: bars.map((b, i) => b.low - e[i]) };
+}
+
+/** Know Sure Thing (Martin Pring): quatro taxas de variação suavizadas e ponderadas. */
+export function kst(src: Series, r = [10, 15, 20, 30], s = [10, 10, 10, 15], signal = 9) {
+  const parts = r.map((len, k) => sma(roc(src, len), s[k]));
+  const line = src.map((_, i) => parts.reduce((acc, p, k) => acc + (k + 1) * p[i], 0));
+  return { kst: line, signal: sma(line, signal) };
+}
+
+/** Coppock Curve: média ponderada da soma de duas taxas de variação (fundos de longo prazo). */
+export function coppock(src: Series, wmaLen = 10, long = 14, short = 11): Series {
+  const a = roc(src, long);
+  const b = roc(src, short);
+  return wma(a.map((v, i) => v + b[i]), wmaLen);
+}
+
+/** Detrended Price Oscillator: tira a tendência para destacar os ciclos. */
+export function dpo(src: Series, len = 21): Series {
+  const m = sma(src, len);
+  const shift = Math.floor(len / 2) + 1;
+  return src.map((_, i) => (i - shift >= 0 ? src[i - shift] - m[i] : NaN));
+}
+
+/** Vortex Indicator: VI+ acima de VI− indica tendência de alta. */
+export function vortex(bars: readonly Bar[], len = 14) {
+  const vmp = bars.map((b, i) => (i ? Math.abs(b.high - bars[i - 1].low) : NaN));
+  const vmm = bars.map((b, i) => (i ? Math.abs(b.low - bars[i - 1].high) : NaN));
+  const t = sum(tr(bars).map((v, i) => (i ? v : NaN)), len);
+  return { plus: sum(vmp, len).map((v, i) => v / t[i]), minus: sum(vmm, len).map((v, i) => v / t[i]) };
+}
+
+/** Linha de acumulação/distribuição (Chaikin). */
+export function adl(bars: readonly Bar[]): Series {
+  let acc = 0;
+  return bars.map((b) => {
+    const range = b.high - b.low;
+    const clv = range ? (b.close - b.low - (b.high - b.close)) / range : 0;
+    acc += clv * (b.volume ?? 0);
+    return acc;
+  });
+}
+
+/** Chaikin Oscillator: EMA 3 menos EMA 10 da linha de acumulação/distribuição. */
+export function chaikinOsc(bars: readonly Bar[], fast = 3, slow = 10): Series {
+  const a = adl(bars);
+  const f = ema(a, fast);
+  const s = ema(a, slow);
+  return f.map((v, i) => v - s[i]);
+}
+
+/** Force Index (Elder): variação do preço vezes o volume, suavizada. */
+export function forceIndex(bars: readonly Bar[], len = 13): Series {
+  const raw = bars.map((b, i) => (i ? (b.close - bars[i - 1].close) * (b.volume ?? 0) : NaN));
+  return ema(raw, len);
+}
+
+/** Choppiness Index: 100 = mercado lateral, 0 = tendência forte (referências em 38,2 e 61,8). */
+export function choppiness(bars: readonly Bar[], len = 14): Series {
+  const t = sum(tr(bars), len);
+  const hi = highest(source(bars, 'high'), len);
+  const lo = lowest(source(bars, 'low'), len);
+  return t.map((v, i) => (hi[i] > lo[i] ? (100 * Math.log10(v / (hi[i] - lo[i]))) / Math.log10(len) : NaN));
+}
+
+/** Percentage Price Oscillator: MACD em percentagem. */
+export function ppo(src: Series, fast = 12, slow = 26, signalLen = 9) {
+  const f = ema(src, fast);
+  const s = ema(src, slow);
+  const line = f.map((v, i) => (s[i] ? ((v - s[i]) / s[i]) * 100 : NaN));
+  const signal = ema(line, signalLen);
+  return { ppo: line, signal, hist: line.map((v, i) => v - signal[i]) };
+}
+
+/** True Strength Index (William Blau). */
+export function tsi(src: Series, long = 25, short = 13, signalLen = 7) {
+  const m = change(src);
+  const num = ema(ema(m, long), short);
+  const den = ema(ema(m.map((v) => Math.abs(v)), long), short);
+  const line = num.map((v, i) => (den[i] ? (100 * v) / den[i] : NaN));
+  return { tsi: line, signal: ema(line, signalLen) };
+}
+
+/** %B das Bandas de Bollinger: 0 na banda de baixo, 1 na de cima. */
+export function percentB(src: Series, len = 20, mult = 2): Series {
+  const b = bollinger(src, len, mult);
+  return src.map((v, i) => (b.upper[i] > b.lower[i] ? (v - b.lower[i]) / (b.upper[i] - b.lower[i]) : NaN));
+}
+
+/** Alligator (Bill Williams): três médias suavizadas do preço médio, deslocadas para o futuro. */
+export function alligator(bars: readonly Bar[]) {
+  const hl2 = source(bars, 'hl2');
+  return { jaw: rma(hl2, 13), teeth: rma(hl2, 8), lips: rma(hl2, 5) };
+}
+
+/** Envelope de médias: média com bandas a uma percentagem fixa. */
+export function envelope(src: Series, len = 20, pct = 2.5, type: MaType = 'sma') {
+  const basis = ma(type, src, len);
+  return { basis, upper: basis.map((v) => v * (1 + pct / 100)), lower: basis.map((v) => v * (1 - pct / 100)) };
+}
+
+/**
+ * Squeeze Momentum (LazyBear): compressão quando as Bandas de Bollinger ficam dentro dos canais de Keltner;
+ * o histograma é a regressão linear do desvio do preço à sua média.
+ */
+export function squeeze(bars: readonly Bar[], len = 20, bbMult = 2, kcMult = 1.5) {
+  const close = source(bars, 'close');
+  const bb = bollinger(close, len, bbMult);
+  const mid = sma(close, len);
+  const rangeMa = sma(tr(bars), len);
+  const kcUp = mid.map((v, i) => v + rangeMa[i] * kcMult);
+  const kcLow = mid.map((v, i) => v - rangeMa[i] * kcMult);
+  const hi = highest(source(bars, 'high'), len);
+  const lo = lowest(source(bars, 'low'), len);
+  const delta = close.map((v, i) => v - ((hi[i] + lo[i]) / 2 + mid[i]) / 2);
+  return {
+    momentum: linreg(delta, len, 0),
+    /** true = compressão ligada */
+    on: bb.lower.map((v, i) => (Number.isFinite(v) && Number.isFinite(kcLow[i]) ? v > kcLow[i] && bb.upper[i] < kcUp[i] : false)),
+  };
+}
