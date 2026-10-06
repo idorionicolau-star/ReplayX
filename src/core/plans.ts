@@ -60,14 +60,23 @@ export interface BillingDoc {
 
 export interface Entitlement {
   pro: boolean;
-  reason: 'paid' | 'trial' | 'free';
+  reason: 'paid' | 'trial' | 'lifetime' | 'free';
   /** Fim do período pago ou do teste (ms). */
   endsAt: number | null;
   daysLeft: number | null;
 }
 
-/** Que plano está ativo agora. O pago ganha ao teste; convidados ficam no grátis. */
-export function entitlement(doc: BillingDoc | null, createdAt: number | null, now = Date.now()): Entitlement {
+/** Contas com Pro vitalício, sem pagamento (e-mails em minúsculas). */
+export const LIFETIME_EMAILS: readonly string[] = ['idorionicolau@gmail.com'];
+
+/** Só conta se o e-mail estiver verificado (Google verifica; uma conta de e-mail e palavra-passe criada por outra pessoa não herda o acesso). */
+export function isLifetimeEmail(email: string | null | undefined, verified: boolean): boolean {
+  return !!email && verified && LIFETIME_EMAILS.includes(email.trim().toLowerCase());
+}
+
+/** Que plano está ativo agora. O vitalício ganha a tudo, o pago ao teste; convidados ficam no grátis. */
+export function entitlement(doc: BillingDoc | null, createdAt: number | null, now = Date.now(), lifetime = false): Entitlement {
+  if (lifetime) return { pro: true, reason: 'lifetime', endsAt: null, daysLeft: null };
   const paidUntil = Number(doc?.paidUntilMs) || 0;
   if (paidUntil > now) {
     const end = doc?.subscriptionEndsAt ? Date.parse(doc.subscriptionEndsAt) : paidUntil;

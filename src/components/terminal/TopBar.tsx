@@ -347,12 +347,12 @@ export function TopBar() {
 function PlanBadge() {
   const plan = usePlan();
   if (!plan.loaded) return null;
-  const label = plan.reason === 'paid' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : 'Assinar Pro';
+  const label = plan.reason === 'paid' || plan.reason === 'lifetime' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : 'Assinar Pro';
   return (
     <button
       type="button"
       onClick={() => openUpgrade()}
-      title={plan.reason === 'trial' ? 'Teste do Pro' : plan.reason === 'paid' ? 'Plano Pro' : 'Ver o plano Pro'}
+      title={plan.reason === 'trial' ? 'Teste do Pro' : plan.reason === 'lifetime' ? 'Pro vitalício' : plan.reason === 'paid' ? 'Plano Pro' : 'Ver o plano Pro'}
       className={cn(
         'mr-1 flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
         plan.reason === 'free' ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-warn/15 text-warn hover:bg-warn/25',

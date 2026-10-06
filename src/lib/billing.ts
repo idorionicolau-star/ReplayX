@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAuth } from './auth';
-import { entitlement, FEATURE_TEXT, FREE_LIMITS, freeReplayTfOk, type BillingDoc, type Entitlement, type ProFeature } from '@/core/plans';
+import { entitlement, isLifetimeEmail, FEATURE_TEXT, FREE_LIMITS, freeReplayTfOk, type BillingDoc, type Entitlement, type ProFeature } from '@/core/plans';
 
 interface BillingState {
   /** Documento `replayx_users/{uid}` (só o servidor o escreve). */
@@ -46,9 +46,14 @@ export function startBilling(uid: string | null) {
   }
 }
 
+/** Conta com Pro vitalício (e-mail na lista e verificado). */
+function hasLifetime(user: { guest: boolean; email: string | null; emailVerified: boolean } | null | undefined): boolean {
+  return !!user && !user.guest && isLifetimeEmail(user.email, user.emailVerified);
+}
+
 export function currentEntitlement(): Entitlement {
   const user = useAuth.getState().user;
-  return entitlement(user?.guest ? null : useBilling.getState().doc, user?.guest ? null : (user?.createdAt ?? null));
+  return entitlement(user?.guest ? null : useBilling.getState().doc, user?.guest ? null : (user?.createdAt ?? null), undefined, hasLifetime(user));
 }
 
 /** Plano atual (recalculado quando muda o documento ou o utilizador). */
@@ -56,7 +61,7 @@ export function usePlan(): Entitlement & { loaded: boolean } {
   const d = useBilling((s) => s.doc);
   const loaded = useBilling((s) => s.loaded);
   const user = useAuth((s) => s.user);
-  const e = entitlement(user?.guest ? null : d, user?.guest ? null : (user?.createdAt ?? null));
+  const e = entitlement(user?.guest ? null : d, user?.guest ? null : (user?.createdAt ?? null), undefined, hasLifetime(user));
   return { ...e, loaded };
 }
 
