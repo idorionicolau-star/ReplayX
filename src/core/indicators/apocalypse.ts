@@ -21,9 +21,13 @@ export interface ApocalypseOptions {
   /** Quantas velas à frente se procura o início de uma pernada longa. */
   horizon: number;
   atrLen: number;
+  /** Mostrar sinais de entrada (com stop e alvo). */
+  signals: boolean;
+  /** A chance da situação tem de ser pelo menos este múltiplo da média do ativo para dar sinal. */
+  ratio: number;
 }
 
-export const APOCALYPSE_DEFAULTS: ApocalypseOptions = { sensitivity: 2.5, topPct: 25, horizon: 6, atrLen: 14 };
+export const APOCALYPSE_DEFAULTS: ApocalypseOptions = { sensitivity: 2.5, topPct: 25, horizon: 6, atrLen: 14, signals: true, ratio: 1.5 };
 
 /** Pernadas passadas necessárias antes de classificar uma como longa. */
 export const MIN_LEGS = 8;
@@ -83,10 +87,29 @@ export interface Reading {
   enough: boolean;
 }
 
+export interface Signal {
+  /** Vela do sinal (a entrada é ao fecho dela). */
+  idx: number;
+  dir: 1 | -1;
+  entry: number;
+  stop: number;
+  target: number;
+  /** Alvo ÷ risco. */
+  rr: number;
+  /** Última vela da operação (saída, fim do prazo ou, se continua aberta, a última vela). */
+  exitIdx: number;
+  outcome: 'tp' | 'sl' | 'timeout' | 'open';
+  /** Chance da situação nesta direção e média do ativo, quando o sinal apareceu. */
+  chance: number;
+  base: number;
+  cases: number;
+}
+
 export interface ApocalypseResult {
   pivots: Pivot[];
   legs: Leg[];
   zones: Zone[];
+  signals: Signal[];
   reading: Reading;
   /** Tamanho e duração da pernada longa típica (mediana das longas). */
   typical: { size: number; dur: number } | null;
@@ -268,7 +291,7 @@ export function apocalypse(bars: readonly Bar[], options: Partial<ApocalypseOpti
   const o = { ...APOCALYPSE_DEFAULTS, ...options };
   const n = bars.length;
   const empty: Reading = { situation: { compression: false, atLevel: false, pullback: false }, cases: 0, pUp: null, pDown: null, baseUp: null, baseDown: null, enough: false };
-  if (n < 30) return { pivots: [], legs: [], zones: [], reading: empty, typical: null };
+  if (n < 30) return { pivots: [], legs: [], zones: [], signals: [], reading: empty, typical: null };
   const atr = atrFilled(bars, o.atrLen);
   const pivots = findPivots(bars, atr, o.sensitivity);
   const legs = buildLegs(pivots, atr, o.topPct);
@@ -320,20 +343,129 @@ export function apocalypse(bars: readonly Bar[], options: Partial<ApocalypseOpti
     const d = longs.map((l) => l.dur).sort((a, b) => a - b);
     typical = { size: quantile(s, 0.5), dur: quantile(d, 0.5) };
   }
-  return { pivots, legs, zones, reading, typical };
+  const signals = o.signals ? entrySignals(bars, atr, pivots, legs, o.horizon, o.ratio) : [];
+  return { pivots, legs, zones, signals, reading, typical };
+}
+
+/**
+ * Sinais de entrada, vela a vela, só com o que já se sabia em cada uma:
+ * - a pernada só entra na estatística depois de confirmada;
+ * - as zonas vêm só das pernadas longas já confirmadas;
+ * - a chance da situação conta só as velas cujo resultado já era conhecido.
+ *
+ * Há sinal quando, na mesma vela: o preço toca uma zona (com pelo menos 2 inícios de pernada longa) do tipo certo,
+ * a chance de pernada longa nessa direção é pelo menos `ratio` vezes a média do ativo (com pelo menos 30 casos e 3 acertos)
+ * e a vela confirma (fecha na direção, na parte de cima/baixo do seu intervalo). O stop fica do outro lado da zona
+ * e o alvo é a pernada longa típica; só se aceita com alvo ≥ risco.
+ */
+export function entrySignals(bars: readonly Bar[], atr: readonly number[], pivots: readonly Pivot[], legs: readonly Leg[], horizon: number, ratio: number): Signal[] {
+  const n = bars.length;
+  const out: Signal[] = [];
+  const upStart = new Uint8Array(n);
+  const downStart = new Uint8Array(n);
+  for (const l of legs) if (l.long) (l.dir === 1 ? upStart : downStart)[l.from.idx] = 1;
+  const win = (arr: Uint8Array, i: number) => {
+    for (let j = i + 1; j <= i + horizon; j++) if (arr[j]) return 1;
+    return 0;
+  };
+  const bySit = new Map<number, { n: number; up: number; down: number }>();
+  const total = { n: 0, up: 0, down: 0 };
+  let labeled = 19;
+  let pk = 0; // oscilações já confirmadas
+  let lp = 0; // pernadas já fechadas (confirmadas)
+  const knownLong: Leg[] = [];
+  let zones: Zone[] = [];
+  let busyUntil = -1;
+  for (let i = 30; i < n; i++) {
+    while (pk < pivots.length && pivots[pk].confirmedAt <= i) pk++;
+    let dirty = false;
+    while (lp < legs.length && legs[lp].to.confirmedAt <= i) {
+      if (legs[lp].long) {
+        knownLong.push(legs[lp]);
+        dirty = true;
+      }
+      lp++;
+    }
+    if (dirty) zones = buildZones(knownLong, atr);
+    // estende a estatística às velas cujo resultado já se conhece
+    const limit = (pk > 0 ? pivots[pk - 1].idx : -1) - horizon - 1;
+    while (labeled < limit) {
+      labeled++;
+      if (labeled < 20) continue;
+      const k = keyOf(situationAt(bars, atr, pivots, labeled));
+      const st = bySit.get(k) ?? { n: 0, up: 0, down: 0 };
+      const up = win(upStart, labeled);
+      const down = win(downStart, labeled);
+      st.n++;
+      st.up += up;
+      st.down += down;
+      bySit.set(k, st);
+      total.n++;
+      total.up += up;
+      total.down += down;
+    }
+    if (i <= busyUntil || total.n < MIN_CASES || knownLong.length < 3) continue;
+    const st = bySit.get(keyOf(situationAt(bars, atr, pivots, i)));
+    if (!st || st.n < MIN_CASES) continue;
+    const b = bars[i];
+    const range = b.high - b.low;
+    if (!(range > 0)) continue;
+    const typicalSize = quantile(knownLong.map((l) => l.size).sort((x, y) => x - y), 0.5);
+    const typicalDur = quantile(knownLong.map((l) => l.dur).sort((x, y) => x - y), 0.5);
+    let best: { dir: 1 | -1; zone: Zone; chance: number; base: number; lift: number } | null = null;
+    for (const dir of [1, -1] as const) {
+      const hits = dir === 1 ? st.up : st.down;
+      const chance = hits / st.n;
+      const base = (dir === 1 ? total.up : total.down) / total.n;
+      if (hits < 3 || !(base > 0) || chance < ratio * base) continue;
+      const kind = dir === 1 ? 'demand' : 'supply';
+      const zone = zones.find((z) => z.kind === kind && z.count >= 2 && b.low <= z.hi && b.high >= z.lo);
+      if (!zone) continue;
+      const confirmed = dir === 1 ? b.close > b.open && b.close >= b.low + 0.6 * range && i > 0 && b.close > bars[i - 1].close : b.close < b.open && b.close <= b.high - 0.6 * range && i > 0 && b.close < bars[i - 1].close;
+      if (!confirmed) continue;
+      const lift = chance / base;
+      if (!best || lift > best.lift) best = { dir, zone, chance, base, lift };
+    }
+    if (!best) continue;
+    const entry = b.close;
+    const stop = best.dir === 1 ? best.zone.lo - 0.25 * atr[i] : best.zone.hi + 0.25 * atr[i];
+    const target = entry + best.dir * typicalSize * atr[i];
+    const risk = Math.abs(entry - stop);
+    if (!(risk > 0) || Math.abs(target - entry) < risk) continue;
+    // o que aconteceu depois (para desenhar); o stop ganha se ambos forem tocados na mesma vela
+    const maxBars = Math.max(50, Math.round(3 * typicalDur));
+    let exitIdx = Math.min(n - 1, i + maxBars);
+    let outcome: Signal['outcome'] = i + maxBars < n ? 'timeout' : 'open';
+    for (let j = i + 1; j < n && j <= i + maxBars; j++) {
+      const hitStop = best.dir === 1 ? bars[j].low <= stop : bars[j].high >= stop;
+      const hitTarget = best.dir === 1 ? bars[j].high >= target : bars[j].low <= target;
+      if (hitStop || hitTarget) {
+        outcome = hitStop ? 'sl' : 'tp';
+        exitIdx = j;
+        break;
+      }
+    }
+    out.push({ idx: i, dir: best.dir, entry, stop, target, rr: Math.abs(target - entry) / risk, exitIdx, outcome, chance: best.chance, base: best.base, cases: st.n });
+    busyUntil = exitIdx;
+  }
+  return out;
 }
 
 /** Linhas curtas da leitura atual, para empilhar na última vela (cada uma cabe na margem à direita do gráfico). */
-export function readingLines(r: Reading, typical: ApocalypseResult['typical']): string[] {
+export function readingLines(r: Reading, typical: ApocalypseResult['typical'], signals: readonly Signal[] = []): string[] {
   const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
   const flags = [r.situation.compression && 'compressão', r.situation.atLevel && 'num nível', r.situation.pullback && 'recuo'].filter(Boolean).join(' + ');
   const lines = [r.enough ? `↑${pct(r.pUp)} ↓${pct(r.pDown)} (média ${pct(r.baseUp)}·${pct(r.baseDown)}) n=${r.cases}` : `poucos casos (${r.cases})`];
   if (flags) lines.push(flags);
   if (typical) lines.push(`longa típica ${typical.size.toFixed(1)} ATR · ${Math.round(typical.dur)} velas`);
+  // como os sinais se portaram neste gráfico (só as operações já fechadas)
+  const won = signals.filter((x) => x.outcome === 'tp').length;
+  const lost = signals.filter((x) => x.outcome === 'sl').length;
+  if (won + lost > 0) lines.push(`sinais: ${won} alvo · ${lost} stop`);
   return lines;
 }
 
 /** Texto único (para testes e descrições). */
-export function readingText(r: Reading, typical: ApocalypseResult['typical']): string {
-  return readingLines(r, typical).join(' · ');
+export function readingText(r: Reading, typical: ApocalypseResult['typical'], signals: readonly Signal[] = []): string {
+  return readingLines(r, typical, signals).join(' · ');
 }

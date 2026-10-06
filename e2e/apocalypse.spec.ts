@@ -18,6 +18,15 @@ test('Apocalypse: acrescenta-se ao gráfico, desenha as zonas e a leitura sem er
   const legend = await page.getByTestId('indicator-name').filter({ hasText: 'APOC' }).locator('xpath=..').innerText();
   expect(legend.split(/\s+/).length).toBeLessThan(12);
   await page.waitForTimeout(600);
+  // os sinais (entrada, stop e alvo) estão calculados no gráfico e não mostram números a mais na legenda
+  const trade = await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { indicators: Map<string, { def?: { id: string }; values: Record<string, number[]> }> }> }).__rxCharts.values()][0];
+    for (const v of c.indicators.values()) if (v.def?.id === 'apocalypse') return { entry: v.values.entry.filter(Number.isFinite).length, sl: v.values.sl.filter(Number.isFinite).length, tp: v.values.tp.filter(Number.isFinite).length };
+    return null;
+  });
+  expect(trade).not.toBeNull();
+  expect(trade!.entry).toBe(trade!.sl);
+  expect(trade!.entry).toBe(trade!.tp);
 
   // no replay recalcula só com as velas até ao cursor
   await page.click('[data-testid=replay-button]');
