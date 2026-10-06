@@ -6,6 +6,7 @@ import type { ChartController } from '@/chart/controller';
 import { useUi } from '@/store/ui';
 import { useReplay } from '@/replay/engine';
 import { cn } from '@/components/ui/cn';
+import { useSettings } from '@/store/settings';
 
 const btn = 'flex h-7 w-7 items-center justify-center rounded-md border border-line bg-elev/95 text-text shadow-sm hover:bg-hover';
 
@@ -110,6 +111,8 @@ export function FitButton({ ctrl }: { ctrl: ChartController }) {
     <button
       type="button"
       onClick={() => {
+        // repõe a escala e volta a ligar a escala automática
+        useSettings.getState().set({ autoFit: true });
         ctrl.fitView();
         setNeed(false);
       }}

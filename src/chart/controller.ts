@@ -95,6 +95,8 @@ export interface ChartCallbacks {
   onBars?(bars: readonly Bar[]): void;
   /** Cursor atual do replay (null = tempo real). */
   getCursor?(): number | null;
+  /** O utilizador mexeu na escala de preços à mão: a escala automática desliga-se até voltar a ligá-la. */
+  onManualScale?(): void;
 }
 
 interface IndicatorView {
@@ -234,6 +236,9 @@ export class ChartController {
     // arrastar o separador entre painéis também reposiciona as etiquetas
     container.addEventListener('pointermove', this.onPaneDrag);
     container.addEventListener('pointerup', this.onPaneDrag);
+    // se a escala de preços ficou manual (arrastar o eixo ou o gráfico na vertical), a escala automática desliga-se
+    container.addEventListener('pointerup', this.onManualCheck);
+    container.addEventListener('pointercancel', this.onManualCheck);
     // o contador da vela anda de segundo a segundo
     this.countdownTimer = setInterval(() => {
       if (this.theme.appearance.countdown && this.cursor === null && this.bars.length) this.overlay.update();
@@ -719,6 +724,20 @@ export class ChartController {
     this.autoFit = on;
     if (on) this.autoScale();
   }
+
+  /** Depois de um gesto: se a escala de preços deixou de ser automática, foi o utilizador. A escolha dele fica até repor. */
+  private onManualCheck = () => {
+    requestAnimationFrame(() => {
+      if (this.destroyed || !this.autoFit) return;
+      try {
+        if (this.isAutoScale()) return;
+      } catch {
+        return;
+      }
+      this.autoFit = false;
+      this.cb.onManualScale?.();
+    });
+  };
 
   /** Ajustar à tela: escala de preços aos dados que estão à vista; se não houver dados à vista, volta ao fim dos dados. */
   fitView() {
@@ -1489,6 +1508,8 @@ export class ChartController {
     this.resizeObs?.disconnect();
     this.container.removeEventListener('pointermove', this.onPaneDrag);
     this.container.removeEventListener('pointerup', this.onPaneDrag);
+    this.container.removeEventListener('pointerup', this.onManualCheck);
+    this.container.removeEventListener('pointercancel', this.onManualCheck);
     if (this.paneRaf) cancelAnimationFrame(this.paneRaf);
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     try {
