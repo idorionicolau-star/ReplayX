@@ -1,5 +1,6 @@
 import type { Bar } from '../types';
 import * as ta from './ta';
+import { apocalypse, readingLines } from './apocalypse';
 import type { MaType, Series, Source } from './ta';
 
 export type InputType = 'int' | 'float' | 'source' | 'bool' | 'select' | 'ma';
@@ -982,6 +983,69 @@ export const INDICATORS: IndicatorDef[] = [
     fills: [{ a: 'upper', b: 'lower', color: 'rgba(33,150,243,0.07)' }],
     compute(bars, p) {
       return { values: ta.envelope(src(bars, p), n(p, 'length'), n(p, 'pct'), s(p, 'type') as MaType) };
+    },
+  },
+
+  {
+    id: 'apocalypse',
+    name: 'Apocalypse',
+    short: 'APOC',
+    category: 'Outros',
+    overlay: true,
+    description:
+      'Encontra as pernadas longas do próprio ativo (as que andaram mais ou duraram mais), marca onde começaram e junta esses pontos em zonas: verde onde as subidas longas nasceram, vermelho onde as descidas nasceram. A etiqueta na última vela diz, pelo histórico, quantas vezes uma situação parecida com a de agora foi seguida de uma pernada longa. É a frequência do passado, não uma garantia.',
+    inputs: [
+      numInput('sens', 'Sensibilidade (ATR por oscilação)', 2.5, 0.25, 1, 10),
+      { key: 'top', label: 'Pernadas longas: melhores %', type: 'int', default: 25, min: 10, max: 50, step: 5 },
+      { key: 'h', label: 'Horizonte (velas à frente)', type: 'int', default: 6, min: 2, max: 50, step: 1 },
+    ],
+    outputs: [
+      { key: 'd1hi', label: 'Procura 1 (cima)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd1lo', label: 'Procura 1 (baixo)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd2hi', label: 'Procura 2 (cima)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd2lo', label: 'Procura 2 (baixo)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's1hi', label: 'Oferta 1 (cima)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's1lo', label: 'Oferta 1 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's2hi', label: 'Oferta 2 (cima)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's2lo', label: 'Oferta 2 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+    ],
+    fills: [
+      { a: 'd1hi', b: 'd1lo', color: 'rgba(8,153,129,0.2)' },
+      { a: 'd2hi', b: 'd2lo', color: 'rgba(8,153,129,0.2)' },
+      { a: 's1hi', b: 's1lo', color: 'rgba(242,54,69,0.2)' },
+      { a: 's2hi', b: 's2lo', color: 'rgba(242,54,69,0.2)' },
+    ],
+    compute(bars, p) {
+      const r = apocalypse(bars, { sensitivity: n(p, 'sens'), topPct: n(p, 'top'), horizon: n(p, 'h') });
+      const N = bars.length;
+      const nan = () => new Array<number>(N).fill(NaN);
+      const values: Record<string, number[]> = {};
+      for (const k of ['d1hi', 'd1lo', 'd2hi', 'd2lo', 's1hi', 's1lo', 's2hi', 's2lo']) values[k] = nan();
+      const price = N ? bars[N - 1].close : 0;
+      // as duas zonas de cada tipo mais perto do preço atual
+      for (const [kind, prefix] of [['demand', 'd'], ['supply', 's']] as const) {
+        const near = r.zones
+          .filter((z) => z.kind === kind)
+          .sort((a, b) => Math.abs((a.lo + a.hi) / 2 - price) - Math.abs((b.lo + b.hi) / 2 - price))
+          .slice(0, 2);
+        near.forEach((z, k) => {
+          for (let i = z.firstIdx; i < N; i++) {
+            values[`${prefix}${k + 1}hi`][i] = z.hi;
+            values[`${prefix}${k + 1}lo`][i] = z.lo;
+          }
+        });
+      }
+      const markers: IndicatorMarker[] = r.legs
+        .filter((l) => l.long)
+        .slice(-60)
+        .map((l) =>
+          l.dir === 1
+            ? { index: l.from.idx, position: 'below' as const, shape: 'arrowUp' as const, color: UP }
+            : { index: l.from.idx, position: 'above' as const, shape: 'arrowDown' as const, color: DOWN },
+        );
+      // a leitura atual: uma linha curta por marcador, empilhadas por cima da última vela
+      if (N) readingLines(r.reading, r.typical).forEach((text, k) => markers.push({ index: N - 1, position: 'above', shape: k === 0 ? 'circle' : 'square', color: '#b39ddb', text }));
+      return { values, markers };
     },
   },
 ];
