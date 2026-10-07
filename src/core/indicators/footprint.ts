@@ -51,6 +51,8 @@ export interface FpOptions {
   sens: number;
   /** Quantas vezes a segunda perna tem de ser mais inclinada que a primeira. */
   slopeRatio: number;
+  /** Quantas vezes a segunda perna tem de ser maior (em preço) que a primeira. */
+  sizeRatio: number;
   /** Cada movimento tem de valer pelo menos isto em ATR (impulsivo, não ruído). */
   minMove: number;
 }
@@ -160,7 +162,7 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
       const size2 = lv.h2.price - lv.l2.price;
       const slope1 = size1 / Math.max(1, lv.l1.idx - lv.h1.idx);
       const slope2 = size2 / Math.max(1, legBars);
-      const ok = lv.l2.price < lv.l1.price && size2 > size1 && size2 >= o.minMove * atr[t] && slope2 >= o.slopeRatio * slope1;
+      const ok = lv.l2.price < lv.l1.price && size2 >= o.sizeRatio * size1 && size2 >= o.minMove * atr[t] && slope2 >= o.slopeRatio * slope1;
       // ainda não é um footprint válido (a perna pode continuar e vir a sê-lo): segue-se a perna
       if (!ok) return true;
       lv.brk = t;

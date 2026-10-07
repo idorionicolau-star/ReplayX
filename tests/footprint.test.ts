@@ -45,7 +45,7 @@ function stoch(n: number, l2 = 72, l3 = 90, l3Low = 5, flip = false) {
   return flip ? { k: k.map((v) => 100 - v), d: d.map((v) => 100 - v) } : { k, d };
 }
 
-const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, minMove: 3 });
+const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, sizeRatio: 1.3, minMove: 3 });
 const signals = (s: FpSetup[]) => s.filter((x) => x.signal !== null);
 
 describe('método footprint + layer line + divergência escondida', () => {
@@ -159,6 +159,32 @@ describe('método footprint + layer line + divergência escondida', () => {
       expect(big, `seed ${seed0}`).toBeDefined();
       expect(big!.brk!).toBeGreaterThan(150);
       expect(big!.brk!).toBeLessThan(185);
+    }
+  });
+
+  it('exemplo do utilizador (compra, V150 15m): a 2.ª perna é maior mas não mais íngreme, e ainda assim é footprint', () => {
+    const PX: [number, number][] = [[0, 700], [85, 372], [190, 1050], [273, 418], [293, 800], [315, 575], [345, 960], [375, 985], [405, 1275], [420, 1050], [445, 1560], [475, 1580], [505, 1270], [525, 1350], [545, 940], [570, 1385], [600, 1000], [630, 640], [690, 900], [720, 760], [790, 300]];
+    const P = PX.map(([x, y]) => [Math.round(x / 3), 37 - (y - 297) / 196] as [number, number]);
+    for (const seed0 of [7, 11, 23]) {
+      let seed = seed0;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const bars2: Bar[] = [];
+      let prev = P[0][1];
+      for (let a = 0; a < P.length - 1; a++) {
+        const [i0, p0] = P[a];
+        const [i1, p1] = P[a + 1];
+        for (let i = i0 + (a ? 1 : 0); i <= i1; i++) {
+          const c = p0 + ((p1 - p0) * (i - i0)) / (i1 - i0) + (rnd() - 0.5) * 0.24;
+          const o = prev;
+          prev = c;
+          bars2.push({ time: T0 + i * 900, open: o, high: Math.max(o, c) + rnd() * 0.12, low: Math.min(o, c) - rnd() * 0.12, close: c, volume: 1 });
+        }
+      }
+      const kd = bars2.map(() => 50);
+      const found = scanFootprint(bars2, atrFilled(bars2, 14), kd, kd, { sens: 1.5, slopeRatio: 0.8, sizeRatio: 1.3, minMove: 3 }).find((x) => x.dir === 1 && x.brk !== null && x.h2.idx >= 80 && x.h2.idx <= 100 && x.l2.idx >= 140);
+      expect(found, `seed ${seed0}`).toBeDefined();
+      // a layer line passa pelo primeiro topo de recuo, como no desenho do utilizador
+      expect(found!.touch).toBeLessThan(found!.h2.idx + 20);
     }
   });
 
