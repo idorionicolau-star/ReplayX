@@ -1108,6 +1108,7 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('size', 'Tamanho mínimo da 2.ª perna (x a 1.ª)', 1.3, 0.1, 1, 10),
       numInput('ratio', 'Inclinação mínima da 2.ª perna (x a 1.ª)', 0.8, 0.1, 0.1, 10),
       numInput('minMove', 'Movimento mínimo (ATR)', 3, 0.5, 1, 20),
+      numInput('stopBuf', 'Folga do stop (ATR)', 0.3, 0.1, 0, 5),
       lenInput(5, 'Estocástico %K', 'k'),
       lenInput(3, 'Estocástico suavização', 'smooth'),
       lenInput(3, 'Estocástico %D', 'd'),
@@ -1115,7 +1116,7 @@ export const INDICATORS: IndicatorDef[] = [
     outputs: [],
     compute(bars, p) {
       const st = ta.stoch(bars, n(p, 'k'), n(p, 'smooth'), n(p, 'd'));
-      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), sizeRatio: n(p, 'size'), minMove: n(p, 'minMove') });
+      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), sizeRatio: n(p, 'size'), minMove: n(p, 'minMove'), stopBuffer: n(p, 'stopBuf') });
       const r = drawFootprint(bars, setups);
       return { values: {}, draw: r.draw, markers: r.markers };
     },

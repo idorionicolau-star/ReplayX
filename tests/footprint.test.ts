@@ -45,7 +45,7 @@ function stoch(n: number, l2 = 72, l3 = 90, l3Low = 5, flip = false) {
   return flip ? { k: k.map((v) => 100 - v), d: d.map((v) => 100 - v) } : { k, d };
 }
 
-const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, sizeRatio: 1.3, minMove: 3 });
+const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3 });
 const signals = (s: FpSetup[]) => s.filter((x) => x.signal !== null);
 
 describe('método footprint + layer line + divergência escondida', () => {
@@ -64,7 +64,9 @@ describe('método footprint + layer line + divergência escondida', () => {
     expect(x.brk!).toBeGreaterThan(x.l2.idx);
     expect(x.l3!.price).toBeGreaterThan(x.l2.price); // fundo mais alto no reteste
     expect(x.signal!).toBeGreaterThan(x.l3!.idx); // a entrada vem depois do fundo do reteste
-    expect(x.stop!).toBeLessThan(x.l3!.price);
+    // o stop fica além do primeiro ponto da divergência (L2), com uma folga pequena
+    expect(x.stop!).toBeLessThan(x.l2.price);
+    expect(x.stop!).toBeGreaterThan(x.l2.price - 5);
   });
 
   it('a layer line sai do topo mais baixo, não corta nenhuma vela da perna e toca num topo de recuo', () => {
@@ -95,7 +97,7 @@ describe('método footprint + layer line + divergência escondida', () => {
     expect(sig).toHaveLength(1);
     expect(sig[0].dir).toBe(-1);
     expect(sig[0].h2.price).toBeGreaterThan(sig[0].h1.price); // fundo mais alto => espelho do topo mais baixo
-    expect(sig[0].stop!).toBeGreaterThan(sig[0].l3!.price);
+    expect(sig[0].stop!).toBeGreaterThan(sig[0].l2.price);
     expect(sig[0].signal).toBe(signals(run(bars, k, d))[0].signal);
   });
 
@@ -181,7 +183,7 @@ describe('método footprint + layer line + divergência escondida', () => {
         }
       }
       const kd = bars2.map(() => 50);
-      const found = scanFootprint(bars2, atrFilled(bars2, 14), kd, kd, { sens: 1.5, slopeRatio: 0.8, sizeRatio: 1.3, minMove: 3 }).find((x) => x.dir === 1 && x.brk !== null && x.h2.idx >= 80 && x.h2.idx <= 100 && x.l2.idx >= 140);
+      const found = scanFootprint(bars2, atrFilled(bars2, 14), kd, kd, { sens: 1.5, slopeRatio: 0.8, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3 }).find((x) => x.dir === 1 && x.brk !== null && x.h2.idx >= 80 && x.h2.idx <= 100 && x.l2.idx >= 140);
       expect(found, `seed ${seed0}`).toBeDefined();
       // a layer line passa pelo primeiro topo de recuo, como no desenho do utilizador
       expect(found!.touch).toBeLessThan(found!.h2.idx + 20);

@@ -42,7 +42,7 @@ export interface FpSetup {
   l3: FpPoint | null;
   /** Vela da entrada (cruzamento depois da divergência). */
   signal: number | null;
-  /** Stop sugerido: para lá do fundo do reteste. */
+  /** Stop sugerido: para lá do primeiro ponto da divergência (o extremo da 2.ª perna). */
   stop: number | null;
   status: 'leg' | 'retest' | 'signal';
 }
@@ -55,6 +55,8 @@ export interface FpOptions {
   sizeRatio: number;
   /** Cada movimento tem de valer pelo menos isto em ATR (impulsivo, não ruído). */
   minMove: number;
+  /** Folga do stop para lá do primeiro ponto da divergência, em ATR. */
+  stopBuffer: number;
 }
 
 interface Engine {
@@ -197,7 +199,8 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
       if (hidden) {
         s.signal = t;
         s.status = 'signal';
-        s.stop = lv.l3.price - 0.1 * atr[t];
+        // o stop fica além do primeiro ponto da divergência (o extremo da 2.ª perna), com uma folga pequena
+        s.stop = lv.l2.price - o.stopBuffer * atr[t];
         return false;
       }
     }
