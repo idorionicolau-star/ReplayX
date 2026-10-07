@@ -1,6 +1,8 @@
 import type { Bar } from '../types';
 import * as ta from './ta';
 import { apocalypse, readingLines } from './apocalypse';
+import { topDown } from './structure';
+import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
 
 export type InputType = 'int' | 'float' | 'source' | 'bool' | 'select' | 'ma';
@@ -45,6 +47,8 @@ export interface IndicatorResult {
   /** Cor por barra (histogramas coloridos, supertrend…). */
   colors?: Record<string, (string | undefined)[]>;
   markers?: IndicatorMarker[];
+  /** Linhas, etiquetas e cartão desenhados por cima do gráfico (precisa de `layer` na definição). */
+  draw?: DrawData;
 }
 
 export interface IndicatorDef {
@@ -55,6 +59,8 @@ export interface IndicatorDef {
   overlay: boolean;
   /** Escala própria no painel principal (ex.: volume em baixo). */
   overlayScale?: 'volume';
+  /** Desenha por cima do gráfico (linhas, etiquetas e cartão) em vez de séries. */
+  layer?: boolean;
   inputs: InputDef[];
   outputs: OutputDef[];
   fills?: { a: string; b: string; color: string }[];
@@ -1063,6 +1069,28 @@ export const INDICATORS: IndicatorDef[] = [
       // a leitura atual: uma linha curta por marcador, empilhadas por cima da última vela
       if (N) readingLines(r.reading, r.typical, r.signals).forEach((text, k) => markers.push({ index: N - 1, position: 'above', shape: k === 0 ? 'circle' : 'square', color: '#b39ddb', text }));
       return { values, markers };
+    },
+  },
+
+  {
+    id: 'structure',
+    name: 'Estrutura de Mercado (Top-Down)',
+    short: 'ESTR',
+    category: 'Tendência',
+    overlay: true,
+    layer: true,
+    description:
+      'Lê a estrutura sozinho, sem contar velas: topos e fundos reais (HH, HL, LH, LL), quebras de estrutura (BOS) e mudanças de carácter (CHoCH). Escolha um intervalo de análise (ex.: 4h) e um de entradas (ex.: 15m): marca a estrutura grande e, dentro da pernada atual, a pequena. Linha cheia = expansão, tracejada = correção. O cartão diz a tendência, a fase e os níveis que confirmam ou invertem; ✓ quando a estrutura de entradas vai a favor da análise. Só usa o que já se sabia em cada vela (não repinta, serve no replay). O gráfico tem de estar no intervalo de entradas ou abaixo.',
+    inputs: [
+      { key: 'analysis', label: 'Intervalo de análise', type: 'select', default: '4h', options: ['30m', '1h', '2h', '4h', '6h', '12h', '1D', '1W'].map((v) => ({ value: v, label: v })) },
+      { key: 'entry', label: 'Intervalo de entradas', type: 'select', default: '15m', options: ['1m', '3m', '5m', '15m', '30m', '1h', '4h'].map((v) => ({ value: v, label: v })) },
+      { key: 'showEntry', label: 'Mostrar a estrutura de entradas', type: 'bool', default: true },
+      numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
+    ],
+    outputs: [],
+    compute(bars, p) {
+      const r = topDown(bars, { analysis: s(p, 'analysis'), entry: s(p, 'entry'), sens: n(p, 'sens'), showEntry: p.showEntry !== false });
+      return { values: {}, draw: r.draw };
     },
   },
 ];

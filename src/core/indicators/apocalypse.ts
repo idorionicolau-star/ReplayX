@@ -157,7 +157,7 @@ function insertSorted(arr: number[], v: number) {
 }
 
 /** ATR sem falhas (nas primeiras velas usa a amplitude da vela). */
-function atrFilled(bars: readonly Bar[], len: number): number[] {
+export function atrFilled(bars: readonly Bar[], len: number): number[] {
   const a = ta.atr(bars, len);
   return a.map((v, i) => (Number.isFinite(v) && v > 0 ? v : Math.max(bars[i].high - bars[i].low, 1e-9)));
 }

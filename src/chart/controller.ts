@@ -34,6 +34,7 @@ import { nowSec } from '@/core/feed/provider';
 import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance, type ParamValue } from '@/core/indicators/registry';
 import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
 import { BandFill } from './fill';
+import { SegmentLayer } from './layer';
 import type { Viewport } from './drawings/tools';
 import type { Drawing, PositionSizing } from './drawings/types';
 import { usePick } from './pick';
@@ -106,6 +107,8 @@ interface IndicatorView {
   script?: ScriptIndicatorResult;
   series: { key: string; label: string; s: ISeriesApi<SeriesType>; color: string; style: PlotStyle; offset: number; sparse: boolean; visible?: boolean }[];
   fills: { fill: BandFill; a: string; b: string }[];
+  /** Camada de linhas, etiquetas e cartão (indicadores que desenham por cima do gráfico). */
+  layer?: SegmentLayer;
   lines: IPriceLine[];
   values: Record<string, number[]>;
   colors?: Record<string, (string | undefined)[]>;
@@ -977,6 +980,14 @@ export class ChartController {
         /* nada */
       }
     }
+    if (v.layer) {
+      try {
+        this.main.detachPrimitive(v.layer);
+      } catch {
+        /* nada */
+      }
+      v.layer = undefined;
+    }
     for (const s of v.series) {
       try {
         this.chart.removeSeries(s.s);
@@ -1066,6 +1077,11 @@ export class ChartController {
         view.fills.push({ fill, a: f.a, b: f.b });
       }
     }
+    if (def?.layer && !inst.hidden) {
+      const layer = new SegmentLayer();
+      this.main.attachPrimitive(layer);
+      view.layer = layer;
+    }
     return view;
   }
 
@@ -1139,6 +1155,7 @@ export class ChartController {
           view.values = r.values;
           view.colors = r.colors;
           (view as IndicatorView & { markers?: unknown }).markers = r.markers;
+          view.layer?.set(view.inst.hidden ? null : (r.draw ?? null));
         } else if (view.script) {
           // resultados de scripts vêm já calculados (worker)
           view.values = Object.fromEntries(view.script.plots.map((p, i) => [`p${i}`, p.data]));
