@@ -51,6 +51,8 @@ export interface FpOptions {
   sens: number;
   /** Quantas vezes a segunda perna tem de ser mais inclinada que a primeira. */
   slopeRatio: number;
+  /** Cada movimento tem de valer pelo menos isto em ATR (impulsivo, não ruído). */
+  minMove: number;
 }
 
 interface Engine {
@@ -79,15 +81,17 @@ const MIN_LEG_BARS = 3;
 /** Um topo de recuo está pelo menos esta distância depois do topo mais baixo (a vela logo a seguir não conta). */
 const MIN_TOUCH_GAP = 2;
 
+/** Quantas ideias em paralelo (as mais recentes): uma ideia pequena e velha não pode tapar a estrutura grande que vem depois. */
+const MAX_LIVE = 6;
+
 /** Procura o método para compras. Para vendas chama-se com tudo espelhado (preços negativos, 100 - %K/%D). */
 function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly number[], d: readonly number[], o: FpOptions): FpSetup[] {
   const n = bars.length;
   const e: Engine = { H: bars.map((b) => b.high), L: bars.map((b) => b.low), C: bars.map((b) => b.close), K: k, D: d };
   const pivots = findPivots(bars, atr, o.sens);
   const out: FpSetup[] = [];
-  let live: Live | null = null;
+  let lives: { lv: Live; setup: FpSetup | null }[] = [];
   let cursor = 0;
-  let setup: FpSetup | null = null;
 
   const stochLow = (i: number, t: number) => {
     let m = Infinity;
@@ -113,11 +117,6 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
     }
   };
 
-  const finish = () => {
-    live = null;
-    setup = null;
-  };
-
   const make = (lv: Live): FpSetup => {
     const s = lv.sLeg;
     const h2 = lv.h2;
@@ -137,6 +136,72 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
     };
   };
 
+  /** Avança uma ideia uma vela. Devolve false quando morre ou chega à entrada. */
+  const step = (ent: { lv: Live; setup: FpSetup | null }, t: number): boolean => {
+    const lv = ent.lv;
+    if (e.H[t] > lv.h2.price) return false; // o topo mais baixo deixou de o ser
+    if (lv.brk === null) {
+      // a vela anterior é um topo de recuo (máximo local) agora confirmado pela vela atual
+      consider(lv, t - 1, t);
+      if (e.L[t] < lv.l2.price) {
+        lv.l2 = { idx: t, price: e.L[t] };
+        // os topos desde o fundo anterior passam a fazer parte da perna
+        if (lv.sPend > lv.sLeg) {
+          lv.sLeg = lv.sPend;
+          lv.touchLeg = lv.touchPend;
+        }
+        lv.sPend = -Infinity;
+        return true;
+      }
+      const legBars = lv.l2.idx - lv.h2.idx;
+      const line = lv.h2.price + lv.sLeg * (t - lv.h2.idx);
+      if (legBars < MIN_LEG_BARS || !Number.isFinite(lv.sLeg) || !(e.C[t] > line)) return true;
+      const size1 = lv.h1.price - lv.l1.price;
+      const size2 = lv.h2.price - lv.l2.price;
+      const slope1 = size1 / Math.max(1, lv.l1.idx - lv.h1.idx);
+      const slope2 = size2 / Math.max(1, legBars);
+      const ok = lv.l2.price < lv.l1.price && size2 > size1 && size2 >= o.minMove * atr[t] && slope2 >= o.slopeRatio * slope1;
+      // ainda não é um footprint válido (a perna pode continuar e vir a sê-lo): segue-se a perna
+      if (!ok) return true;
+      lv.brk = t;
+      ent.setup = make(lv);
+      ent.setup.status = 'retest';
+      out.push(ent.setup);
+      return true;
+    }
+    // reteste: os topos de recuo continuam a contar para a linha, caso o rompimento se mostre falso
+    consider(lv, t - 1, t);
+    if (e.L[t] < lv.l2.price) {
+      // a perna continuou: o rompimento era falso. Volta a ser perna e a linha refaz-se com os novos recuos
+      const at = out.indexOf(ent.setup!);
+      if (at >= 0) out.splice(at, 1);
+      ent.setup = null;
+      lv.brk = null;
+      lv.l3 = null;
+      lv.l2 = { idx: t, price: e.L[t] };
+      if (lv.sPend > lv.sLeg) {
+        lv.sLeg = lv.sPend;
+        lv.touchLeg = lv.touchPend;
+      }
+      lv.sPend = -Infinity;
+      return true;
+    }
+    if (!lv.l3 || e.L[t] <= lv.l3.price) lv.l3 = { idx: t, price: e.L[t] };
+    const s = ent.setup!;
+    s.l3 = lv.l3;
+    const crossed = e.K[t - 1] <= e.D[t - 1] && e.K[t] > e.D[t];
+    if (crossed && lv.l3.idx < t && lv.l3.idx > lv.brk) {
+      const hidden = lv.l3.price > lv.l2.price && stochLow(lv.l3.idx, t) < stochLow(lv.l2.idx, t);
+      if (hidden) {
+        s.signal = t;
+        s.status = 'signal';
+        s.stop = lv.l3.price - 0.1 * atr[t];
+        return false;
+      }
+    }
+    return true;
+  };
+
   for (let t = 1; t < n; t++) {
     // novas oscilações confirmadas nesta vela
     let fresh: (typeof pivots)[number] | null = null;
@@ -145,70 +210,25 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
       cursor++;
     }
 
-    if (live) {
-      const lv: Live = live;
-      if (e.H[t] > lv.h2.price) {
-        finish(); // o topo mais baixo deixou de o ser
-      } else if (lv.brk === null) {
-        // a vela anterior é um topo de recuo (máximo local) agora confirmado pela vela atual
-        consider(lv, t - 1, t);
-        if (e.L[t] < lv.l2.price) {
-          lv.l2 = { idx: t, price: e.L[t] };
-          // os topos desde o fundo anterior passam a fazer parte da perna
-          if (lv.sPend > lv.sLeg) {
-            lv.sLeg = lv.sPend;
-            lv.touchLeg = lv.touchPend;
-          }
-          lv.sPend = -Infinity;
-        } else {
-          const legBars = lv.l2.idx - lv.h2.idx;
-          const line = lv.h2.price + lv.sLeg * (t - lv.h2.idx);
-          if (legBars >= MIN_LEG_BARS && Number.isFinite(lv.sLeg) && e.C[t] > line) {
-            const size1 = lv.h1.price - lv.l1.price;
-            const size2 = lv.h2.price - lv.l2.price;
-            const slope1 = size1 / Math.max(1, lv.l1.idx - lv.h1.idx);
-            const slope2 = size2 / Math.max(1, legBars);
-            const ok = lv.l2.price < lv.l1.price && size2 > size1 && slope2 >= o.slopeRatio * slope1;
-            if (!ok) {
-              finish();
-            } else {
-              lv.brk = t;
-              setup = make(lv);
-              setup.brk = t;
-              setup.status = 'retest';
-              out.push(setup);
-            }
-          }
-        }
-      } else {
-        // reteste: o fundo tem de ficar acima de L2 e o preço ainda não voltou a H2
-        if (e.L[t] < lv.l2.price) {
-          finish();
-        } else {
-          if (!lv.l3 || e.L[t] <= lv.l3.price) lv.l3 = { idx: t, price: e.L[t] };
-          const s: FpSetup = setup!;
-          s.l3 = lv.l3;
-          const crossed = e.K[t - 1] <= e.D[t - 1] && e.K[t] > e.D[t];
-          if (crossed && lv.l3.idx < t && lv.l3.idx > lv.brk) {
-            const hidden = lv.l3.price > lv.l2.price && stochLow(lv.l3.idx, t) < stochLow(lv.l2.idx, t);
-            if (hidden) {
-              s.signal = t;
-              s.status = 'signal';
-              s.stop = lv.l3.price - 0.1 * atr[t];
-              finish();
-            }
-          }
+    lives = lives.filter((ent) => step(ent, t));
+
+    if (fresh && fresh.type === 'H') {
+      const h2 = fresh;
+      // H1: o último topo mais alto que este. L1: o fundo mais baixo entre os dois.
+      // (oscilações pequenas pelo meio, por ruído, não partem o padrão)
+      const at = pivots.indexOf(h2);
+      let h1: (typeof pivots)[number] | undefined;
+      for (let q = at - 1; q >= 0; q--) {
+        if (pivots[q].type === 'H' && pivots[q].price > h2.price) {
+          h1 = pivots[q];
+          break;
         }
       }
-    }
-
-    if (!live && fresh && fresh.type === 'H' && cursor >= 3) {
-      const h2 = fresh;
-      // as duas oscilações imediatamente antes (H1, L1) são as que vêm antes desta no ziguezague
-      const at = pivots.indexOf(h2);
-      const l1 = pivots[at - 1];
-      const h1 = pivots[at - 2];
-      if (l1 && h1 && l1.type === 'L' && h1.type === 'H' && h2.price < h1.price) {
+      let l1: (typeof pivots)[number] | undefined;
+      if (h1) {
+        for (let q = pivots.indexOf(h1) + 1; q < at; q++) if (pivots[q].type === 'L' && (!l1 || pivots[q].price < l1.price)) l1 = pivots[q];
+      }
+      if (l1 && h1 && h1.price - l1.price >= o.minMove * atr[h2.confirmedAt]) {
         let low: FpPoint = { idx: h2.idx + 1, price: e.L[Math.min(n - 1, h2.idx + 1)] };
         for (let j = h2.idx + 1; j <= t; j++) if (e.L[j] <= low.price) low = { idx: j, price: e.L[j] };
         const lv: Live = {
@@ -224,16 +244,20 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
           l3: null,
         };
         for (let j = h2.idx + MIN_TOUCH_GAP; j < t; j++) consider(lv, j, t);
-        live = lv;
+        lives.push({ lv, setup: null });
+        // só ficam as ideias mais recentes; as que já romperam têm prioridade sobre as que ainda seguem a perna
+        if (lives.length > MAX_LIVE) {
+          const drop = lives.findIndex((x) => x.lv.brk === null);
+          lives.splice(drop === -1 ? 0 : drop, 1);
+        }
       }
     }
   }
 
   // o que ainda está em curso na última vela (perna a seguir, sem rompimento) também se devolve
-  if (live) {
-    const lv: Live = live;
-    if (lv.brk === null) {
-      const s = make(lv);
+  for (const ent of lives) {
+    if (ent.lv.brk === null) {
+      const s = make(ent.lv);
       s.status = 'leg';
       out.push(s);
     }

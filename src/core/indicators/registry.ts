@@ -1106,6 +1106,7 @@ export const INDICATORS: IndicatorDef[] = [
     inputs: [
       numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
       numInput('ratio', 'Inclinação da 2.ª perna (x a 1.ª)', 1.3, 0.1, 1, 10),
+      numInput('minMove', 'Movimento mínimo (ATR)', 3, 0.5, 1, 20),
       lenInput(5, 'Estocástico %K', 'k'),
       lenInput(3, 'Estocástico suavização', 'smooth'),
       lenInput(3, 'Estocástico %D', 'd'),
@@ -1113,7 +1114,7 @@ export const INDICATORS: IndicatorDef[] = [
     outputs: [],
     compute(bars, p) {
       const st = ta.stoch(bars, n(p, 'k'), n(p, 'smooth'), n(p, 'd'));
-      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio') });
+      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), minMove: n(p, 'minMove') });
       const r = drawFootprint(bars, setups);
       return { values: {}, draw: r.draw, markers: r.markers };
     },

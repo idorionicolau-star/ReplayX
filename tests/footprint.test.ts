@@ -45,7 +45,7 @@ function stoch(n: number, l2 = 72, l3 = 90, l3Low = 5, flip = false) {
   return flip ? { k: k.map((v) => 100 - v), d: d.map((v) => 100 - v) } : { k, d };
 }
 
-const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio });
+const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, minMove: 3 });
 const signals = (s: FpSetup[]) => s.filter((x) => x.signal !== null);
 
 describe('método footprint + layer line + divergência escondida', () => {
@@ -134,6 +134,32 @@ describe('método footprint + layer line + divergência escondida', () => {
     expect(r.draw.texts.some((t) => t.text === 'layer line rompida')).toBe(true);
     expect(r.draw.texts.some((t) => t.text === 'stop')).toBe(true);
     expect(r.draw.panel!.lines[0].text).toMatch(/Compra|Venda/);
+  });
+
+  it('com velas ruidosas apanha a estrutura grande (espelho: venda) e não a perde por ensaios pequenos', () => {
+    // forma do exemplo do utilizador: fundo, topo, fundo mais alto e subida inclinada com recuos até um topo, onde rompe a layer line
+    const P: [number, number][] = [[0, 780], [20, 720], [60, 790], [75, 740], [85, 800], [90, 780], [100, 840], [105, 815], [115, 880], [120, 850], [135, 930], [140, 905], [150, 975], [160, 940], [175, 900], [185, 810], [200, 830]];
+    for (const seed0 of [7, 23, 31]) {
+      let seed = seed0;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const noisy: Bar[] = [];
+      let prev = 780;
+      for (let a = 0; a < P.length - 1; a++) {
+        const [i0, p0] = P[a];
+        const [i1, p1] = P[a + 1];
+        for (let i = i0 + (a ? 1 : 0); i <= i1; i++) {
+          const c = p0 + ((p1 - p0) * (i - i0)) / (i1 - i0) + (rnd() - 0.5) * 10;
+          const o = prev;
+          prev = c;
+          noisy.push({ time: T0 + i * 3600, open: o, high: Math.max(o, c) + rnd() * 5, low: Math.min(o, c) - rnd() * 5, close: c, volume: 1 });
+        }
+      }
+      const kd = noisy.map(() => 50);
+      const big = run(noisy, kd, kd).find((x) => x.dir === -1 && x.brk !== null && x.h2.idx >= 70 && x.h2.idx <= 80 && x.l2.idx >= 140);
+      expect(big, `seed ${seed0}`).toBeDefined();
+      expect(big!.brk!).toBeGreaterThan(150);
+      expect(big!.brk!).toBeLessThan(185);
+    }
   });
 
   it('poucos dados ou ruído não dão nada nem estoiram', () => {
