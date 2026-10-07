@@ -23,6 +23,7 @@ import { resolveSymbol } from '@/core/symbols';
 import { pnlFor, unrealized } from '@/core/trading/engine';
 import { applyTradeAction, setLivePrice, tradingMode } from '@/trading/actions';
 import { fmtDateTime, fmtMoney } from '@/lib/format';
+import { compactExecMarkers } from '@/chart/execMarkers';
 import { Legend } from './Legend';
 import { DrawingToolbarFloat } from './DrawingToolbarFloat';
 import { ReplayPickBanner } from './ReplayPickBanner';
@@ -211,16 +212,7 @@ export function ChartPane({ index }: { index: number }) {
       });
       // marcas de execução
       const execs = useTrading.getState().execs[mode].filter((e) => e.symbolId === symbolId);
-      const markers: SeriesMarker<Time>[] = execs.map((e) => {
-        const buy = (e.kind === 'entry') === (e.side === 'long');
-        return {
-          time: e.time as UTCTimestamp,
-          position: buy ? 'belowBar' : 'aboveBar',
-          shape: buy ? 'arrowUp' : 'arrowDown',
-          color: e.kind === 'exit' ? ((e.pnl ?? 0) >= 0 ? '#089981' : '#f23645') : buy ? '#2962ff' : '#e65100',
-          text: e.kind === 'exit' && e.pnl !== undefined ? `${e.text} ${fmtMoney(e.pnl)}` : e.text,
-        };
-      });
+      const markers = compactExecMarkers(execs, (t) => ctrl.barTimeAt(t));
       ctrl.setExecMarkers(markers);
     };
     update();
