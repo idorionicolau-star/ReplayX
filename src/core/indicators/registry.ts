@@ -1,6 +1,7 @@
 import type { Bar } from '../types';
 import * as ta from './ta';
-import { apocalypse, readingLines } from './apocalypse';
+import { apocalypse, atrFilled, readingLines } from './apocalypse';
+import { drawFootprint, scanFootprint } from './footprint';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
@@ -1091,6 +1092,30 @@ export const INDICATORS: IndicatorDef[] = [
     compute(bars, p) {
       const r = topDown(bars, { analysis: s(p, 'analysis'), entry: s(p, 'entry'), sens: n(p, 'sens'), showEntry: p.showEntry !== false });
       return { values: {}, draw: r.draw };
+    },
+  },
+  {
+    id: 'footprint',
+    name: 'Footprint + Layer Line (divergência)',
+    short: 'FP',
+    category: 'Tendência',
+    overlay: true,
+    layer: true,
+    description:
+      'Método footprint: topo mais baixo com segunda perna mais inclinada (espelho para vendas), layer line que toca nos topos dos recuos, rompimento com reteste e divergência escondida no Estocástico (5,3,3). A divergência é obrigatória: a entrada só aparece quando há divergência e o %K cruza o %D. Sem divergência não há sinal. Só usa o que já se sabia em cada vela (não repinta, serve no replay).',
+    inputs: [
+      numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
+      numInput('ratio', 'Inclinação da 2.ª perna (x a 1.ª)', 1.3, 0.1, 1, 10),
+      lenInput(5, 'Estocástico %K', 'k'),
+      lenInput(3, 'Estocástico suavização', 'smooth'),
+      lenInput(3, 'Estocástico %D', 'd'),
+    ],
+    outputs: [],
+    compute(bars, p) {
+      const st = ta.stoch(bars, n(p, 'k'), n(p, 'smooth'), n(p, 'd'));
+      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio') });
+      const r = drawFootprint(bars, setups);
+      return { values: {}, draw: r.draw, markers: r.markers };
     },
   },
 ];
