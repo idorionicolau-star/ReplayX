@@ -24,6 +24,28 @@ export interface FpPoint {
   price: number;
 }
 
+/** Uma entrada: a primeira (divergência + cruzamento) ou um escalonamento a favor da nova tendência. */
+export interface FpEntry {
+  idx: number;
+  kind: 'first' | 'scale';
+  /** O que a disparou: divergência escondida + cruzamento do Estocástico, ou o Accelerator. */
+  trigger: 'div' | 'ac';
+  /** Stop: além do primeiro ponto da divergência (ou do último fundo no caso do Accelerator), com folga. */
+  stop: number;
+  /** Os pontos de preço da divergência (primeiro e segundo), quando há. */
+  from: FpPoint | null;
+  to: FpPoint | null;
+}
+
+/** A layer line da nova tendência: parte do extremo da 2.ª perna e passa por baixo dos fundos dos recuos. */
+export interface FpTrendLine {
+  idx0: number;
+  p0: number;
+  slope: number;
+  /** Vela em que um fecho a violou (a tendência acabou); null enquanto vale. */
+  end: number | null;
+}
+
 export interface FpSetup {
   /** 1 = compra (footprint de queda), -1 = venda (footprint de alta). */
   dir: 1 | -1;
@@ -44,7 +66,10 @@ export interface FpSetup {
   signal: number | null;
   /** Stop sugerido: para lá do primeiro ponto da divergência (o extremo da 2.ª perna). */
   stop: number | null;
-  status: 'leg' | 'retest' | 'signal';
+  /** Todas as entradas: a primeira e os escalonamentos. */
+  entries: FpEntry[];
+  trendLine: FpTrendLine | null;
+  status: 'leg' | 'retest' | 'signal' | 'trend';
 }
 
 export interface FpOptions {
@@ -57,6 +82,10 @@ export interface FpOptions {
   minMove: number;
   /** Folga do stop para lá do primeiro ponto da divergência, em ATR. */
   stopBuffer: number;
+  /** Gatilho dos escalonamentos: divergência escondida, Accelerator, ou qualquer um. */
+  trigger: 'div' | 'ac' | 'both';
+  /** Barras verdes mínimas do Accelerator antes da vermelha. */
+  acBars: number;
 }
 
 interface Engine {
@@ -79,6 +108,17 @@ interface Live {
   touchPend: number;
   brk: number | null;
   l3: FpPoint | null;
+  /** Depois da primeira entrada: a nova tendência. */
+  trend: {
+    /** Menor razão (fundo - L2) / distância: a layer line da nova tendência. */
+    s: number;
+    prev: FpPoint;
+    last: FpPoint;
+    /** Já há divergência escondida no último fundo à espera do cruzamento. */
+    armed: boolean;
+    /** Fundo da última entrada (cada fundo só dá uma entrada). */
+    used: number;
+  } | null;
 }
 
 const MIN_LEG_BARS = 3;
@@ -89,7 +129,7 @@ const MIN_TOUCH_GAP = 2;
 const MAX_LIVE = 6;
 
 /** Procura o método para compras. Para vendas chama-se com tudo espelhado (preços negativos, 100 - %K/%D). */
-function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly number[], d: readonly number[], o: FpOptions): FpSetup[] {
+function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly number[], d: readonly number[], ac: readonly number[], o: FpOptions): FpSetup[] {
   const n = bars.length;
   const e: Engine = { H: bars.map((b) => b.high), L: bars.map((b) => b.low), C: bars.map((b) => b.close), K: k, D: d };
   const pivots = findPivots(bars, atr, o.sens);
@@ -136,6 +176,8 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
       l3: lv.l3,
       signal: null,
       stop: null,
+      entries: [],
+      trendLine: null,
       status: 'leg',
     };
   };
@@ -143,6 +185,7 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
   /** Avança uma ideia uma vela. Devolve false quando morre ou chega à entrada. */
   const step = (ent: { lv: Live; setup: FpSetup | null }, t: number): boolean => {
     const lv = ent.lv;
+    if (lv.trend) return stepTrend(ent, t);
     if (e.H[t] > lv.h2.price) return false; // o topo mais baixo deixou de o ser
     if (lv.brk === null) {
       // a vela anterior é um topo de recuo (máximo local) agora confirmado pela vela atual
@@ -198,11 +241,63 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
       const hidden = lv.l3.price > lv.l2.price && stochLow(lv.l3.idx, t) < stochLow(lv.l2.idx, t);
       if (hidden) {
         s.signal = t;
-        s.status = 'signal';
+        s.status = 'trend';
         // o stop fica além do primeiro ponto da divergência (o extremo da 2.ª perna), com uma folga pequena
         s.stop = lv.l2.price - o.stopBuffer * atr[t];
-        return false;
+        s.entries.push({ idx: t, kind: 'first', trigger: 'div', stop: s.stop, from: lv.l2, to: lv.l3 });
+        // começa a nova tendência: a layer line nova parte de L2 e passa por baixo dos fundos dos recuos
+        const s0 = (lv.l3.price - lv.l2.price) / (lv.l3.idx - lv.l2.idx);
+        lv.trend = { s: s0, prev: lv.l2, last: lv.l3, armed: false, used: lv.l3.idx };
+        s.trendLine = { idx0: lv.l2.idx, p0: lv.l2.price, slope: s0, end: null };
+        return true;
       }
+    }
+    return true;
+  };
+
+  /** Padrão do Accelerator para compras: pelo menos `acBars` barras verdes (a subir) e uma vermelha, tudo abaixo de zero. */
+  const acPattern = (t: number) => {
+    if (!(ac[t] < ac[t - 1]) || !(ac[t - 1] <= 0)) return false;
+    for (let q = 0; q < o.acBars; q++) if (!(ac[t - 1 - q] > ac[t - 2 - q])) return false;
+    return true;
+  };
+
+  /** Depois da primeira entrada: escalonamentos a favor da nova tendência, sem violar a layer line nova. */
+  const stepTrend = (ent: { lv: Live; setup: FpSetup | null }, t: number): boolean => {
+    const lv = ent.lv;
+    const tr = lv.trend!;
+    const s = ent.setup!;
+    const line = lv.l2.price + tr.s * (t - lv.l2.idx);
+    // violar a layer line nova (um fecho por baixo) ou o extremo da 2.ª perna acaba a tendência
+    if (e.C[t] < line || e.L[t] < lv.l2.price) {
+      s.trendLine!.end = t;
+      return false;
+    }
+    // a vela anterior é um fundo de recuo (mínimo local) confirmado pela atual
+    const j = t - 1;
+    if (j >= lv.l2.idx + 2 && e.L[j] < e.L[j - 1] && e.L[j] <= e.L[t] && j > tr.last.idx) {
+      tr.prev = tr.last;
+      tr.last = { idx: j, price: e.L[j] };
+      const r = (e.L[j] - lv.l2.price) / (j - lv.l2.idx);
+      if (r < tr.s) {
+        tr.s = r;
+        s.trendLine!.slope = r;
+      }
+      // divergência escondida: fundo mais alto no preço, mais baixo no Estocástico
+      tr.armed = tr.last.price > tr.prev.price && stochLow(tr.last.idx, t) < stochLow(tr.prev.idx, t);
+    }
+    if (tr.last.idx <= tr.used) return true; // cada fundo só dá uma entrada
+    const useDiv = o.trigger !== 'ac';
+    const useAc = o.trigger !== 'div';
+    const crossed = e.K[t - 1] <= e.D[t - 1] && e.K[t] > e.D[t];
+    if (useDiv && tr.armed && crossed) {
+      s.entries.push({ idx: t, kind: 'scale', trigger: 'div', stop: tr.prev.price - o.stopBuffer * atr[t], from: tr.prev, to: tr.last });
+      tr.used = tr.last.idx;
+      tr.armed = false;
+    } else if (useAc && acPattern(t)) {
+      s.entries.push({ idx: t, kind: 'scale', trigger: 'ac', stop: tr.last.price - o.stopBuffer * atr[t], from: null, to: tr.last });
+      tr.used = tr.last.idx;
+      tr.armed = false;
     }
     return true;
   };
@@ -247,6 +342,7 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
           touchPend: h2.idx + 1,
           brk: null,
           l3: null,
+          trend: null,
         };
         for (let j = h2.idx + MIN_TOUCH_GAP; j < t; j++) consider(lv, j, t);
         lives.push({ lv, setup: null });
@@ -273,10 +369,10 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
 const mirror = (b: Bar): Bar => ({ ...b, open: -b.open, high: -b.low, low: -b.high, close: -b.close });
 
 /** Compras e vendas do método, já em preços reais. */
-export function scanFootprint(bars: readonly Bar[], atr: readonly number[], k: readonly number[], d: readonly number[], o: FpOptions): FpSetup[] {
-  const buys = scanBuy(bars, atr, k, d, o);
+export function scanFootprint(bars: readonly Bar[], atr: readonly number[], k: readonly number[], d: readonly number[], ac: readonly number[], o: FpOptions): FpSetup[] {
+  const buys = scanBuy(bars, atr, k, d, ac, o);
   const m = bars.map(mirror);
-  const sells = scanBuy(m, atr, k.map((v) => 100 - v), d.map((v) => 100 - v), o).map((s): FpSetup => {
+  const sells = scanBuy(m, atr, k.map((v) => 100 - v), d.map((v) => 100 - v), ac.map((v) => -v), o).map((s): FpSetup => {
     const pt = (p: FpPoint): FpPoint => ({ idx: p.idx, price: -p.price });
     return {
       dir: -1,
@@ -290,6 +386,8 @@ export function scanFootprint(bars: readonly Bar[], atr: readonly number[], k: r
       l3: s.l3 ? pt(s.l3) : null,
       signal: s.signal,
       stop: s.stop === null ? null : -s.stop,
+      entries: s.entries.map((x) => ({ ...x, stop: -x.stop, from: x.from ? pt(x.from) : null, to: x.to ? pt(x.to) : null })),
+      trendLine: s.trendLine ? { idx0: s.trendLine.idx0, p0: -s.trendLine.p0, slope: -s.trendLine.slope, end: s.trendLine.end } : null,
       status: s.status,
     };
   });
@@ -336,25 +434,33 @@ export function drawFootprint(bars: readonly Bar[], setups: FpSetup[]): Footprin
       lines.push({ i1: s.l2.idx, p1: s.l2.price, i2: s.l3.idx, p2: s.l3.price, color: WHITE, width: 1.5, dash: true });
       texts.push({ i: s.l3.idx, p: s.l3.price, text: 'reteste', color: WHITE, size: 10, pos: buy ? 'below' : 'above', bold: false });
     }
-    if (s.signal !== null) {
-      markers.push({ index: s.signal, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? GREEN : RED, text: buy ? 'COMPRA' : 'VENDA' });
-      if (s.stop !== null) {
-        lines.push({ i1: s.l3 ? s.l3.idx : s.signal, p1: s.stop, i2: Math.min(last, stop + 8), p2: s.stop, color: RED, width: 1, dash: true });
-        texts.push({ i: Math.min(last, stop + 8), p: s.stop, text: 'stop', color: RED, size: 10, pos: buy ? 'below' : 'above', bold: false });
-      }
+    for (const en of s.entries) {
+      const first = en.kind === 'first';
+      markers.push({ index: en.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? GREEN : RED, text: `${buy ? 'COMPRA' : 'VENDA'}${first ? '' : ' +'}` });
+      const to = Math.min(last, en.idx + 12);
+      lines.push({ i1: en.idx, p1: en.stop, i2: to, p2: en.stop, color: RED, width: 1, dash: true });
+      if (first) texts.push({ i: to, p: en.stop, text: 'stop', color: RED, size: 10, pos: buy ? 'below' : 'above', bold: false });
+    }
+    // layer line da nova tendência: do extremo da 2.ª perna, por baixo (compras) ou por cima (vendas) dos recuos
+    if (s.trendLine) {
+      const tl = s.trendLine;
+      const to = tl.end ?? last;
+      lines.push({ i1: tl.idx0, p1: tl.p0, i2: to, p2: tl.p0 + tl.slope * (to - tl.idx0), color: '#00e676', width: 1.5 });
+      texts.push({ i: Math.max(tl.idx0 + 1, Math.round((tl.idx0 + to) / 2)), p: tl.p0 + tl.slope * (Math.round((tl.idx0 + to) / 2) - tl.idx0), text: tl.end === null ? 'layer line nova' : 'layer line nova (violada)', color: '#00e676', size: 10, pos: buy ? 'below' : 'above', bold: false });
     }
   }
 
-  const cur = setups[setups.length - 1];
+  // o cartão fala da tendência em curso (se houver), senão da ideia mais recente
+  const cur = [...setups].reverse().find((x) => x.status === 'trend' && x.trendLine?.end == null) ?? setups[setups.length - 1];
   const panel = cur
     ? [
         { text: `${cur.dir === 1 ? 'Compra' : 'Venda'}: footprint de ${cur.dir === 1 ? 'queda' : 'alta'}`, color: cur.dir === 1 ? GREEN : RED },
         {
           text:
-            cur.status === 'signal'
-              ? cur.signal === last
-                ? 'ENTRADA agora: divergência + cruzamento'
-                : `entrada há ${last - (cur.signal ?? last)} velas`
+            cur.status === 'trend'
+              ? cur.trendLine?.end == null
+                ? `tendência em curso: ${cur.entries.length} entrada${cur.entries.length === 1 ? '' : 's'}`
+                : `tendência acabou (layer line violada): ${cur.entries.length} entrada${cur.entries.length === 1 ? '' : 's'}`
               : cur.brk !== null
                 ? 'layer line rompida: à espera de divergência'
                 : 'a seguir a layer line',

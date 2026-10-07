@@ -45,7 +45,7 @@ function stoch(n: number, l2 = 72, l3 = 90, l3Low = 5, flip = false) {
   return flip ? { k: k.map((v) => 100 - v), d: d.map((v) => 100 - v) } : { k, d };
 }
 
-const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, { sens, slopeRatio: ratio, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3 });
+const run = (bars: Bar[], k: number[], d: number[], sens = 1.5, ratio = 1.3): FpSetup[] => scanFootprint(bars, atrFilled(bars, 14), k, d, bars.map(() => 0), { sens, slopeRatio: ratio, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3, trigger: 'div', acBars: 4 });
 const signals = (s: FpSetup[]) => s.filter((x) => x.signal !== null);
 
 describe('método footprint + layer line + divergência escondida', () => {
@@ -183,7 +183,7 @@ describe('método footprint + layer line + divergência escondida', () => {
         }
       }
       const kd = bars2.map(() => 50);
-      const found = scanFootprint(bars2, atrFilled(bars2, 14), kd, kd, { sens: 1.5, slopeRatio: 0.8, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3 }).find((x) => x.dir === 1 && x.brk !== null && x.h2.idx >= 80 && x.h2.idx <= 100 && x.l2.idx >= 140);
+      const found = scanFootprint(bars2, atrFilled(bars2, 14), kd, kd, bars2.map(() => 0), { sens: 1.5, slopeRatio: 0.8, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3, trigger: 'div', acBars: 4 }).find((x) => x.dir === 1 && x.brk !== null && x.h2.idx >= 80 && x.h2.idx <= 100 && x.l2.idx >= 140);
       expect(found, `seed ${seed0}`).toBeDefined();
       // a layer line passa pelo primeiro topo de recuo, como no desenho do utilizador
       expect(found!.touch).toBeLessThan(found!.h2.idx + 20);
@@ -206,5 +206,105 @@ describe('método footprint + layer line + divergência escondida', () => {
     expect(def.layer).toBe(true);
     const r = def.compute(bars, defaultParams(def));
     expect(r.draw).toBeDefined();
+  });
+});
+
+describe('escalonamentos a favor da nova tendência', () => {
+  /** Como BUY, e depois a tendência continua com dois recuos que não violam a layer line nova (de L2 por baixo dos fundos). */
+  const TREND: [number, number][] = [...BUY, [110, 78], [120, 100], [130, 92], [140, 115]];
+
+  /** %K abaixo de %D (30) numa janela à volta de cada fundo e acima (60) fora delas: o cruzamento sobe 3 velas depois do fundo. */
+  function stochAt(n: number, pts: [number, number][], flip = false) {
+    const k = Array(n).fill(60);
+    const d = Array(n).fill(30);
+    for (const [c, low] of pts) for (let i = c - 2; i <= c + 2; i++) k[i] = low;
+    return flip ? { k: k.map((v) => 100 - v), d: d.map((v) => 100 - v) } : { k, d };
+  }
+  const opts = (trigger: 'div' | 'ac' | 'both') => ({ sens: 1.5, slopeRatio: 1.3, sizeRatio: 1.3, minMove: 3, stopBuffer: 0.3, trigger, acBars: 4 });
+  const scan = (b: Bar[], k: number[], d: number[], ac: number[], trigger: 'div' | 'ac' | 'both' = 'div') => scanFootprint(b, atrFilled(b, 14), k, d, ac, opts(trigger));
+  const withEntries = (s: FpSetup[]) => s.filter((x) => x.entries.length > 0);
+
+  it('depois da primeira entrada, cada recuo com divergência escondida e cruzamento dá uma entrada de escalonamento', () => {
+    const b = path(TREND);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 3], [130, 1]]);
+    const x = withEntries(scan(b, k, d, b.map(() => 0)))[0];
+    expect(x.entries.map((e) => e.kind)).toEqual(['first', 'scale', 'scale']);
+    expect(x.entries.every((e) => e.trigger === 'div')).toBe(true);
+    // as entradas vêm depois do fundo de cada recuo
+    expect(x.entries[1].idx).toBeGreaterThan(110);
+    expect(x.entries[2].idx).toBeGreaterThan(130);
+    // o stop de cada escalonamento fica além do primeiro ponto da divergência (o fundo anterior)
+    expect(x.entries[1].stop).toBeLessThan(x.entries[1].from!.price);
+    expect(x.entries[2].stop).toBeLessThan(x.entries[2].from!.price);
+    expect(x.entries[2].from!.price).toBeCloseTo(x.entries[1].to!.price, 6);
+    expect(x.trendLine!.end).toBeNull();
+    expect(x.status).toBe('trend');
+  });
+
+  it('um recuo sem divergência (Estocástico a fazer fundo mais alto) não dá entrada', () => {
+    const b = path(TREND);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 20], [130, 1]]);
+    const x = withEntries(scan(b, k, d, b.map(() => 0)))[0];
+    expect(x.entries.map((e) => e.idx).filter((i) => i > 100 && i < 125)).toEqual([]);
+  });
+
+  it('violar a layer line nova (um fecho por baixo) acaba a tendência e não há mais entradas', () => {
+    // o recuo vai muito fundo: fecha abaixo da linha de L2 por baixo dos fundos, mas ainda acima de L2
+    const broke: [number, number][] = [...BUY, [110, 56], [120, 100], [130, 92], [140, 115]];
+    const b = path(broke);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 3], [130, 1]]);
+    const x = withEntries(scan(b, k, d, b.map(() => 0)))[0];
+    expect(x.trendLine!.end).not.toBeNull();
+    expect(x.entries.map((e) => e.kind)).toEqual(['first']);
+  });
+
+  it('Accelerator: 4 barras verdes e 1 vermelha abaixo de zero dão a entrada quando sai a vermelha', () => {
+    const b = path(TREND);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5]]); // sem divergência nos recuos seguintes
+    const ac = b.map(() => 0);
+    [-5, -4, -3, -2, -1, -1.5].forEach((v, q) => (ac[113 + q] = v)); // 4 verdes (-4..-1) e a vermelha em 118
+    const none = withEntries(scan(b, k, d, ac, 'div'))[0];
+    expect(none.entries.map((e) => e.kind)).toEqual(['first']);
+    const x = withEntries(scan(b, k, d, ac, 'ac'))[0];
+    const sc = x.entries.filter((e) => e.kind === 'scale');
+    expect(sc).toHaveLength(1);
+    expect(sc[0].idx).toBe(118);
+    expect(sc[0].trigger).toBe('ac');
+    expect(sc[0].stop).toBeLessThan(b[110].low);
+    // com menos de 4 verdes não há entrada
+    const few = ac.slice();
+    few[113] = 0;
+    few[114] = -3.5;
+    expect(withEntries(scan(b, k, d, few, 'ac'))[0].entries.filter((e) => e.kind === 'scale')).toHaveLength(0);
+  });
+
+  it('espelho (vendas): mesmos escalonamentos, stops acima', () => {
+    const b = path(TREND, 1, true);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 3], [130, 1]], true);
+    const x = withEntries(scan(b, k, d, b.map(() => 0)))[0];
+    expect(x.dir).toBe(-1);
+    expect(x.entries.map((e) => e.kind)).toEqual(['first', 'scale', 'scale']);
+    for (const e of x.entries) expect(e.stop).toBeGreaterThan(b[e.idx].high);
+    expect(x.trendLine!.slope).toBeLessThan(0); // a layer line nova das vendas desce, por cima dos recuos
+  });
+
+  it('não repinta: cortar velas dá as mesmas entradas até esse ponto', () => {
+    const b = path(TREND);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 3], [130, 1]]);
+    const full = withEntries(scan(b, k, d, b.map(() => 0)))[0].entries.map((e) => e.idx);
+    for (let cut = 100; cut <= b.length; cut += 4) {
+      const part = withEntries(scan(b.slice(0, cut), k.slice(0, cut), d.slice(0, cut), b.slice(0, cut).map(() => 0)))[0]?.entries.map((e) => e.idx) ?? [];
+      for (const i of part) expect(full).toContain(i);
+    }
+  });
+
+  it('desenha a layer line nova, os marcadores "+" e o cartão diz quantas entradas', () => {
+    const b = path(TREND);
+    const { k, d } = stochAt(b.length, [[72, 15], [90, 5], [110, 3], [130, 1]]);
+    const r = drawFootprint(b, scan(b, k, d, b.map(() => 0)));
+    expect(r.markers.filter((m) => m.text === 'COMPRA +')).toHaveLength(2);
+    expect(r.markers.filter((m) => m.text === 'COMPRA')).toHaveLength(1);
+    expect(r.draw.texts.some((t) => t.text === 'layer line nova')).toBe(true);
+    expect(r.draw.panel!.lines[1].text).toMatch(/3 entradas/);
   });
 });

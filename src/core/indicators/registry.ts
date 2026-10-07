@@ -1102,13 +1102,25 @@ export const INDICATORS: IndicatorDef[] = [
     overlay: true,
     layer: true,
     description:
-      'Método footprint: topo mais baixo e segunda perna maior que a primeira (espelho para vendas), layer line que toca nos topos dos recuos, rompimento com reteste e divergência escondida no Estocástico (5,3,3). A divergência é obrigatória: a entrada só aparece quando há divergência e o %K cruza o %D. Sem divergência não há sinal. Só usa o que já se sabia em cada vela (não repinta, serve no replay).',
+      'Método footprint: topo mais baixo e segunda perna maior que a primeira (espelho para vendas), layer line que toca nos topos dos recuos, rompimento com reteste e divergência escondida no Estocástico (5,3,3). A divergência é obrigatória: a entrada só aparece quando há divergência e o %K cruza o %D. Sem divergência não há sinal. Depois da primeira entrada, escalona a favor da nova tendência (divergência escondida num novo recuo, ou o Accelerator: barras verdes e uma vermelha abaixo de zero) enquanto a layer line da nova tendência não for violada. O stop fica além do primeiro ponto da divergência. Só usa o que já se sabia em cada vela (não repinta, serve no replay).',
     inputs: [
       numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
       numInput('size', 'Tamanho mínimo da 2.ª perna (x a 1.ª)', 1.3, 0.1, 1, 10),
       numInput('ratio', 'Inclinação mínima da 2.ª perna (x a 1.ª)', 0.8, 0.1, 0.1, 10),
       numInput('minMove', 'Movimento mínimo (ATR)', 3, 0.5, 1, 20),
       numInput('stopBuf', 'Folga do stop (ATR)', 0.3, 0.1, 0, 5),
+      {
+        key: 'trigger',
+        label: 'Gatilho dos escalonamentos',
+        type: 'select',
+        default: 'div',
+        options: [
+          { value: 'div', label: 'Divergência escondida' },
+          { value: 'ac', label: 'Accelerator' },
+          { value: 'both', label: 'Qualquer um' },
+        ],
+      },
+      lenInput(4, 'Accelerator: barras verdes antes da vermelha', 'acBars'),
       lenInput(5, 'Estocástico %K', 'k'),
       lenInput(3, 'Estocástico suavização', 'smooth'),
       lenInput(3, 'Estocástico %D', 'd'),
@@ -1116,7 +1128,7 @@ export const INDICATORS: IndicatorDef[] = [
     outputs: [],
     compute(bars, p) {
       const st = ta.stoch(bars, n(p, 'k'), n(p, 'smooth'), n(p, 'd'));
-      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), sizeRatio: n(p, 'size'), minMove: n(p, 'minMove'), stopBuffer: n(p, 'stopBuf') });
+      const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, ta.accelerator(bars), { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), sizeRatio: n(p, 'size'), minMove: n(p, 'minMove'), stopBuffer: n(p, 'stopBuf'), trigger: s(p, 'trigger') as 'div' | 'ac' | 'both', acBars: n(p, 'acBars') });
       const r = drawFootprint(bars, setups);
       return { values: {}, draw: r.draw, markers: r.markers };
     },
