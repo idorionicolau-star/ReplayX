@@ -13,6 +13,19 @@ import type { BacktestResult } from '@/core/strategy/types';
 import type { Bar } from '@/core/types';
 import { consumeBacktest } from '@/lib/billing';
 
+export const MIN_BARS = 50;
+
+/** Diz porquê há poucas barras (replay, fonte sem mais histórico, ou falha ao carregar) e o que fazer. */
+export function fewBarsMessage(o: { name: string; tf: string; n: number; replay: boolean; startReached: boolean; first: number | null }): string {
+  const head = `Poucos dados para testar ${o.name} ${o.tf} (${o.n} barras, mínimo ${MIN_BARS}).`;
+  if (o.replay) return `${head} No replay só se testa o que vem antes do cursor: começa o replay mais tarde ou testa fora do replay.`;
+  if (o.startReached) {
+    const since = o.first !== null ? new Date(o.first * 1000).toLocaleDateString('pt-PT') : null;
+    return `${head} A fonte só tem dados${since ? ` desde ${since}` : ''}: experimenta um intervalo mais curto (por exemplo H4 ou H1) ou outro mercado.`;
+  }
+  return `${head} Não consegui carregar mais histórico: tenta outra vez ou muda de intervalo.`;
+}
+
 /** Dados do gráfico ativo para testar (no replay, só até ao cursor — sem espreitar o futuro). */
 export async function loadDataset(count: number, symbolId?: string, tf?: string): Promise<Dataset & { tf: string }> {
   const ws = useWorkspace.getState();
@@ -25,7 +38,9 @@ export async function loadDataset(count: number, symbolId?: string, tf?: string)
   const h = await dataFeed().history(sym, theTf, to, count);
   let bars: Bar[] = h.bars;
   if (cursor !== null) bars = bars.filter((b) => barEnd(b.time, theTf) <= cursor);
-  if (bars.length < 50) throw new Error(`Poucos dados para testar ${sym.name} ${tfShort(theTf)} (${bars.length} barras).`);
+  if (bars.length < MIN_BARS) {
+    throw new Error(fewBarsMessage({ name: sym.name, tf: tfShort(theTf), n: bars.length, replay: cursor !== null, startReached: h.startReached, first: bars[0]?.time ?? null }));
+  }
   return { label: `${sym.name} · ${tfShort(theTf)}`, symbolId: sym.id, bars, spec: specData(sym), tf: theTf };
 }
 
