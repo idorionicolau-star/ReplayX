@@ -2,6 +2,7 @@ import type { AssetClass, Bar, SymbolInfo } from '../types';
 import { alignTime, parseTf, tfSeconds, type Timeframe } from '../timeframes';
 import { backoffDelay, nowSec, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
 import { allSymbols, registerSymbol } from '../symbols';
+import { extendWithYahoo } from './yahooFallback';
 
 /**
  * Cliente WebSocket da Deriv (índices sintéticos, forex, metais, índices de bolsa).
@@ -537,7 +538,12 @@ export const derivProvider: Provider = {
     return NATIVE;
   },
 
-  fetch: (symbol, tf, args) => (tf.unit === 's' ? fetchTickBars(symbol, tf, args) : fetchCandles(symbol, tf, args)),
+  fetch: async (symbol, tf, args) => {
+    if (tf.unit === 's') return fetchTickBars(symbol, tf, args);
+    const bars = await fetchCandles(symbol, tf, args);
+    // H4 e diário: quando a Deriv acaba o histórico, completa o passado com o Yahoo (Forex e ouro/prata)
+    return extendWithYahoo(symbol, tf, args, bars);
+  },
 
   subscribe(symbol, tf, onBar, seed) {
     let cur: Bar | null = seed ? { ...seed } : null;
