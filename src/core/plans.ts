@@ -21,7 +21,7 @@ export const planById = (id: string): Plan | undefined => PLANS.find((p) => p.id
 /** Dias de tolerância depois do fim do período pago. */
 export const GRACE_DAYS = 2;
 /** Dias de Pro grátis para contas novas (contados desde a criação da conta). */
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 14;
 
 /** Limites do plano grátis. */
 export const FREE_LIMITS = {
