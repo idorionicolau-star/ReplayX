@@ -271,7 +271,7 @@ export function signalR(s: DtSignal): number | null {
   return s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
 }
 
-export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 12): DtOutput {
+export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 12, goal?: { target: number; historyDone: boolean }): DtOutput {
   const last = bars.length - 1;
   const rects: DrawRect[] = [];
   const lines: DrawLine[] = [];
@@ -320,6 +320,12 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 12)
   if (closed.length) {
     const sign = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(v >= 10 || v <= -10 ? 1 : 2)}R`;
     panel.push({ text: `soma ${sign(totalR)} · média ${sign(avgR)} por sinal`, color: totalR >= 0 ? TARGET : STOP });
+  }
+  if (goal && r.signals.length < goal.target) {
+    panel.push({
+      text: goal.historyDone ? `o histórico acabou: ${r.signals.length} de ${goal.target} sinais` : `a carregar mais passado… ${r.signals.length}/${goal.target} sinais`,
+      color: '#d1d4dc',
+    });
   }
   if (r.pending.length) panel.push({ text: 'há uma zona à espera de confirmação', color: '#d1d4dc' });
   else if (lastSig && !lastSig.exit) panel.push({ text: `${lastSig.dir === 1 ? 'compra' : 'venda'} em curso`, color: lastSig.dir === 1 ? BUY : SELL });

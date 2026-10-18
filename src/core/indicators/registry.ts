@@ -44,6 +44,12 @@ export interface IndicatorMarker {
   text?: string;
 }
 
+/** O que o gráfico diz ao indicador sobre o histórico carregado. */
+export interface ComputeContext {
+  /** Não há mais passado para carregar (os dados acabaram ou chegou-se ao máximo). */
+  historyDone: boolean;
+}
+
 export interface IndicatorResult {
   values: Record<string, Series>;
   /** Cor por barra (histogramas coloridos, supertrend…). */
@@ -51,6 +57,8 @@ export interface IndicatorResult {
   markers?: IndicatorMarker[];
   /** Linhas, etiquetas e cartão desenhados por cima do gráfico (precisa de `layer` na definição). */
   draw?: DrawData;
+  /** O indicador quer mais passado (por exemplo, para juntar sinais suficientes): o gráfico carrega mais velas sozinho. */
+  wantHistory?: boolean;
 }
 
 export interface IndicatorDef {
@@ -69,7 +77,7 @@ export interface IndicatorDef {
   levels?: { value: number; color?: string; label?: string }[];
   scale?: { min?: number; max?: number };
   description: string;
-  compute(bars: readonly Bar[], p: Record<string, ParamValue>): IndicatorResult;
+  compute(bars: readonly Bar[], p: Record<string, ParamValue>, ctx?: ComputeContext): IndicatorResult;
 }
 
 const UP = '#089981';
@@ -1151,9 +1159,10 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
       numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
       numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
-    compute(bars, p) {
+    compute(bars, p, ctx) {
       const r = scanDoubleTops(bars, atrFilled(bars, 14), {
         sens: n(p, 'sens'),
         tol: n(p, 'tol'),
@@ -1163,8 +1172,10 @@ export const INDICATORS: IndicatorDef[] = [
         tpRatio: n(p, 'tpRatio'),
         stopBuf: n(p, 'stopBuf'),
       });
-      const out = drawDoubleTops(bars, r);
-      return { values: {}, draw: out.draw, markers: out.markers };
+      const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
+      const historyDone = ctx?.historyDone ?? true;
+      const out = drawDoubleTops(bars, r, 12, goal ? { target: goal, historyDone } : undefined);
+      return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },
 ];

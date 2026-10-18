@@ -155,6 +155,22 @@ describe('topo e fundo duplo', () => {
     expect(d.draw.panel!.lines[2].text).toBe(`soma +${total.toFixed(2)}R · média +${total.toFixed(2)}R por sinal`);
   });
 
+  it('pede mais passado enquanto tiver menos sinais que o objetivo; quando o histórico acaba, diz quantos encontrou', () => {
+    const def = getIndicator('doubletop')!;
+    const bars = deepValley();
+    const p = defaultParams(def);
+    expect(p.minSignals).toBe(200);
+    const more = def.compute(bars, p, { historyDone: false });
+    expect(more.wantHistory).toBe(true);
+    expect(more.draw!.panel!.lines.some((l) => /a carregar mais passado… 1\/200 sinais/.test(l.text))).toBe(true);
+    const done = def.compute(bars, p, { historyDone: true });
+    expect(done.wantHistory).toBe(false);
+    expect(done.draw!.panel!.lines.some((l) => /o histórico acabou: 1 de 200 sinais/.test(l.text))).toBe(true);
+    // objetivo cumprido ou desligado: não pede nada
+    expect(def.compute(bars, { ...p, minSignals: 1 }, { historyDone: false }).wantHistory).toBe(false);
+    expect(def.compute(bars, { ...p, minSignals: 0 }, { historyDone: false }).wantHistory).toBe(false);
+  });
+
   it('ruído e poucos dados não estoiram e são rápidos', () => {
     expect(run([]).signals).toEqual([]);
     let seed = 3;
