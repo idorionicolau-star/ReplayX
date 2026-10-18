@@ -24,7 +24,9 @@ function path(points: [number, number][]): Bar[] {
 }
 
 const flip = (bars: Bar[]): Bar[] => bars.map((b) => ({ ...b, open: 200 - b.open, high: 200 - b.low, low: 200 - b.high, close: 200 - b.close }));
-const run = (bars: Bar[]) => scanDoubleTops(bars, atrFilled(bars, 14), DT_DEFAULTS);
+/** Sem o limite de R do alvo (os trajetos dos testes têm alvos longos); o limite tem o seu próprio teste. */
+const NO_MAX = { ...DT_DEFAULTS, maxRR: 0 };
+const run = (bars: Bar[], o = NO_MAX) => scanDoubleTops(bars, atrFilled(bars, 14), o);
 
 /** Vela de expansão para baixo (venda) na vela i, a abrir onde a anterior fechou. */
 function expansionDown(bars: Bar[], i: number, size = 3) {
@@ -153,6 +155,50 @@ describe('topo e fundo duplo', () => {
     const r = run(bars);
     const total = r.signals.map(signalR).filter((v): v is number => v !== null).reduce((a, b) => a + b, 0);
     expect(d.draw.panel!.lines[2].text).toBe(`soma +${total.toFixed(2)}R · média +${total.toFixed(2)}R por sinal`);
+  });
+
+  it('pede mais passado enquanto tiver menos sinais que o objetivo; quando o histórico acaba, diz quantos encontrou', () => {
+    const def = getIndicator('doubletop')!;
+    const bars = deepValley();
+    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), maxRR: 0 };
+    expect(p.minSignals).toBe(200);
+    const more = def.compute(bars, p, { historyDone: false });
+    expect(more.wantHistory).toBe(true);
+    expect(more.draw!.panel!.lines.some((l) => /a carregar mais passado… 1\/200 sinais/.test(l.text))).toBe(true);
+    const done = def.compute(bars, p, { historyDone: true });
+    expect(done.wantHistory).toBe(false);
+    expect(done.draw!.panel!.lines.some((l) => /o histórico acabou: 1 de 200 sinais/.test(l.text))).toBe(true);
+    // objetivo cumprido ou desligado: não pede nada
+    expect(def.compute(bars, { ...p, minSignals: 1 }, { historyDone: false }).wantHistory).toBe(false);
+    expect(def.compute(bars, { ...p, minSignals: 0 }, { historyDone: false }).wantHistory).toBe(false);
+  });
+
+  it('alvo longe demais (mais R do que o máximo) não entra; sem limite, entra', () => {
+    const bars = deepValley();
+    const free = run(bars).signals.filter((x) => x.dir === -1);
+    expect(free).toHaveLength(1);
+    const rr = (free[0].entry - free[0].target) / (free[0].stop - free[0].entry);
+    expect(run(bars, { ...DT_DEFAULTS, maxRR: Math.floor(rr) }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+    expect(run(bars, { ...DT_DEFAULTS, maxRR: Math.ceil(rr) }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    expect(DT_DEFAULTS.maxRR).toBe(3);
+  });
+
+  it('os topos têm de estar quase no mesmo nível: um segundo topo meio ATR abaixo já não conta', () => {
+    const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
+    expansionDown(near, 49);
+    expect(run(near).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    const far = path([[0, 100], [20, 120], [35, 105], [48, 118.9], [49, 118.7], [80, 95]]);
+    expansionDown(far, 49);
+    expect(run(far).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+  });
+
+  it('a caixa é pequena: não passa muito abaixo do topo mais baixo', () => {
+    const bars = deepValley();
+    const x = run(bars).signals.filter((s) => s.dir === -1)[0];
+    const a = atrFilled(bars, 14)[x.idx];
+    const lowerTop = Math.min(x.first.price, x.second.price);
+    expect(x.boxLo).toBeGreaterThanOrEqual(lowerTop - 0.35 * a - 1e-9);
+    expect(x.boxHi - x.boxLo).toBeLessThan(1.5 * a);
   });
 
   it('ruído e poucos dados não estoiram e são rápidos', () => {

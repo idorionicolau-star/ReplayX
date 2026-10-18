@@ -120,6 +120,10 @@ type AnySeries = ISeriesApi<SeriesType>;
 
 const HISTORY_COUNT = 1500;
 const MORE_COUNT = 1500;
+/** Quando um indicador pede mais passado, o gráfico carrega sozinho até este total de velas. */
+const AUTO_HISTORY_MAX = 20000;
+/** E no máximo este número de cargas seguidas por símbolo e intervalo. */
+const AUTO_HISTORY_ROUNDS = 15;
 
 let chartSeq = 0;
 
@@ -1145,13 +1149,50 @@ export class ChartController {
     return this.times[n - 1] + (i - (n - 1)) * this.tfSec;
   }
 
+  private historyKey = '';
+  private historyRounds = 0;
+
+  private loadedCount(): number {
+    return this.cursor !== null ? this.replayBars.length : this.bars.length;
+  }
+
+  /** Não há mais passado para carregar a pedido dos indicadores. */
+  private historyDone(): boolean {
+    const key = `${this.symbol?.id}|${this.tf}`;
+    if (key !== this.historyKey) {
+      this.historyKey = key;
+      this.historyRounds = 0;
+    }
+    return this.startReached || this.loadedCount() >= AUTO_HISTORY_MAX || this.historyRounds >= AUTO_HISTORY_ROUNDS;
+  }
+
+  private historyTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Um indicador pediu mais passado: carrega mais um bloco (ele volta a pedir se ainda faltar). */
+  private requestHistory() {
+    if (this.historyTimer || this.destroyed || !this.symbol || this.historyDone()) return;
+    this.historyTimer = setTimeout(async () => {
+      this.historyTimer = null;
+      if (this.destroyed || this.historyDone()) return;
+      // já está a carregar (por exemplo, o arrastar do gráfico): tenta outra vez a seguir
+      if (this.loadingMore) return this.requestHistory();
+      this.historyRounds++;
+      await this.loadMore();
+      // acabou o passado: o cartão do indicador passa a dizê-lo
+      if (this.historyDone()) this.updateIndicators(true);
+    }, 80);
+  }
+
   private updateIndicators(full: boolean) {
     const bars = this.bars;
     if (!bars.length) return;
+    let wantHistory = false;
+    const ctx = { historyDone: this.historyDone() };
     for (const view of this.indicators.values()) {
       try {
         if (view.def) {
-          const r = view.def.compute(bars, { ...Object.fromEntries(view.def.inputs.map((i) => [i.key, i.default])), ...view.inst.params } as Record<string, ParamValue>);
+          const r = view.def.compute(bars, { ...Object.fromEntries(view.def.inputs.map((i) => [i.key, i.default])), ...view.inst.params } as Record<string, ParamValue>, ctx);
+          if (r.wantHistory && !view.inst.hidden) wantHistory = true;
           view.values = r.values;
           view.colors = r.colors;
           (view as IndicatorView & { markers?: unknown }).markers = r.markers;
@@ -1214,6 +1255,7 @@ export class ChartController {
     }
     if (full) this.updateMarkers();
     else this.scheduleMarkers();
+    if (wantHistory) this.requestHistory();
   }
 
   private markerTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1517,6 +1559,8 @@ export class ChartController {
   }
 
   destroy() {
+    if (this.historyTimer) clearTimeout(this.historyTimer);
+    this.historyTimer = null;
     this.destroyed = true;
     this.gen++;
     this.stopLive();
