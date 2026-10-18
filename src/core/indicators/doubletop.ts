@@ -67,7 +67,7 @@ export interface DtOptions {
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, bePct: 75, tpNear: true, bePrice: 0, beAtr: 0.1 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 0, bePct: 0, tpNear: true, bePrice: 0, beAtr: 0.1 };
 
 export interface DtPoint {
   idx: number;

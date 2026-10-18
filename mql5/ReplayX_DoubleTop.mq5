@@ -27,8 +27,8 @@ input bool   InpTpNear      = true;  // Saída no fundo/topo mais próximo que a
 input double InpTpRatio     = 0.6;   // (saída antiga) vale conta a partir de (fração da pernada)
 input double InpMinR        = 1.0;   // R mínimo (entrada longe demais não entra; 0 = sem limite)
 input double InpMaxTargetAtr= 20.0;  // Alvo máximo desde a entrada (ATR; 0 = sem limite)
-input double InpBePct       = 75.0;  // Breakeven: quando anda esta % do caminho até à saída (0 = usa o R abaixo)
-input double InpBeAt        = 1.0;   // Breakeven em R (só se a % acima for 0; 0 = sem breakeven)
+input double InpBePct       = 0.0;   // Breakeven: quando anda esta % do caminho até à saída (0 = não usa; BE desligado por padrão)
+input double InpBeAt        = 0.0;   // Breakeven em R (só se a % acima for 0; 0 = sem breakeven)
 input double InpBePips      = 0.0;   // Breakeven: folga para spread e comissões (pips; 0 = 0,1 ATR)
 
 input group "Risco e proteções"

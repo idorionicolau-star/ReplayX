@@ -311,7 +311,7 @@ describe('topo e fundo duplo', () => {
     // venda em 49 (entrada ~116,6); desce até 1:1, volta acima da entrada, depois sobe até ao stop original
     const bars = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [60, 112], [70, 118], [80, 126]]);
     expansionDown(bars, 49);
-    const s = run(bars).signals.filter((x) => x.dir === -1)[0];
+    const s = run(bars, { ...NO_MAX, be: 1 }).signals.filter((x) => x.dir === -1)[0];
     const risk = s.stop - s.entry;
     expect(Math.min(...bars.slice(50, 61).map((b) => b.low))).toBeLessThan(s.entry - risk);
     expect(s.beIdx).not.toBeNull();
@@ -320,14 +320,14 @@ describe('topo e fundo duplo', () => {
     expect(s.beStop!).toBeLessThan(s.entry);
     expect(signalR(s)!).toBeGreaterThan(0);
     expect(signalR(s)!).toBeLessThan(0.3);
-    const pips = run(bars, { ...NO_MAX, bePrice: 0.5 }).signals.filter((x) => x.dir === -1)[0];
+    const pips = run(bars, { ...NO_MAX, be: 1, bePrice: 0.5 }).signals.filter((x) => x.dir === -1)[0];
     expect(pips.entry - pips.beStop!).toBeCloseTo(0.5, 6);
     // no fundo duplo (espelho) o BE fica acima da entrada
-    const buy = run(flip(bars)).signals.filter((x) => x.dir === 1)[0];
+    const buy = run(flip(bars), { ...NO_MAX, be: 1 }).signals.filter((x) => x.dir === 1)[0];
     expect(buy.beStop!).toBeGreaterThan(buy.entry);
     expect(buy.exit?.result).toBe('be');
     expect(signalR(buy)!).toBeGreaterThan(0);
-    const d = drawDoubleTops(bars, run(bars));
+    const d = drawDoubleTops(bars, run(bars, { ...NO_MAX, be: 1 }));
     expect(d.draw.texts.some((t) => t.text === 'BE')).toBe(true);
     expect(d.draw.texts.some((t) => /saiu no BE/.test(t.text))).toBe(true);
     // desligado, o mesmo trajeto acaba no stop
@@ -385,7 +385,8 @@ describe('topo e fundo duplo', () => {
     expect(s2.beIdx).not.toBeNull();
     expect(s2.exit?.result).toBe('be');
     expect(signalR(s2)!).toBeGreaterThan(0);
-    expect(DT_DEFAULTS.bePct).toBe(75);
+    expect(DT_DEFAULTS.bePct).toBe(0);
+    expect(DT_DEFAULTS.be).toBe(0);
   });
 
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {

@@ -13,7 +13,7 @@ topo duplo (venda) e fundo duplo (compra), com rejeição, combinação de duas 
 - Decide só com velas fechadas; uma operação de cada vez (compra ou venda).
 - Stop além da caixa dos dois topos; saída no fundo (ou topo) mais próximo que ainda está de pé (não rompido) e que dê o R mínimo.
 - O 1.º topo não pode ter mais de 50 velas até à entrada. Entrada longe demais (menos de 1R) ou alvo longe demais (mais de 20 ATR) não entra.
-- Breakeven tardio: só quando o preço anda 75% do caminho até à saída (`InpBePct`, editável; com 0 usa `InpBeAt` em R), o stop passa para um pouco além da entrada (folga em pips, ou 0,1 ATR). É feito a cada tick.
+- Sem breakeven por padrão: o stop e o alvo ficam onde estão até a operação acabar. Se quiseres, podes ligar o breakeven em `InpBePct` (% do caminho até à saída) ou em `InpBeAt` (R); o stop passa para um pouco além da entrada (folga em pips, ou 0,1 ATR), a cada tick.
 - Aquece com as últimas 3000 velas (não opera nelas) e só entra em sinais novos.
 
 ## O que desenha (como o indicador)
@@ -28,8 +28,8 @@ Caixa nos dois topos (vermelha = venda, azul = compra), linhas de **Stop**, **En
 | `InpTolPips` | 0 | Mesmo nível em pips (0 = automática: 0,2 ATR ou 5% da altura do padrão) |
 | `InpMaxBars` | 50 | Velas máximas do 1.º topo até à entrada |
 | `InpMinR` | 1 | R mínimo |
-| `InpBePct` | 75 | Breakeven quando anda esta % do caminho até à saída (0 = usa `InpBeAt`) |
-| `InpBeAt` / `InpBePips` | 1 / 0 | Breakeven em R (só se `InpBePct` = 0) e folga para custos (pips) |
+| `InpBePct` | 0 | Breakeven quando anda esta % do caminho até à saída (0 = não usa) |
+| `InpBeAt` / `InpBePips` | 0 / 0 | Breakeven em R (só se `InpBePct` = 0; 0 = sem breakeven) e folga para custos (pips) |
 | `InpRiskPct` | 10 | Risco por operação, % do saldo |
 | `InpFixedLot` | 0 | Lote fixo (0 = calcula pelo risco e pelo stop) |
 | `InpMaxConsecLosses` / `InpMaxDailyLossPct` | 0 / 0 | Pára o dia por perdas seguidas ou perda diária (0 = desligado) |
