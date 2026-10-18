@@ -22,7 +22,8 @@ import type { IndicatorMarker } from './registry';
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
  * 8. O primeiro topo não pode ser antigo: no máximo 50 velas (ajustável) até à vela da entrada.
- * 9. Breakeven: se o preço anda 1:1 a favor (ajustável), o stop passa para a entrada; se depois voltar, sai a zero.
+ * 9. Breakeven: se o preço anda 1:1 a favor (ajustável), o stop passa para um pouco além da entrada, o suficiente para
+ *    cobrir spread e comissões (folga em pips, ou 0,1 ATR); se depois voltar, sai com esse pequeno ganho.
  * 10. Uma operação de cada vez: enquanto uma está aberta, as outras confirmações passam.
  *
  * Tudo é decidido só com as velas já fechadas: no replay o sinal aparece na vela em que se confirmou, nunca antes.
@@ -49,6 +50,10 @@ export interface DtOptions {
   stopBuf: number;
   /** Breakeven: quando o preço anda a favor este múltiplo do risco (1 = 1:1), o stop passa para a entrada. 0 = sem breakeven. */
   be: number;
+  /** Folga do breakeven para cobrir spread e comissões, em preço (pips × pip). 0 = automática, `beAtr` do ATR. */
+  bePrice: number;
+  /** Folga automática do breakeven, em ATR. */
+  beAtr: number;
   /** Velas, no máximo, entre o primeiro topo e a vela da entrada: mais do que isso é um topo antigo, não um W. 0 = sem limite. */
   maxBars: number;
   /** Menos R do que isto (distância ao alvo / distância ao stop) não entra: a entrada ficou longe demais. 0 = sem limite. */
@@ -57,7 +62,7 @@ export interface DtOptions {
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, bePrice: 0, beAtr: 0.1 };
 
 export interface DtPoint {
   idx: number;
@@ -83,8 +88,9 @@ export interface DtSignal {
   targetKind: 'vale' | 'origem';
   /** Resultado, quando já se sabe: vela em que saiu e se foi pelo alvo ou pelo stop. */
   exit: { idx: number; result: 'alvo' | 'stop' | 'be' } | null;
-  /** Vela em que o stop passou para a entrada (breakeven), se passou. */
+  /** Vela em que o stop passou para o breakeven, se passou, e o nível dele (um pouco além da entrada, para cobrir spread e comissões). */
   beIdx: number | null;
+  beStop: number | null;
 }
 
 /** Zona à espera do segundo topo e da confirmação. */
@@ -141,10 +147,13 @@ class TopScanner {
     if (!open || t <= open.idx) return;
     const b = this.bars[t];
     // com o breakeven feito, o stop está na entrada (conta a partir da vela seguinte à que andou 1:1)
-    const stop = open.beIdx !== null ? open.entry : open.stop;
-    if (b.high >= stop) open.exit = { idx: t, result: open.beIdx !== null ? 'be' : 'stop' };
+    const stop = open.beStop ?? open.stop;
+    if (b.high >= stop) open.exit = { idx: t, result: open.beStop !== null ? 'be' : 'stop' };
     else if (b.low <= open.target) open.exit = { idx: t, result: 'alvo' };
-    else if (this.o.be > 0 && open.beIdx === null && b.low <= open.entry - this.o.be * (open.stop - open.entry)) open.beIdx = t;
+    else if (this.o.be > 0 && open.beIdx === null && b.low <= open.entry - this.o.be * (open.stop - open.entry)) {
+      open.beIdx = t;
+      open.beStop = open.entry - (this.o.bePrice > 0 ? this.o.bePrice : this.o.beAtr * this.atr[t]);
+    }
     if (open.exit) this.open = null;
   }
 
@@ -278,6 +287,7 @@ class TopScanner {
         targetKind: useValley ? 'vale' : 'origem',
         exit: null,
         beIdx: null,
+        beStop: null,
       };
       this.signals.push(this.open);
       busy = true;
@@ -326,6 +336,7 @@ export function scanDoubleTops(bars: readonly Bar[], atr: readonly number[], o: 
       entry: -s.entry,
       stop: -s.stop,
       target: -s.target,
+      beStop: s.beStop === null ? null : -s.beStop,
       targetFrom: neg(s.targetFrom),
     }),
   );
@@ -352,7 +363,7 @@ export function signalR(s: DtSignal): number | null {
   if (!s.exit) return null;
   const risk = Math.abs(s.stop - s.entry);
   if (!(risk > 0)) return null;
-  if (s.exit.result === 'be') return 0;
+  if (s.exit.result === 'be') return s.beStop === null ? 0 : (s.entry - s.beStop) / risk * Math.sign(s.entry - s.stop) * -1;
   return s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
 }
 
@@ -376,9 +387,9 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 300
     lines.push({ i1: s.targetFrom.idx, p1: s.target, i2: end, p2: s.target, color: TARGET, width: 1 });
     texts.push({ i: mid(s.targetFrom.idx, end), p: s.target, text: 'Saída', color: TARGET, size: 10, pos: buy ? 'above' : 'below', bold: false });
     markers.push({ index: s.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: col, text: `${buy ? 'COMPRA' : 'VENDA'} (${s.trigger})` });
-    if (s.beIdx !== null) texts.push({ i: s.beIdx, p: s.entry, text: 'BE', color: ENTRY, size: 10, pos: buy ? 'below' : 'above', bold: false });
+    if (s.beIdx !== null) texts.push({ i: s.beIdx, p: s.beStop ?? s.entry, text: 'BE', color: ENTRY, size: 10, pos: buy ? 'below' : 'above', bold: false });
     if (s.exit?.result === 'be') {
-      texts.push({ i: s.exit.idx, p: s.entry, text: '= saiu a zero (BE)', color: ENTRY, size: 10, pos: buy ? 'below' : 'above' });
+      texts.push({ i: s.exit.idx, p: s.beStop ?? s.entry, text: '= saiu no BE (cobre custos)', color: ENTRY, size: 10, pos: buy ? 'below' : 'above' });
     } else if (s.exit) {
       const rr = signalR(s);
       const ok = s.exit.result === 'alvo';
@@ -403,7 +414,7 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 300
   const panel = [
     { text: `Topo/fundo duplo: ${r.signals.length} sinais`, color: '#d1d4dc' },
     closed.length
-      ? { text: `${wins} alvos · ${closed.length - wins - bes} stops${bes ? ` · ${bes} a zero` : ''} (${Math.round((wins / closed.length) * 100)}%)`, color: '#d1d4dc' }
+      ? { text: `${wins} alvos · ${closed.length - wins - bes} stops${bes ? ` · ${bes} no BE` : ''} (${Math.round((wins / closed.length) * 100)}%)`, color: '#d1d4dc' }
       : { text: 'ainda sem sinais fechados', color: '#d1d4dc' },
   ];
   if (closed.length) {

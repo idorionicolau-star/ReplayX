@@ -316,10 +316,20 @@ describe('topo e fundo duplo', () => {
     expect(Math.min(...bars.slice(50, 61).map((b) => b.low))).toBeLessThan(s.entry - risk);
     expect(s.beIdx).not.toBeNull();
     expect(s.exit?.result).toBe('be');
-    expect(signalR(s)).toBe(0);
+    // o BE fica um pouco além da entrada (cobre spread e comissões): sai com um pequeno ganho, nunca perde
+    expect(s.beStop!).toBeLessThan(s.entry);
+    expect(signalR(s)!).toBeGreaterThan(0);
+    expect(signalR(s)!).toBeLessThan(0.3);
+    const pips = run(bars, { ...NO_MAX, bePrice: 0.5 }).signals.filter((x) => x.dir === -1)[0];
+    expect(pips.entry - pips.beStop!).toBeCloseTo(0.5, 6);
+    // no fundo duplo (espelho) o BE fica acima da entrada
+    const buy = run(flip(bars)).signals.filter((x) => x.dir === 1)[0];
+    expect(buy.beStop!).toBeGreaterThan(buy.entry);
+    expect(buy.exit?.result).toBe('be');
+    expect(signalR(buy)!).toBeGreaterThan(0);
     const d = drawDoubleTops(bars, run(bars));
     expect(d.draw.texts.some((t) => t.text === 'BE')).toBe(true);
-    expect(d.draw.texts.some((t) => /saiu a zero/.test(t.text))).toBe(true);
+    expect(d.draw.texts.some((t) => /saiu no BE/.test(t.text))).toBe(true);
     // desligado, o mesmo trajeto acaba no stop
     const off = run(bars, { ...NO_MAX, be: 0 }).signals.filter((x) => x.dir === -1)[0];
     expect(off.exit?.result).toBe('stop');
