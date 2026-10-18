@@ -298,6 +298,15 @@ describe('topo e fundo duplo', () => {
     }
   });
 
+  it('topo antigo demais não conta: no máximo 50 velas (ajustável) entre o 1.º topo e a entrada', () => {
+    const bars = path([[0, 100], [20, 120], [35, 90], [90, 119.8], [91, 119.6], [130, 80]]);
+    expansionDown(bars, 91);
+    expect(run(bars, { ...NO_MAX, maxBars: 50 }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+    expect(run(bars, { ...NO_MAX, maxBars: 80 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    expect(run(bars, { ...NO_MAX, maxBars: 0 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    expect(DT_DEFAULTS.maxBars).toBe(50);
+  });
+
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
     // segundo topo 0,2 abaixo do primeiro
     const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);

@@ -21,7 +21,8 @@ import type { IndicatorMarker } from './registry';
  *    - se o vale entre os topos foi uma correção a sério, a saída é o fundo desse vale;
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
- * 8. Uma operação de cada vez: enquanto uma está aberta, as outras confirmações passam.
+ * 8. O primeiro topo não pode ser antigo: no máximo 50 velas (ajustável) até à vela da entrada.
+ * 9. Uma operação de cada vez: enquanto uma está aberta, as outras confirmações passam.
  *
  * Tudo é decidido só com as velas já fechadas: no replay o sinal aparece na vela em que se confirmou, nunca antes.
  */
@@ -45,13 +46,15 @@ export interface DtOptions {
   tpRatio: number;
   /** Folga do stop acima da caixa, em ATR. */
   stopBuf: number;
+  /** Velas, no máximo, entre o primeiro topo e a vela da entrada: mais do que isso é um topo antigo, não um W. 0 = sem limite. */
+  maxBars: number;
   /** Menos R do que isto (distância ao alvo / distância ao stop) não entra: a entrada ficou longe demais. 0 = sem limite. */
   minRR: number;
   /** Alvo mais longe da entrada do que isto, em ATR, não entra: demora, pode nem lá chegar. 0 = sem limite. */
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50 };
 
 export interface DtPoint {
   idx: number;
@@ -172,6 +175,11 @@ class TopScanner {
       const z = this.zones[zi];
       if (z.dead) continue;
       const top = z.first.price;
+      // topo antigo demais para ser o primeiro ponto do W
+      if (o.maxBars > 0 && t - z.first.idx > o.maxBars) {
+        z.dead = true;
+        continue;
+      }
       // mesmo nível: em pips, se escolhidos; se não, uma fração do ATR ou da altura do padrão (num W grande, uns pips a mais ainda é o mesmo nível)
       const tol = o.tolPrice > 0 ? o.tolPrice : Math.max(o.tol * a, o.tolPct * (top - z.valley.price));
       // rompimento: um fecho acima do nível, ou um pavio que passa muito dele, já é outro nível
