@@ -34,8 +34,14 @@ Linha de tendência, raio, linha de informação, linha estendida, linha com set
 - **Barra de ferramentas no telemóvel** estável: fica aberta enquanto mudas opções e fecha ao escolher uma ferramenta. Com uma ferramenta ativa, tocar no desenho selecionado edita-o em vez de criar outro. Botão para esconder as barras de baixo.
 - **Telemóvel:** toque mais tolerante, pegas maiores e uma **lupa** (como no MT5) que mostra ampliado o ponto debaixo do dedo.
 
-### Indicadores (36)
+### Indicadores (mais de 50)
 Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner, Donchian, VWAP, Supertrend, Parabolic SAR, Ichimoku, ZigZag, Regressão linear, Pivots, Fractais, Volume, RSI, MACD, Estocástico, Stoch RSI, CCI, Williams %R, ADX/DMI, ATR, Desvio padrão, Largura de Bollinger, Momentum, ROC, Awesome Oscillator, TRIX, Aroon, OBV, MFI, CMF e mais. Todos com parâmetros, cores e painéis próprios.
+
+**Indicadores de método** (desenham caixas, linhas e etiquetas por cima do gráfico; só usam velas fechadas, por isso não repintam e servem no replay):
+- **Topo e Fundo Duplo (entradas):** caixa nos dois topos, entrada na vela de rejeição ou de expansão, stop além da caixa, saída no vale (correção a sério) ou na origem da pernada; resultado de cada sinal e placar.
+- **Footprint + Layer Line:** footprint, layer line, rompimento com reteste e divergência escondida no Estocástico; escalonamentos a favor da nova tendência.
+- **Estrutura de Mercado (Top-Down):** topos e fundos reais, BOS e CHoCH em dois intervalos.
+- **Apocalypse:** zonas onde costumam começar pernadas longas, com sinais só quando há significância estatística.
 
 A legenda de cada indicador fica no topo do seu painel e acompanha quando mudas a altura dos painéis. **Toca (ou clica) no nome** para abrir as ações: ocultar, definições, adicionar alerta e remover.
 
