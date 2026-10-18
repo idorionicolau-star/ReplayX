@@ -1231,7 +1231,7 @@ export const INDICATORS: IndicatorDef[] = [
     category: 'Outros',
     overlay: false,
     description:
-      'Painel extra com a curva de capital dos sinais do Topo e Fundo Duplo (os mesmos parâmetros). Cada operação fechada arrisca uma % da conta e rende o seu R. No fim de cada N dias retira o lucro acima do capital inicial (a conta volta ao capital inicial); se a conta estiver abaixo, não retira nem repõe. Mostra a conta, o total retirado e o total (conta + retiradas). Não inclui spread nem comissões. Se for mais de uma operação por dia, cada uma conta pelo capital que a conta tem nesse momento.',
+      'Painel extra com a curva de capital dos sinais do Topo e Fundo Duplo (os mesmos parâmetros). Cada operação fechada arrisca uma % da conta e rende o seu R. No fim de cada N dias retira o lucro acima do capital inicial (a conta volta ao capital inicial); se a conta estiver abaixo, não retira nem repõe. Mostra a conta, o lucro líquido (conta + retiradas - capital inicial, desce quando se perde), o total (conta + retiradas) e, escondido, o retirado bruto (só os lucros que sobraram em cada dia, sem descontar as perdas). Não inclui spread nem comissões. Se for mais de uma operação por dia, cada uma conta pelo capital que a conta tem nesse momento.',
     inputs: [
       numInput('capital', 'Capital inicial', 1000, 100, 1, 1e9),
       numInput('riskPct', 'Risco por operação (% da conta)', 1, 0.25, 0.05, 100),
@@ -1241,7 +1241,8 @@ export const INDICATORS: IndicatorDef[] = [
     ],
     outputs: [
       { key: 'account', label: 'Conta', style: 'step', color: '#2962ff', width: 2 },
-      { key: 'withdrawn', label: 'Retirado', style: 'step', color: '#ff9800', width: 1 },
+      { key: 'net', label: 'Lucro líquido', style: 'step', color: '#ff9800', width: 2 },
+      { key: 'withdrawn', label: 'Retirado (bruto)', style: 'step', color: '#9c27b0', width: 1, hiddenByDefault: true },
       { key: 'total', label: 'Total (conta + retiradas)', style: 'line', color: '#089981', width: 2 },
     ],
     compute(bars, p, ctx) {
@@ -1249,7 +1250,7 @@ export const INDICATORS: IndicatorDef[] = [
       const r = scanDoubleTops(bars, atrFilled(bars, 14), dtOptions(p, pip).options);
       const eq = equityCurve(bars, r.signals, { capital: n(p, 'capital'), riskPct: n(p, 'riskPct'), everyDays: Math.max(0, Math.round(n(p, 'everyDays')) || 0) });
       const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
-      return { values: { account: eq.account, withdrawn: eq.withdrawn, total: eq.total }, wantHistory: goal > 0 && r.signals.length < goal && !(ctx?.historyDone ?? true) };
+      return { values: { account: eq.account, net: eq.net, withdrawn: eq.withdrawn, total: eq.total }, wantHistory: goal > 0 && r.signals.length < goal && !(ctx?.historyDone ?? true) };
     },
   },
 ];

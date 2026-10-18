@@ -39,7 +39,7 @@ Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner,
 
 **Indicadores de método** (desenham caixas, linhas e etiquetas por cima do gráfico; só usam velas fechadas, por isso não repintam e servem no replay):
 - **Topo e Fundo Duplo (entradas):** caixa nos dois topos, praticamente no mesmo nível (tolerância em pips, à escolha); entrada na vela de rejeição, na combinação de duas velas (a que tocou na zona e a seguinte) ou na vela de expansão; stop além da caixa, saída no vale (correção a sério) ou na origem da pernada; não entra com pouco R nem com o alvo longe demais; resultado de cada sinal e placar.
-- **Curva de capital com retiradas (Topo e Fundo Duplo):** painel extra com a curva de capital dos sinais; arrisca uma % da conta por operação e, a cada N dias, retira o lucro acima do capital inicial. Mostra a conta, o retirado e o total.
+- **Curva de capital com retiradas (Topo e Fundo Duplo):** painel extra com a curva de capital dos sinais; arrisca uma % da conta por operação e, a cada N dias, retira o lucro acima do capital inicial. Mostra a conta, o lucro líquido e o total (conta + retiradas).
 - **Footprint + Layer Line:** footprint, layer line, rompimento com reteste e divergência escondida no Estocástico; escalonamentos a favor da nova tendência.
 - **Estrutura de Mercado (Top-Down):** topos e fundos reais, BOS e CHoCH em dois intervalos.
 - **Apocalypse:** zonas onde costumam começar pernadas longas, com sinais só quando há significância estatística.
