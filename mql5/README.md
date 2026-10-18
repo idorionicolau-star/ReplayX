@@ -16,6 +16,12 @@ topo duplo (venda) e fundo duplo (compra), com rejeição, combinação de duas 
 - Breakeven: quando anda a favor 1:1, o stop passa para um pouco além da entrada (folga em pips, ou 0,1 ATR). É feito a cada tick.
 - Aquece com as últimas 3000 velas (não opera nelas) e só entra em sinais novos.
 
+## O que desenha (como o indicador)
+Caixa nos dois topos (vermelha = venda, azul = compra), linhas de **Stop**, **Entrada** e **Saída**, seta com o tipo de entrada (rejeição, combinação, expansão), "BE" quando o stop passa para o breakeven, o resultado de cada sinal ("✓ alvo +2,3R", "✗ stop -1R", "saiu no BE") e um cartão no canto com os sinais, alvos/stops, soma e média de R e o "mesmo nível" em pips.
+- `InpDraw` liga/desliga os desenhos; `InpDrawHistory` desenha também os sinais do aquecimento.
+- No **Strategy Tester** os desenhos só aparecem com o **modo visual** ligado (nos testes sem visual não se desenha, para ir mais depressa).
+- O resultado desenhado de cada sinal é calculado vela a vela, como no indicador; o resultado real da conta pode diferir um pouco (spread e breakeven por tick).
+
 ## Entradas principais
 | Entrada | Padrão | O que faz |
 |---|---|---|

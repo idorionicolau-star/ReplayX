@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                          ReplayX_DoubleTop.mq5   |
 //|  Topo e Fundo Duplo (rejeição, combinação de 2 velas, expansão)  |
 //|  Porte do indicador "Topo e Fundo Duplo" do ReplayX.             |
@@ -38,6 +38,10 @@ input int    InpMaxConsecLosses = 0; // Pára o dia depois de N perdas seguidas 
 input double InpMaxDailyLossPct = 0.0; // Pára o dia com esta perda (% do saldo; 0 = desligado)
 input bool   InpAllowBuy    = true;  // Permitir compras
 input bool   InpAllowSell   = true;  // Permitir vendas
+
+input group "Desenho no gráfico"
+input bool   InpDraw        = true;  // Desenhar caixa, stop, entrada, saída, setas, resultados e cartão
+input bool   InpDrawHistory = true;  // Desenhar também os sinais do histórico de aquecimento
 
 input group "Geral"
 input long   InpMagic       = 20251018; // Número mágico
@@ -85,6 +89,25 @@ struct SSignal
    double stop;
    double target;
    int    trigger;     // 0 rejeição, 1 combinação, 2 expansão
+   double boxHi;       // caixa (no espaço espelhado)
+   double boxLo;
+   int    firstIdx;
+   int    secondIdx;
+   int    targetIdx;   // vela de onde vem a saída
+  };
+
+//--- Registo de cada sinal (preços reais) para desenhar e para o placar
+struct SRec
+  {
+   int    id;
+   int    dir;         // 1 compra, -1 venda
+   int    firstIdx, secondIdx, idx, targetIdx;
+   double boxHi, boxLo, entry, stop, target;
+   int    trigger;
+   int    beIdx;       // -1 = sem breakeven
+   double beStop;
+   int    exitIdx;     // -1 = em curso
+   int    result;      // 0 em curso, 1 alvo, 2 stop, 3 breakeven
   };
 
 //+------------------------------------------------------------------+
@@ -357,6 +380,8 @@ bool CDtScanner::Step(int t, bool busy, SSignal &sig)
       if(busy) { zones[zi].dead = true; continue; }
 
       double boxHi = MathMax(top, zones[zi].second.price);
+      double lowerTop = MathMin(top, zones[zi].second.price);
+      double boxLo = MathMin(lowerTop - 0.15 * a, MathMax(MathMax(zones[zi].firstBody, zones[zi].secondBody), lowerTop - 0.35 * a));
       double entry = C(t);
       double stop = boxHi + InpStopBuf * a;
       double leg = top - zones[zi].origin.price;
@@ -391,6 +416,11 @@ bool CDtScanner::Step(int t, bool busy, SSignal &sig)
       sig.stop = stop;
       sig.target = target;
       sig.trigger = rejection ? 0 : (combo ? 1 : 2);
+      sig.boxHi = boxHi;
+      sig.boxLo = boxLo;
+      sig.firstIdx = zones[zi].first.idx;
+      sig.secondIdx = zones[zi].second.idx;
+      sig.targetIdx = targetFrom.idx;
       // operação virtual (aquecimento)
       vOpen = true; vIdx = t; vEntry = entry; vStop = stop; vTarget = target; vBe = false; vBeStop = 0;
       busy = true;
@@ -548,6 +578,187 @@ void OpenTrade(bool buy, const SSignal &sig, double sign)
    else    Print((buy ? "COMPRA " : "VENDA "), why, " lote ", DoubleToString(lots, 2), " SL ", DoubleToString(stop, _Digits), " TP ", DoubleToString(target, _Digits));
   }
 
+//+------------------------------------------------------------------+
+//| Registo dos sinais, desenho e placar                             |
+//+------------------------------------------------------------------+
+SRec gRec[];
+int  gNRec = 0;
+int  gRecId = 0;
+#define PFX "RXDT_"
+
+bool CanDraw()
+  {
+   if(!InpDraw) return false;
+   if(MQLInfoInteger(MQL_TESTER) && !MQLInfoInteger(MQL_VISUAL_MODE)) return false;
+   return true;
+  }
+
+void PutLine(const string name, datetime t1, double p1, datetime t2, double p2, color col)
+  {
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_TREND, 0, t1, p1, t2, p2);
+      ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+      ObjectSetInteger(0, name, OBJPROP_RAY_RIGHT, false);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+     }
+   ObjectMove(0, name, 0, t1, p1);
+   ObjectMove(0, name, 1, t2, p2);
+  }
+
+void PutText(const string name, datetime t, double price, const string text, color col, ENUM_ANCHOR_POINT anchor)
+  {
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_TEXT, 0, t, price);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 8);
+     }
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR, anchor);
+   ObjectMove(0, name, 0, t, price);
+  }
+
+double RecR(const SRec &r)
+  {
+   double risk = MathAbs(r.stop - r.entry);
+   if(risk <= 0.0 || r.result == 0) return 0.0;
+   if(r.result == 2) return -1.0;
+   if(r.result == 1) return MathAbs(r.target - r.entry) / risk;
+   return (r.dir < 0 ? (r.entry - r.beStop) : (r.beStop - r.entry)) / risk;
+  }
+
+string TriggerName(int k) { return k == 0 ? "rejeição" : (k == 1 ? "combinação" : "expansão"); }
+
+void DrawRec(int k)
+  {
+   if(!CanDraw()) return;
+   SRec r = gRec[k];
+   bool buy = r.dir > 0;
+   string base = PFX + IntegerToString(r.id) + "_";
+   int last = gN - 1;
+   int endIdx = r.exitIdx >= 0 ? r.exitIdx : last;
+   datetime tEnd = gT[endIdx];
+   color colBox = buy ? clrLavender : clrMistyRose;
+   color colEdge = buy ? clrRoyalBlue : clrCrimson;
+   string nb = base + "box";
+   int boxEnd = MathMax(r.idx, r.secondIdx + 1);
+   if(boxEnd > last) boxEnd = last;
+   if(ObjectFind(0, nb) < 0)
+     {
+      ObjectCreate(0, nb, OBJ_RECTANGLE, 0, gT[r.firstIdx], r.boxHi, gT[boxEnd], r.boxLo);
+      ObjectSetInteger(0, nb, OBJPROP_COLOR, colEdge);
+      ObjectSetInteger(0, nb, OBJPROP_FILL, true);
+      ObjectSetInteger(0, nb, OBJPROP_BACK, true);
+      ObjectSetInteger(0, nb, OBJPROP_SELECTABLE, false);
+     }
+   ObjectSetInteger(0, nb, OBJPROP_BGCOLOR, colBox);
+   PutLine(base + "stop", gT[r.firstIdx], r.stop, tEnd, r.stop, clrTomato);
+   PutText(base + "stopt", gT[(r.firstIdx + endIdx) / 2], r.stop, "Stop", clrTomato, buy ? ANCHOR_UPPER : ANCHOR_LOWER);
+   PutLine(base + "entry", gT[r.idx], r.entry, tEnd, r.entry, clrSilver);
+   PutText(base + "entryt", gT[(r.idx + endIdx) / 2], r.entry, "Entrada", clrGray, buy ? ANCHOR_LOWER : ANCHOR_UPPER);
+   PutLine(base + "tp", gT[r.targetIdx], r.target, tEnd, r.target, clrTeal);
+   PutText(base + "tpt", gT[(r.targetIdx + endIdx) / 2], r.target, "Saída", clrTeal, buy ? ANCHOR_LOWER : ANCHOR_UPPER);
+   string na = base + "seta";
+   if(ObjectFind(0, na) < 0)
+     {
+      ObjectCreate(0, na, buy ? OBJ_ARROW_BUY : OBJ_ARROW_SELL, 0, gT[r.idx], r.entry);
+      ObjectSetInteger(0, na, OBJPROP_SELECTABLE, false);
+     }
+   PutText(base + "sinal", gT[r.idx], buy ? gL[r.idx] : gH[r.idx], (buy ? "COMPRA (" : "VENDA (") + TriggerName(r.trigger) + ")", buy ? clrRoyalBlue : clrCrimson, buy ? ANCHOR_UPPER : ANCHOR_LOWER);
+   if(r.beIdx >= 0) PutText(base + "be", gT[r.beIdx], r.entry, "BE", clrGray, buy ? ANCHOR_UPPER : ANCHOR_LOWER);
+   if(r.result == 1)
+      PutText(base + "res", gT[r.exitIdx], r.target, "✓ alvo +" + DoubleToString(RecR(r), 1) + "R", clrTeal, buy ? ANCHOR_LOWER : ANCHOR_UPPER);
+   else if(r.result == 2)
+      PutText(base + "res", gT[r.exitIdx], r.stop, "✗ stop -1R", clrTomato, buy ? ANCHOR_UPPER : ANCHOR_LOWER);
+   else if(r.result == 3)
+      PutText(base + "res", gT[r.exitIdx], r.beStop, "= saiu no BE (cobre custos)", clrGray, buy ? ANCHOR_UPPER : ANCHOR_LOWER);
+  }
+
+void DrawPanel()
+  {
+   if(!CanDraw()) return;
+   int closed = 0, wins = 0, stops = 0, bes = 0;
+   double sum = 0.0;
+   for(int i = 0; i < gNRec; i++)
+     {
+      if(gRec[i].result == 0) continue;
+      closed++;
+      if(gRec[i].result == 1) wins++;
+      else if(gRec[i].result == 2) stops++;
+      else bes++;
+      sum += RecR(gRec[i]);
+     }
+   string txt = "Topo/fundo duplo: " + IntegerToString(gNRec) + " sinais\n";
+   if(closed > 0)
+     {
+      txt += IntegerToString(wins) + " alvos · " + IntegerToString(stops) + " stops";
+      if(bes > 0) txt += " · " + IntegerToString(bes) + " no BE";
+      txt += " (" + IntegerToString((int)MathRound(100.0 * wins / closed)) + "%)\n";
+      txt += "soma " + (sum >= 0 ? "+" : "") + DoubleToString(sum, 2) + "R · média " + (sum >= 0 ? "+" : "") + DoubleToString(sum / closed, 2) + "R por sinal\n";
+     }
+   else txt += "ainda sem sinais fechados\n";
+   double a = gN > 0 ? gAtr[gN - 1] : 0.0;
+   double pips = InpTolPips > 0.0 ? InpTolPips : (MathMax(InpTolAtr * a, 0.0) / gPip);
+   txt += "mesmo nível: ±" + DoubleToString(pips, pips >= 10 ? 0 : 1) + " pips" + (InpTolPips > 0.0 ? "" : " ou " + DoubleToString(InpTolPct, 0) + "% do padrão (automático)");
+   Comment(txt);
+  }
+
+void AddRecord(bool buy, const SSignal &sig, double sign)
+  {
+   ArrayResize(gRec, gNRec + 1);
+   SRec r;
+   gRecId++;
+   r.id = gRecId;
+   r.dir = buy ? 1 : -1;
+   r.firstIdx = sig.firstIdx; r.secondIdx = sig.secondIdx; r.idx = sig.idx; r.targetIdx = sig.targetIdx;
+   // de volta aos preços reais
+   r.boxHi = sign > 0 ? sig.boxHi : -sig.boxLo;
+   r.boxLo = sign > 0 ? sig.boxLo : -sig.boxHi;
+   r.entry = sign * sig.entry; r.stop = sign * sig.stop; r.target = sign * sig.target;
+   r.trigger = sig.trigger;
+   r.beIdx = -1; r.beStop = 0.0; r.exitIdx = -1; r.result = 0;
+   gRec[gNRec] = r;
+   gNRec++;
+   if(gWarm && !InpDrawHistory) return;
+   DrawRec(gNRec - 1);
+  }
+
+// Resultado de cada sinal vela a vela (como no indicador: na mesma vela conta primeiro o stop)
+void UpdateRecords(int t)
+  {
+   for(int k = 0; k < gNRec; k++)
+     {
+      if(gRec[k].result != 0) continue;
+      if(t <= gRec[k].idx) continue;
+      bool sell = gRec[k].dir < 0;
+      double stopNow = gRec[k].beIdx >= 0 ? gRec[k].beStop : gRec[k].stop;
+      bool changed = false;
+      if(sell ? gH[t] >= stopNow : gL[t] <= stopNow)
+        { gRec[k].exitIdx = t; gRec[k].result = gRec[k].beIdx >= 0 ? 3 : 2; changed = true; }
+      else if(sell ? gL[t] <= gRec[k].target : gH[t] >= gRec[k].target)
+        { gRec[k].exitIdx = t; gRec[k].result = 1; changed = true; }
+      else if(InpBeAt > 0.0 && gRec[k].beIdx < 0)
+        {
+         double risk = MathAbs(gRec[k].stop - gRec[k].entry);
+         bool reached = sell ? gL[t] <= gRec[k].entry - InpBeAt * risk : gH[t] >= gRec[k].entry + InpBeAt * risk;
+         if(reached)
+           {
+            double off = InpBePips > 0.0 ? InpBePips * gPip : 0.1 * gAtr[t];
+            gRec[k].beIdx = t;
+            gRec[k].beStop = sell ? gRec[k].entry - off : gRec[k].entry + off;
+            changed = true;
+           }
+        }
+      if(!gWarm || InpDrawHistory)
+        {
+         if(changed || gRec[k].result == 0) DrawRec(k);
+        }
+     }
+  }
+
 //--- Vela nova fechada: avança as duas pesquisas
 void ProcessBar()
   {
@@ -555,23 +766,27 @@ void ProcessBar()
    if(t == 0) { gSell.OnFirstBar(); gBuy.OnFirstBar(); return; }
    SSignal sSig, bSig;
    sSig.fired = false; bSig.fired = false;
+   UpdateRecords(t);
    if(gWarm)
      {
       gSell.VirtualExits(t);
       gBuy.VirtualExits(t);
       bool busy = gSell.vOpen || gBuy.vOpen;
-      gSell.Step(t, busy, sSig);
+      if(gSell.Step(t, busy, sSig)) AddRecord(false, sSig, 1.0);
       busy = gSell.vOpen || gBuy.vOpen;
-      gBuy.Step(t, busy, bSig);
+      if(gBuy.Step(t, busy, bSig)) AddRecord(true, bSig, -1.0);
       return;
      }
    ulong tk;
    bool busy = FindPosition(tk);
    bool allowed = TradingAllowed();
    bool sFired = gSell.Step(t, busy || !allowed || !InpAllowSell, sSig);
+   if(sFired) AddRecord(false, sSig, 1.0);
    if(sFired && !busy && allowed && InpAllowSell) { OpenTrade(false, sSig, 1.0); busy = FindPosition(tk); }
    bool bFired = gBuy.Step(t, busy || !allowed || !InpAllowBuy, bSig);
+   if(bFired) AddRecord(true, bSig, -1.0);
    if(bFired && !busy && allowed && InpAllowBuy) OpenTrade(true, bSig, -1.0);
+   DrawPanel();
   }
 
 void SyncBars()
@@ -626,7 +841,9 @@ int OnInit()
   {
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
    gPip = (digits == 3 || digits == 5) ? 10.0 * _Point : _Point;
-   gN = 0; gAtrReady = false; gAtrCount = 0; gAtrSeed = 0.0; gAtrPrev = 0.0;
+   gN = 0; gNRec = 0; gRecId = 0; ArrayResize(gRec, 0);
+   ObjectsDeleteAll(0, PFX);
+   gAtrReady = false; gAtrCount = 0; gAtrSeed = 0.0; gAtrPrev = 0.0;
    gSell.Init(1.0);
    gBuy.Init(-1.0);
    gWarm = true;
@@ -646,6 +863,7 @@ int OnInit()
      }
    gWarm = false;
    gLastBar = iTime(_Symbol, _Period, 0);
+   DrawPanel();
 
    gTrade.SetExpertMagicNumber(InpMagic);
    gTrade.SetDeviationInPoints(InpDeviation);
@@ -661,4 +879,14 @@ void OnTick()
    if(bar == gLastBar) return;
    gLastBar = bar;
    SyncBars();
+  }
+
+void OnDeinit(const int reason)
+  {
+   // no testador deixa os desenhos no fim para poderes ver; no gráfico normal limpa
+   if(!MQLInfoInteger(MQL_TESTER))
+     {
+      ObjectsDeleteAll(0, PFX);
+      Comment("");
+     }
   }
