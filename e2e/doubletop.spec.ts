@@ -60,3 +60,25 @@ test('Topo e Fundo Duplo: carrega passado sozinho até 200 sinais (ou até o his
   expect(barsAfter).toBeGreaterThan(barsBefore);
   expect(errors).toEqual([]);
 });
+
+test('Curva de capital com retiradas: abre num painel extra e desenha a conta, o retirado e o total', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await enterAsGuest(page);
+  await page.evaluate(() => (window as unknown as { __rxBilling: { setState(s: object): void } }).__rxBilling.setState({ loaded: false }));
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 500);
+  await page.click('[data-testid=indicators-button]');
+  await page.getByPlaceholder('Procurar indicador').fill('Curva de capital');
+  await page.getByTestId('indicator-doubletop-equity').click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('indicator-name').filter({ hasText: 'CC' })).toBeVisible();
+  await expect.poll(() =>
+    page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, { indicators: Map<string, { def?: { id: string }; values: Record<string, number[]> }> }> }).__rxCharts.values()][0];
+      for (const v of c.indicators.values()) if (v.def?.id === 'doubletop-equity') return v.values.total?.some((x) => Number.isFinite(x) && x > 0) ?? false;
+      return false;
+    }),
+  ).toBe(true);
+  expect(errors).toEqual([]);
+});
