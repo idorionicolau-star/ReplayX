@@ -140,8 +140,11 @@ export class SegmentLayer implements ISeriesPrimitive<Time> {
         ctx.font = `${t.bold === false ? 500 : 700} ${size}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        // fora do ecrã: não vale a pena medir nem desenhar (com muitos sinais isto pesa)
+        const ax = t.edge === 'right' ? 0 : x(t.i);
+        if (ax === null || ax < -300 || ax > mediaSize.width + 300) continue;
         const w = ctx.measureText(t.text).width;
-        const cx = t.edge === 'right' ? mediaSize.width - 8 - w / 2 : x(t.i);
+        const cx = t.edge === 'right' ? mediaSize.width - 8 - w / 2 : ax;
         const cy = y(t.p);
         if (cx === null || cy === null || cx < -40 || cx > mediaSize.width + 40) continue;
         const gap = size * 0.9;

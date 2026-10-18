@@ -35,9 +35,11 @@ export interface DtOptions {
   tpRatio: number;
   /** Folga do stop acima da caixa, em ATR. */
   stopBuf: number;
+  /** Alvo a mais do que isto em R (distância ao alvo / distância ao stop) não entra: está longe demais. 0 = sem limite. */
+  maxRR: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.75, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.35, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, maxRR: 3 };
 
 export interface DtPoint {
   idx: number;
@@ -171,7 +173,8 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const body = Math.abs(b.close - b.open);
       // rejeição: toca na zona, vela de tamanho a sério, pavio grande e fecha fora da zona do topo (rejeitou o nível)
       const rejection = reaches && range >= 0.8 * a && upperWick >= o.wick * range && b.close < top - 0.3 * a;
-      const expansion = b.close < b.open && body >= o.expansion * a && t - z.touchedAt <= 2;
+      // expansão: vela forte contra o topo logo a seguir ao toque no nível (na própria vela ou na seguinte)
+      const expansion = b.close < b.open && body >= o.expansion * a && t - z.touchedAt <= 1;
       if (fired || !(rejection || expansion)) continue;
       // já há uma venda aberta: esta confirmação faz parte da mesma ideia
       if (open) {
@@ -182,7 +185,7 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const boxHi = Math.max(top, z.second.price);
       // a caixa vai dos pavios dos topos até ao topo dos corpos (pelo menos um pouco abaixo do topo mais baixo)
       const lowerTop = Math.min(top, z.second.price);
-      const boxLo = Math.min(lowerTop - 0.2 * a, Math.max(z.firstBody, z.secondBody, lowerTop - 0.6 * a));
+      const boxLo = Math.min(lowerTop - 0.15 * a, Math.max(z.firstBody, z.secondBody, lowerTop - 0.35 * a));
       const entry = b.close;
       const stop = boxHi + o.stopBuf * a;
       const leg = top - z.origin.price;
@@ -191,6 +194,8 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const target = targetFrom.price;
       z.dead = true;
       if (!(target < entry) || !(stop > entry)) continue;
+      // alvo longe demais: demora, pode nem lá chegar — não entra
+      if (o.maxRR > 0 && (entry - target) / (stop - entry) > o.maxRR) continue;
       fired = true;
       open = {
         dir: -1,
@@ -271,7 +276,7 @@ export function signalR(s: DtSignal): number | null {
   return s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
 }
 
-export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 12, goal?: { target: number; historyDone: boolean }): DtOutput {
+export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 3000, goal?: { target: number; historyDone: boolean }): DtOutput {
   const last = bars.length - 1;
   const rects: DrawRect[] = [];
   const lines: DrawLine[] = [];
