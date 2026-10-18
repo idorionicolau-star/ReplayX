@@ -24,8 +24,8 @@ function path(points: [number, number][]): Bar[] {
 }
 
 const flip = (bars: Bar[]): Bar[] => bars.map((b) => ({ ...b, open: 200 - b.open, high: 200 - b.low, low: 200 - b.high, close: 200 - b.close }));
-/** Sem o limite de R do alvo (os trajetos dos testes têm alvos longos); o limite tem o seu próprio teste. */
-const NO_MAX = { ...DT_DEFAULTS, maxRR: 0 };
+/** Sem os limites de R e de alvo (os trajetos dos testes têm alvos longos); os limites têm os seus próprios testes. */
+const NO_MAX = { ...DT_DEFAULTS, minRR: 0, maxTarget: 0 };
 const run = (bars: Bar[], o = NO_MAX) => scanDoubleTops(bars, atrFilled(bars, 14), o);
 
 /** Vela de expansão para baixo (venda) na vela i, a abrir onde a anterior fechou. */
@@ -160,7 +160,7 @@ describe('topo e fundo duplo', () => {
   it('pede mais passado enquanto tiver menos sinais que o objetivo; quando o histórico acaba, diz quantos encontrou', () => {
     const def = getIndicator('doubletop')!;
     const bars = deepValley();
-    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), maxRR: 0 };
+    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minRR: 0, maxTarget: 0 };
     expect(p.minSignals).toBe(200);
     const more = def.compute(bars, p, { historyDone: false });
     expect(more.wantHistory).toBe(true);
@@ -173,14 +173,22 @@ describe('topo e fundo duplo', () => {
     expect(def.compute(bars, { ...p, minSignals: 0 }, { historyDone: false }).wantHistory).toBe(false);
   });
 
-  it('alvo longe demais (mais R do que o máximo) não entra; sem limite, entra', () => {
+  it('entrada longe demais (menos R do que o mínimo) não entra; com um mínimo mais baixo, entra', () => {
     const bars = deepValley();
     const free = run(bars).signals.filter((x) => x.dir === -1);
     expect(free).toHaveLength(1);
     const rr = (free[0].entry - free[0].target) / (free[0].stop - free[0].entry);
-    expect(run(bars, { ...DT_DEFAULTS, maxRR: Math.floor(rr) }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
-    expect(run(bars, { ...DT_DEFAULTS, maxRR: Math.ceil(rr) }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
-    expect(DT_DEFAULTS.maxRR).toBe(3);
+    expect(run(bars, { ...NO_MAX, minRR: rr + 0.1 }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+    expect(run(bars, { ...NO_MAX, minRR: rr - 0.1 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    expect(DT_DEFAULTS.minRR).toBe(1.5);
+  });
+
+  it('alvo longe demais da entrada (em ATR) não entra; sem limite, entra', () => {
+    const bars = deepValley();
+    const x = run(bars).signals.filter((s) => s.dir === -1)[0];
+    const dist = (x.entry - x.target) / atrFilled(bars, 14)[x.idx];
+    expect(run(bars, { ...NO_MAX, maxTarget: dist - 0.1 }).signals.filter((s) => s.dir === -1)).toHaveLength(0);
+    expect(run(bars, { ...NO_MAX, maxTarget: dist + 0.1 }).signals.filter((s) => s.dir === -1)).toHaveLength(1);
   });
 
   it('os topos têm de estar quase no mesmo nível: um segundo topo meio ATR abaixo já não conta', () => {
@@ -199,6 +207,82 @@ describe('topo e fundo duplo', () => {
     const lowerTop = Math.min(x.first.price, x.second.price);
     expect(x.boxLo).toBeGreaterThanOrEqual(lowerTop - 0.35 * a - 1e-9);
     expect(x.boxHi - x.boxLo).toBeLessThan(1.5 * a);
+  });
+
+  /** Topo em 120.3 (pavio da vela 20); a vela 48 é verde e chega toda ao topo, a 49 é vermelha forte e devolve-a. */
+  function comboTop(touchHigh = 120.3) {
+    const b = path([[0, 100], [20, 120], [35, 105], [47, 119], [48, 120], [49, 118.7], [80, 95]]);
+    b[48] = { ...b[48], open: 119, close: 120, high: touchHigh, low: 118.9 };
+    b[49] = { ...b[49], open: 120, close: 118.7, high: 120.1, low: 118.5 };
+    return b;
+  }
+
+  it('combinação de velas: a vela que tocou na zona e a seguinte, juntas, fazem a rejeição; entra no fecho da segunda', () => {
+    const bars = comboTop();
+    const a = atrFilled(bars, 14)[49];
+    // nenhuma das duas sozinha confirma: a vermelha não tem pavio em cima nem corpo de expansão
+    expect(bars[49].open - bars[49].close).toBeLessThan(a);
+    const s = run(bars).signals.filter((x) => x.dir === -1);
+    expect(s).toHaveLength(1);
+    expect(s[0].idx).toBe(49);
+    expect(s[0].trigger).toBe('combinação');
+    expect(s[0].entry).toBeCloseTo(118.7, 6);
+    expect(s[0].stop).toBeGreaterThan(120.3);
+    const d = drawDoubleTops(bars, run(bars));
+    expect(d.markers.some((m) => m.text === 'VENDA (combinação)')).toBe(true);
+  });
+
+  it('combinação no fundo duplo (o espelho): vermelha que chega toda ao fundo e verde que rejeita = compra cedo', () => {
+    const bars = flip(comboTop());
+    const s = run(bars).signals.filter((x) => x.dir === 1);
+    expect(s).toHaveLength(1);
+    expect(s[0].trigger).toBe('combinação');
+    expect(s[0].idx).toBe(49);
+    expect(s[0].entry).toBeCloseTo(200 - 118.7, 6);
+  });
+
+  it('combinação só com a vela que tocou na zona: se a primeira não chega ao nível, não há entrada', () => {
+    const bars = comboTop(119.4);
+    bars[49] = { ...bars[49], high: 119.3 };
+    expect(run(bars).signals.filter((x) => x.dir === -1 && x.idx === 49)).toHaveLength(0);
+  });
+
+  it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
+    // segundo topo 0,2 abaixo do primeiro
+    const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
+    expansionDown(near, 49);
+    expect(run(near, { ...NO_MAX, tolPrice: 0.1 }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+    expect(run(near, { ...NO_MAX, tolPrice: 0.3 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    // segundo topo 1,1 abaixo: só com uma tolerância grande
+    const far = path([[0, 100], [20, 120], [35, 105], [48, 118.9], [49, 118.7], [80, 95]]);
+    expansionDown(far, 49);
+    expect(run(far, { ...NO_MAX, tolPrice: 1.2 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+  });
+
+  it('o pavio pode furar um pouco o nível, mas se passa muito dele já é outro nível', () => {
+    const base = () => path([[0, 100], [20, 120], [35, 105], [47, 118.6], [48, 118.4], [80, 95]]);
+    const small = base();
+    small[48] = { ...small[48], open: 118.5, close: 119.0, high: 120.6, low: 118.3 };
+    expect(run(small).signals.filter((x) => x.dir === -1)).toHaveLength(1);
+    const big = base();
+    big[48] = { ...big[48], open: 118.5, close: 119.0, high: 122.5, low: 118.3 };
+    expect(run(big).signals.filter((x) => x.dir === -1)).toHaveLength(0);
+  });
+
+  it('tolerância em pips no catálogo: usa o pip do símbolo e mostra no cartão quanto vale', () => {
+    const def = getIndicator('doubletop')!;
+    const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
+    expansionDown(near, 49);
+    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minRR: 0, maxTarget: 0, minSignals: 0 };
+    expect(p.tolPips).toBe(0);
+    const auto = def.compute(near, p, { historyDone: true, pip: 0.01 });
+    expect(auto.markers!.some((m) => m.text?.startsWith('VENDA'))).toBe(true);
+    expect(auto.draw!.panel!.lines.some((l) => /^mesmo nível: ±\d+ pips \(automático\)$/.test(l.text))).toBe(true);
+    const tight = def.compute(near, { ...p, tolPips: 5 }, { historyDone: true, pip: 0.01 });
+    expect(tight.markers!.some((m) => m.text?.startsWith('VENDA'))).toBe(false);
+    expect(tight.draw!.panel!.lines.some((l) => l.text === 'mesmo nível: ±5,0 pips')).toBe(true);
+    // sem pip conhecido, fica no automático
+    expect(def.compute(near, { ...p, tolPips: 5 }, { historyDone: true }).markers!.some((m) => m.text?.startsWith('VENDA'))).toBe(true);
   });
 
   it('ruído e poucos dados não estoiram e são rápidos', () => {

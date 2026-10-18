@@ -9,13 +9,18 @@ import type { IndicatorMarker } from './registry';
  * Para vendas (topo duplo; o fundo duplo é o espelho):
  * 1. Primeiro topo: uma oscilação já confirmada (o preço afastou-se dele).
  * 2. O preço desce até um vale com profundidade suficiente e volta a subir à zona do primeiro topo.
- * 3. Confirmação, que é a entrada (no fecho da vela):
+ * 3. Os dois topos ficam praticamente no mesmo nível: o segundo chega ao primeiro com uma tolerância pequena
+ *    (em pips, ou em ATR quando não se escolhe pips); o pavio pode furar um pouco o nível, o fecho não.
+ * 4. Confirmação, que é a entrada (no fecho da vela):
  *    - vela de rejeição: toca na zona e rejeita a maior parte do corpo (pavio grande), pode ser de qualquer cor;
+ *    - ou combinação de duas velas: a vela que tocou na zona e a seguinte, juntas (duas de M5 são uma de M10),
+ *      fazem uma rejeição — por exemplo, uma verde que chega toda ao topo e uma vermelha que a devolve;
  *    - ou vela de expansão: uma vela forte contra o topo logo depois de tocar na zona.
- * 4. Stop logo acima da caixa (os dois topos).
- * 5. Saída (alvo):
+ * 5. Stop logo acima da caixa (os dois topos).
+ * 6. Saída (alvo):
  *    - se o vale entre os topos foi uma correção a sério, a saída é o fundo desse vale;
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
+ * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
  *
  * Tudo é decidido só com as velas já fechadas: no replay o sinal aparece na vela em que se confirmou, nunca antes.
  */
@@ -23,8 +28,10 @@ import type { IndicatorMarker } from './registry';
 export interface DtOptions {
   /** Oscilação mínima, em ATR, para o primeiro topo contar. */
   sens: number;
-  /** Quanto o segundo topo pode ficar abaixo (ou passar acima) do primeiro, em ATR. */
+  /** Mesmo nível: quanto o segundo topo pode ficar abaixo (ou fechar acima) do primeiro, em ATR. Só conta quando `tolPrice` é 0. */
   tol: number;
+  /** Mesmo nível em preço (pips × tamanho do pip). 0 = automático, pelo `tol` em ATR. */
+  tolPrice: number;
   /** Profundidade mínima do vale entre os topos, em ATR. */
   minDepth: number;
   /** Pavio mínimo da vela de rejeição, em fração do tamanho da vela. */
@@ -35,11 +42,13 @@ export interface DtOptions {
   tpRatio: number;
   /** Folga do stop acima da caixa, em ATR. */
   stopBuf: number;
-  /** Alvo a mais do que isto em R (distância ao alvo / distância ao stop) não entra: está longe demais. 0 = sem limite. */
-  maxRR: number;
+  /** Menos R do que isto (distância ao alvo / distância ao stop) não entra: a entrada ficou longe demais. 0 = sem limite. */
+  minRR: number;
+  /** Alvo mais longe da entrada do que isto, em ATR, não entra: demora, pode nem lá chegar. 0 = sem limite. */
+  maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.35, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, maxRR: 3 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1.5, maxTarget: 8 };
 
 export interface DtPoint {
   idx: number;
@@ -56,7 +65,7 @@ export interface DtSignal {
   boxLo: number;
   /** Vela da confirmação (entrada no fecho). */
   idx: number;
-  trigger: 'rejeição' | 'expansão';
+  trigger: 'rejeição' | 'combinação' | 'expansão';
   entry: number;
   stop: number;
   target: number;
@@ -92,6 +101,8 @@ const MAX_ZONES = 6;
 /** Velas depois do último toque na zona em que ainda se aceita a confirmação. */
 const WAIT = 6;
 const MIN_GAP = 3;
+/** O pavio pode furar o nível até este múltiplo da tolerância; mais do que isso já é outro nível. */
+const PIERCE = 3;
 
 interface Side {
   signals: DtSignal[];
@@ -110,7 +121,9 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
   let open: DtSignal | null = null;
   for (let t = 1; t < n; t++) {
     const b = bars[t];
+    const prev = bars[t - 1];
     const a = atr[t];
+    const tol = o.tolPrice > 0 ? o.tolPrice : o.tol * a;
     // a operação aberta fecha no stop ou no alvo (na mesma vela, conta primeiro o stop)
     if (open && t > open.idx) {
       if (b.high >= open.stop) open.exit = { idx: t, result: 'stop' };
@@ -144,13 +157,14 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
     for (const z of zones) {
       if (z.dead) continue;
       const top = z.first.price;
-      // rompimento: um fecho bem acima do primeiro topo acaba com a ideia
-      if (b.close > top + o.tol * a) {
+      // rompimento: um fecho acima do nível, ou um pavio que passa muito dele, já é outro nível
+      if (b.close > top + tol || b.high > top + PIERCE * tol) {
         z.dead = true;
         continue;
       }
       const deepEnough = top - z.valley.price >= o.minDepth * a;
-      const reaches = b.high >= top - o.tol * a;
+      const reaches = b.high >= top - tol;
+      const prevTouch = z.touchedAt;
       if (z.touchedAt === null) {
         if (b.low < z.valley.price) z.valley = { idx: t, price: b.low };
         if (!(reaches && deepEnough && t - z.first.idx >= MIN_GAP)) continue;
@@ -175,7 +189,20 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const rejection = reaches && range >= 0.8 * a && upperWick >= o.wick * range && b.close < top - 0.3 * a;
       // expansão: vela forte contra o topo logo a seguir ao toque no nível (na própria vela ou na seguinte)
       const expansion = b.close < b.open && body >= o.expansion * a && t - z.touchedAt <= 1;
-      if (fired || !(rejection || expansion)) continue;
+      // combinação: a vela que tocou na zona (verde, a subir até ao topo) e a seguinte, uma vermelha forte que devolve
+      // quase toda a verde; vistas como uma só vela (duas de M5 = uma de M10), fazem uma rejeição com fecho fora da zona
+      const cHigh = Math.max(prev.high, b.high);
+      const cRange = cHigh - Math.min(prev.low, b.low);
+      const combo =
+        prevTouch === t - 1 &&
+        prev.close > prev.open &&
+        b.close < b.open &&
+        body >= 0.6 * a &&
+        prev.close - b.close >= 0.75 * (prev.close - prev.open) &&
+        cRange >= 0.8 * a &&
+        cHigh - Math.max(prev.open, b.close) >= o.wick * cRange &&
+        b.close < top - 0.3 * a;
+      if (fired || !(rejection || combo || expansion)) continue;
       // já há uma venda aberta: esta confirmação faz parte da mesma ideia
       if (open) {
         z.dead = true;
@@ -194,8 +221,9 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const target = targetFrom.price;
       z.dead = true;
       if (!(target < entry) || !(stop > entry)) continue;
-      // alvo longe demais: demora, pode nem lá chegar — não entra
-      if (o.maxRR > 0 && (entry - target) / (stop - entry) > o.maxRR) continue;
+      // entrada longe demais (pouco R até ao alvo) ou alvo longe demais (demora, pode nem lá chegar): não entra
+      if (o.minRR > 0 && (entry - target) / (stop - entry) < o.minRR) continue;
+      if (o.maxTarget > 0 && entry - target > o.maxTarget * a) continue;
       fired = true;
       open = {
         dir: -1,
@@ -204,7 +232,7 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
         boxHi,
         boxLo,
         idx: t,
-        trigger: rejection ? 'rejeição' : 'expansão',
+        trigger: rejection ? 'rejeição' : combo ? 'combinação' : 'expansão',
         entry,
         stop,
         target,
@@ -276,7 +304,7 @@ export function signalR(s: DtSignal): number | null {
   return s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
 }
 
-export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 3000, goal?: { target: number; historyDone: boolean }): DtOutput {
+export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 3000, goal?: { target: number; historyDone: boolean }, levelNote?: string): DtOutput {
   const last = bars.length - 1;
   const rects: DrawRect[] = [];
   const lines: DrawLine[] = [];
@@ -326,6 +354,7 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 300
     const sign = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(v >= 10 || v <= -10 ? 1 : 2)}R`;
     panel.push({ text: `soma ${sign(totalR)} · média ${sign(avgR)} por sinal`, color: totalR >= 0 ? TARGET : STOP });
   }
+  if (levelNote) panel.push({ text: levelNote, color: '#d1d4dc' });
   if (goal && r.signals.length < goal.target) {
     panel.push({
       text: goal.historyDone ? `o histórico acabou: ${r.signals.length} de ${goal.target} sinais` : `a carregar mais passado… ${r.signals.length}/${goal.target} sinais`,

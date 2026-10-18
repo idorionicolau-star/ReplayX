@@ -48,6 +48,8 @@ export interface IndicatorMarker {
 export interface ComputeContext {
   /** Não há mais passado para carregar (os dados acabaram ou chegou-se ao máximo). */
   historyDone: boolean;
+  /** Tamanho de um pip (ou ponto) do símbolo, para entradas em pips. */
+  pip?: number;
 }
 
 export interface IndicatorResult {
@@ -1150,33 +1152,49 @@ export const INDICATORS: IndicatorDef[] = [
     overlay: true,
     layer: true,
     description:
-      'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Os dois topos têm de estar quase no mesmo nível. Saída no vale entre os topos quando foi uma correção a sério, ou na origem da pernada quando os topos estão no fim de uma tendência sem correção; se a saída fica longe demais (mais de 3R, ajustável), não entra. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
+      'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. Os dois topos têm de estar praticamente no mesmo nível: escolhe a tolerância em pips (0 = automática pelo ATR); o pavio pode furar um pouco o nível, o fecho não. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor), combinação (a vela que tocou na zona e a seguinte, juntas, fazem uma rejeição — duas de M5 vistas como uma de M10) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no vale entre os topos quando foi uma correção a sério, ou na origem da pernada quando os topos estão no fim de uma tendência sem correção. Não entra quando a entrada ficou longe demais (menos de 1,5R até ao alvo, ajustável) nem quando o alvo está longe demais. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
     inputs: [
       numInput('sens', 'Oscilação mínima do 1.º topo (ATR)', 2, 0.25, 0.5, 5),
-      numInput('tol', 'Tolerância entre os topos (ATR)', 0.35, 0.05, 0.05, 3),
+      numInput('tolPips', 'Mesmo nível: tolerância em pips (0 = automática)', 0, 1, 0, 1000000),
+      numInput('tolAtr', 'Mesmo nível automático (ATR)', 0.2, 0.05, 0.02, 3),
       numInput('minDepth', 'Profundidade mínima do vale (ATR)', 2.5, 0.25, 0.5, 10),
       numInput('wick', 'Pavio mínimo da rejeição (fração da vela)', 0.5, 0.05, 0.2, 0.9),
       numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
       numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
       numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
-      numInput('maxRR', 'R máximo do alvo (mais longe não entra; 0 = sem limite)', 3, 0.5, 0, 20),
+      numInput('minRR', 'R mínimo (entrada longe demais não entra; 0 = sem limite)', 1.5, 0.25, 0, 10),
+      numInput('maxTarget', 'Alvo máximo desde a entrada (ATR; 0 = sem limite)', 8, 0.5, 0, 50),
       { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
-      const r = scanDoubleTops(bars, atrFilled(bars, 14), {
+      const atr = atrFilled(bars, 14);
+      const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;
+      const tolPips = Math.max(0, n(p, 'tolPips') || 0);
+      const tolPrice = pip && tolPips ? tolPips * pip : 0;
+      const r = scanDoubleTops(bars, atr, {
         sens: n(p, 'sens'),
-        tol: n(p, 'tol'),
+        tol: n(p, 'tolAtr'),
+        tolPrice,
         minDepth: n(p, 'minDepth'),
         wick: n(p, 'wick'),
         expansion: n(p, 'expansion'),
         tpRatio: n(p, 'tpRatio'),
         stopBuf: n(p, 'stopBuf'),
-        maxRR: n(p, 'maxRR'),
+        minRR: n(p, 'minRR'),
+        maxTarget: n(p, 'maxTarget'),
       });
       const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
       const historyDone = ctx?.historyDone ?? true;
-      const out = drawDoubleTops(bars, r, undefined, goal ? { target: goal, historyDone } : undefined);
+      // quanto vale agora a tolerância do mesmo nível, em pips, para se poder escolher um valor
+      let levelNote: string | undefined;
+      const lastAtr = atr[atr.length - 1];
+      if (pip && (tolPrice || lastAtr > 0)) {
+        const pips = (tolPrice || n(p, 'tolAtr') * lastAtr) / pip;
+        const txt = pips >= 10 ? String(Math.round(pips)) : pips.toFixed(1).replace('.', ',');
+        levelNote = `mesmo nível: ±${txt} pips${tolPrice ? '' : ' (automático)'}`;
+      }
+      const out = drawDoubleTops(bars, r, undefined, goal ? { target: goal, historyDone } : undefined, levelNote);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },

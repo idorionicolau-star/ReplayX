@@ -32,6 +32,7 @@ import { alignTime, parseTf, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
 import { nowSec } from '@/core/feed/provider';
 import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance, type ParamValue } from '@/core/indicators/registry';
+import { pipSize } from '@/core/symbols';
 import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
 import { BandFill } from './fill';
 import { SegmentLayer } from './layer';
@@ -1187,7 +1188,7 @@ export class ChartController {
     const bars = this.bars;
     if (!bars.length) return;
     let wantHistory = false;
-    const ctx = { historyDone: this.historyDone() };
+    const ctx = { historyDone: this.historyDone(), pip: this.symbol ? pipSize(this.symbol) : undefined };
     for (const view of this.indicators.values()) {
       try {
         if (view.def) {
