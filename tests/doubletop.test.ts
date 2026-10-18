@@ -149,6 +149,10 @@ describe('topo e fundo duplo', () => {
     expect(d.markers.some((m) => m.text?.startsWith('VENDA'))).toBe(true);
     expect(d.draw.texts.some((t) => t.text.startsWith('✓ alvo'))).toBe(true);
     expect(d.draw.panel!.lines[1].text).toMatch(/1 alvos · 0 stops/);
+    // soma de todos os R dos sinais fechados
+    const r = run(bars);
+    const total = r.signals.map(signalR).filter((v): v is number => v !== null).reduce((a, b) => a + b, 0);
+    expect(d.draw.panel!.lines[2].text).toBe(`soma +${total.toFixed(2)}R · média +${total.toFixed(2)}R por sinal`);
   });
 
   it('ruído e poucos dados não estoiram e são rápidos', () => {

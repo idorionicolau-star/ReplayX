@@ -308,14 +308,19 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 12)
   const closed = r.signals.filter((s) => s.exit);
   const wins = closed.filter((s) => s.exit!.result === 'alvo').length;
   const rs = closed.map(signalR).filter((v): v is number => v !== null);
-  const avgR = rs.length ? rs.reduce((x, y) => x + y, 0) / rs.length : 0;
+  const totalR = rs.reduce((x, y) => x + y, 0);
+  const avgR = rs.length ? totalR / rs.length : 0;
   const lastSig = r.signals[r.signals.length - 1];
   const panel = [
     { text: `Topo/fundo duplo: ${r.signals.length} sinais`, color: '#d1d4dc' },
     closed.length
-      ? { text: `${wins} alvos · ${closed.length - wins} stops (${Math.round((wins / closed.length) * 100)}%) · ${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R por sinal`, color: avgR >= 0 ? TARGET : STOP }
+      ? { text: `${wins} alvos · ${closed.length - wins} stops (${Math.round((wins / closed.length) * 100)}%)`, color: '#d1d4dc' }
       : { text: 'ainda sem sinais fechados', color: '#d1d4dc' },
   ];
+  if (closed.length) {
+    const sign = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(v >= 10 || v <= -10 ? 1 : 2)}R`;
+    panel.push({ text: `soma ${sign(totalR)} · média ${sign(avgR)} por sinal`, color: totalR >= 0 ? TARGET : STOP });
+  }
   if (r.pending.length) panel.push({ text: 'há uma zona à espera de confirmação', color: '#d1d4dc' });
   else if (lastSig && !lastSig.exit) panel.push({ text: `${lastSig.dir === 1 ? 'compra' : 'venda'} em curso`, color: lastSig.dir === 1 ? BUY : SELL });
 
