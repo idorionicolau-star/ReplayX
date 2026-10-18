@@ -355,6 +355,20 @@ describe('topo e fundo duplo', () => {
     expect(buy.target).toBeLessThan(200 - old.target);
   });
 
+  it('a saída não é um fundo que o preço já rompeu: o fundo antigo à esquerda, já quebrado, não conta', () => {
+    // fundo antigo em 100 (vela 5); o preço rompe-o até 95 (vela 30); depois sobe e faz o segundo topo
+    const bars = path([[0, 110], [5, 100], [20, 120], [30, 95], [42, 119.8], [43, 119.6], [80, 85]]);
+    expansionDown(bars, 43);
+    const s = run(bars, { ...NO_MAX, tpNear: true }).signals.filter((x) => x.dir === -1);
+    expect(s).toHaveLength(1);
+    const x = s[0];
+    // não vai ao 100 (já quebrado): vai ao fundo que está de pé, o do meio do M
+    expect(x.target).toBeLessThan(99);
+    expect(x.target).toBeCloseTo(94.7, 5);
+    expect(x.targetFrom.idx).toBe(30);
+    expect(Math.min(...bars.slice(x.targetFrom.idx + 1, x.idx + 1).map((b) => b.low))).toBeGreaterThanOrEqual(x.target);
+  });
+
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
     // segundo topo 0,2 abaixo do primeiro
     const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);

@@ -17,7 +17,8 @@ import type { IndicatorMarker } from './registry';
  *      fazem uma rejeição — por exemplo, uma verde que chega ao topo e uma vermelha forte que a devolve;
  *    - ou vela de expansão: uma vela forte contra o topo logo depois de tocar na zona.
  * 5. Stop logo acima da caixa (os dois topos).
- * 6. Saída (alvo): o fundo (topo, nas compras) mais próximo da entrada que ainda dê o R mínimo. Sem isso:
+ * 6. Saída (alvo): o fundo (topo, nas compras) mais próximo da entrada que ainda dê o R mínimo e que ainda esteja de pé:
+ *    um fundo que o preço já rompeu depois (uma vela mais baixa à direita) não é alvo. Sem isso:
  *    - se o vale entre os topos foi uma correção a sério, a saída é o fundo desse vale;
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
@@ -277,8 +278,13 @@ class TopScanner {
         const risk = stop - entry;
         const room = Math.max(o.minRR * risk, 1e-12);
         let best: DtPoint | null = null;
+        // o fundo é uma barreira: se o preço já passou por baixo dele, deixa de contar (só vale o que ainda está de pé)
+        const standing = (c: DtPoint) => {
+          for (let j = c.idx + 1; j <= t; j++) if (bars[j].low < c.price) return false;
+          return true;
+        };
         for (const c of [...this.lows, z.valley, z.origin]) {
-          if (c.price <= entry - room && (!best || c.price > best.price)) best = c;
+          if (c.price <= entry - room && (!best || c.price > best.price) && standing(c)) best = c;
         }
         if (best) {
           targetFrom = best;
