@@ -2,7 +2,8 @@ import type { Bar } from '../types';
 import * as ta from './ta';
 import { apocalypse, atrFilled, readingLines } from './apocalypse';
 import { drawFootprint, scanFootprint } from './footprint';
-import { drawDoubleTops, scanDoubleTops } from './doubletop';
+import { drawDoubleTops, scanDoubleTops, type DtOptions } from './doubletop';
+import { equityCurve } from './equity';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
@@ -118,6 +119,51 @@ function maDef(id: MaType | 'vwma', name: string, color: string, def = 20): Indi
 }
 
 const MA_OPTIONS = ta.MA_TYPES.map((m) => ({ value: m, label: m.toUpperCase() }));
+
+const DT_INPUTS: InputDef[] = [
+  numInput('sens', 'Oscilação mínima do 1.º topo (ATR)', 2, 0.25, 0.5, 5),
+  numInput('tolPips', 'Mesmo nível: tolerância em pips (0 = automática)', 0, 1, 0, 1000000),
+  numInput('tolAtr', 'Mesmo nível automático (ATR)', 0.2, 0.05, 0.02, 3),
+  numInput('tolPct', 'Mesmo nível automático (% da altura do padrão)', 5, 0.5, 0, 50),
+  numInput('minDepth', 'Profundidade mínima do vale (ATR)', 2.5, 0.25, 0.5, 10),
+  numInput('wick', 'Pavio mínimo da rejeição (fração da vela)', 0.5, 0.05, 0.2, 0.9),
+  numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
+  numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
+  numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
+  { key: 'maxBars', label: 'Velas máximas desde o 1.º topo até à entrada (0 = sem limite)', type: 'int', default: 50, min: 0, max: 500, step: 5 },
+  { key: 'tpNear', label: 'Saída no fundo/topo mais próximo (desligado: vale ou origem da pernada)', type: 'bool', default: true },
+  numInput('beAt', 'Breakeven: stop na entrada quando anda a favor (R; 0 = desligado)', 1, 0.25, 0, 10),
+  numInput('bePips', 'Breakeven: folga para spread e comissões (pips; 0 = automática)', 0, 1, 0, 1000000),
+  numInput('minR', 'R mínimo (entrada longe demais não entra; 0 = sem limite)', 1, 0.25, 0, 10),
+  numInput('maxTargetAtr', 'Alvo máximo desde a entrada (ATR; 0 = sem limite)', 20, 1, 0, 200),
+];
+
+/** Opções do Topo e Fundo Duplo a partir dos parâmetros do indicador (e do pip do símbolo, quando se conhece). */
+function dtOptions(p: Record<string, ParamValue>, pip: number): { options: DtOptions; tolPrice: number } {
+  const tolPips = Math.max(0, n(p, 'tolPips') || 0);
+  const tolPrice = pip && tolPips ? tolPips * pip : 0;
+  return {
+    tolPrice,
+    options: {
+      sens: n(p, 'sens'),
+      tol: n(p, 'tolAtr'),
+      tolPct: n(p, 'tolPct') / 100,
+      tolPrice,
+      minDepth: n(p, 'minDepth'),
+      wick: n(p, 'wick'),
+      expansion: n(p, 'expansion'),
+      tpRatio: n(p, 'tpRatio'),
+      stopBuf: n(p, 'stopBuf'),
+      be: n(p, 'beAt'),
+      tpNear: p.tpNear !== false,
+      bePrice: pip && n(p, 'bePips') > 0 ? n(p, 'bePips') * pip : 0,
+      beAtr: 0.1,
+      maxBars: Math.max(0, Math.round(n(p, 'maxBars')) || 0),
+      minRR: n(p, 'minR'),
+      maxTarget: n(p, 'maxTargetAtr'),
+    },
+  };
+}
 
 export const INDICATORS: IndicatorDef[] = [
   maDef('sma', 'Média Móvel Simples', '#2962ff'),
@@ -1154,47 +1200,16 @@ export const INDICATORS: IndicatorDef[] = [
     description:
       'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. Os dois topos têm de estar praticamente no mesmo nível: escolhe a tolerância em pips (0 = automática, pelo ATR ou pela altura do padrão); o pavio pode furar um pouco o nível, o fecho não. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor), combinação (a vela que tocou na zona e a seguinte, juntas, fazem uma rejeição — duas de M5 vistas como uma de M10) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no fundo (ou topo, nas compras) mais próximo da entrada que ainda dê o R mínimo; desligando, sai no vale entre os topos ou na origem da pernada. Não entra quando a entrada ficou longe demais (menos de 1R até ao alvo, ajustável) nem quando o alvo está longe demais. O primeiro topo não pode ter mais de 50 velas (ajustável) até à entrada. Breakeven: quando o preço anda 1:1 a favor (ajustável), o stop passa para um pouco além da entrada, para cobrir spread e comissões (folga em pips, ou 0,1 ATR). Uma operação de cada vez: enquanto uma compra ou venda está aberta, não entra outra. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
     inputs: [
-      numInput('sens', 'Oscilação mínima do 1.º topo (ATR)', 2, 0.25, 0.5, 5),
-      numInput('tolPips', 'Mesmo nível: tolerância em pips (0 = automática)', 0, 1, 0, 1000000),
-      numInput('tolAtr', 'Mesmo nível automático (ATR)', 0.2, 0.05, 0.02, 3),
-      numInput('tolPct', 'Mesmo nível automático (% da altura do padrão)', 5, 0.5, 0, 50),
-      numInput('minDepth', 'Profundidade mínima do vale (ATR)', 2.5, 0.25, 0.5, 10),
-      numInput('wick', 'Pavio mínimo da rejeição (fração da vela)', 0.5, 0.05, 0.2, 0.9),
-      numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
-      numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
-      numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
-      { key: 'maxBars', label: 'Velas máximas desde o 1.º topo até à entrada (0 = sem limite)', type: 'int', default: 50, min: 0, max: 500, step: 5 },
-      { key: 'tpNear', label: 'Saída no fundo/topo mais próximo (desligado: vale ou origem da pernada)', type: 'bool', default: true },
-      numInput('beAt', 'Breakeven: stop na entrada quando anda a favor (R; 0 = desligado)', 1, 0.25, 0, 10),
-      numInput('bePips', 'Breakeven: folga para spread e comissões (pips; 0 = automática)', 0, 1, 0, 1000000),
-      numInput('minR', 'R mínimo (entrada longe demais não entra; 0 = sem limite)', 1, 0.25, 0, 10),
-      numInput('maxTargetAtr', 'Alvo máximo desde a entrada (ATR; 0 = sem limite)', 20, 1, 0, 200),
+      ...DT_INPUTS,
       { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
       const atr = atrFilled(bars, 14);
       const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;
+      const { options, tolPrice } = dtOptions(p, pip);
       const tolPips = Math.max(0, n(p, 'tolPips') || 0);
-      const tolPrice = pip && tolPips ? tolPips * pip : 0;
-      const r = scanDoubleTops(bars, atr, {
-        sens: n(p, 'sens'),
-        tol: n(p, 'tolAtr'),
-        tolPct: n(p, 'tolPct') / 100,
-        tolPrice,
-        minDepth: n(p, 'minDepth'),
-        wick: n(p, 'wick'),
-        expansion: n(p, 'expansion'),
-        tpRatio: n(p, 'tpRatio'),
-        stopBuf: n(p, 'stopBuf'),
-        be: n(p, 'beAt'),
-        tpNear: p.tpNear !== false,
-        bePrice: pip && n(p, 'bePips') > 0 ? n(p, 'bePips') * pip : 0,
-        beAtr: 0.1,
-        maxBars: Math.max(0, Math.round(n(p, 'maxBars')) || 0),
-        minRR: n(p, 'minR'),
-        maxTarget: n(p, 'maxTargetAtr'),
-      });
+      const r = scanDoubleTops(bars, atr, options);
       const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
       const historyDone = ctx?.historyDone ?? true;
       // quanto vale agora a tolerância do mesmo nível, em pips, para se poder escolher um valor
@@ -1207,6 +1222,34 @@ export const INDICATORS: IndicatorDef[] = [
       }
       const out = drawDoubleTops(bars, r, undefined, goal ? { target: goal, historyDone } : undefined, levelNote);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
+    },
+  },
+  {
+    id: 'doubletop-equity',
+    name: 'Curva de capital com retiradas (Topo e Fundo Duplo)',
+    short: 'CC',
+    category: 'Outros',
+    overlay: false,
+    description:
+      'Painel extra com a curva de capital dos sinais do Topo e Fundo Duplo (os mesmos parâmetros). Cada operação fechada arrisca uma % da conta e rende o seu R. No fim de cada N dias retira o lucro acima do capital inicial (a conta volta ao capital inicial); se a conta estiver abaixo, não retira nem repõe. Mostra a conta, o total retirado e o total (conta + retiradas). Não inclui spread nem comissões. Se for mais de uma operação por dia, cada uma conta pelo capital que a conta tem nesse momento.',
+    inputs: [
+      numInput('capital', 'Capital inicial', 1000, 100, 1, 1e9),
+      numInput('riskPct', 'Risco por operação (% da conta)', 1, 0.25, 0.05, 100),
+      { key: 'everyDays', label: 'Retirar o lucro a cada N dias (0 = nunca retira)', type: 'int', default: 1, min: 0, max: 365, step: 1 },
+      ...DT_INPUTS,
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
+    ],
+    outputs: [
+      { key: 'account', label: 'Conta', style: 'step', color: '#2962ff', width: 2 },
+      { key: 'withdrawn', label: 'Retirado', style: 'step', color: '#ff9800', width: 1 },
+      { key: 'total', label: 'Total (conta + retiradas)', style: 'line', color: '#089981', width: 2 },
+    ],
+    compute(bars, p, ctx) {
+      const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;
+      const r = scanDoubleTops(bars, atrFilled(bars, 14), dtOptions(p, pip).options);
+      const eq = equityCurve(bars, r.signals, { capital: n(p, 'capital'), riskPct: n(p, 'riskPct'), everyDays: Math.max(0, Math.round(n(p, 'everyDays')) || 0) });
+      const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
+      return { values: { account: eq.account, withdrawn: eq.withdrawn, total: eq.total }, wantHistory: goal > 0 && r.signals.length < goal && !(ctx?.historyDone ?? true) };
     },
   },
 ];
