@@ -2,6 +2,7 @@ import type { Bar } from '../types';
 import * as ta from './ta';
 import { apocalypse, atrFilled, readingLines } from './apocalypse';
 import { drawFootprint, scanFootprint } from './footprint';
+import { drawDoubleTops, scanDoubleTops } from './doubletop';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
@@ -1131,6 +1132,39 @@ export const INDICATORS: IndicatorDef[] = [
       const setups = scanFootprint(bars, atrFilled(bars, 14), st.k, st.d, ta.accelerator(bars), { sens: n(p, 'sens'), slopeRatio: n(p, 'ratio'), sizeRatio: n(p, 'size'), minMove: n(p, 'minMove'), stopBuffer: n(p, 'stopBuf'), trigger: s(p, 'trigger') as 'div' | 'ac' | 'both', acBars: n(p, 'acBars') });
       const r = drawFootprint(bars, setups);
       return { values: {}, draw: r.draw, markers: r.markers };
+    },
+  },
+  {
+    id: 'doubletop',
+    name: 'Topo e Fundo Duplo (entradas)',
+    short: 'TD',
+    category: 'Tendência',
+    overlay: true,
+    layer: true,
+    description:
+      'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no vale entre os topos quando foi uma correção a sério, ou na origem da pernada quando os topos estão no fim de uma tendência sem correção. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
+    inputs: [
+      numInput('sens', 'Oscilação mínima do 1.º topo (ATR)', 2, 0.25, 0.5, 5),
+      numInput('tol', 'Tolerância entre os topos (ATR)', 0.75, 0.05, 0.1, 3),
+      numInput('minDepth', 'Profundidade mínima do vale (ATR)', 2.5, 0.25, 0.5, 10),
+      numInput('wick', 'Pavio mínimo da rejeição (fração da vela)', 0.5, 0.05, 0.2, 0.9),
+      numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
+      numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
+      numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
+    ],
+    outputs: [],
+    compute(bars, p) {
+      const r = scanDoubleTops(bars, atrFilled(bars, 14), {
+        sens: n(p, 'sens'),
+        tol: n(p, 'tol'),
+        minDepth: n(p, 'minDepth'),
+        wick: n(p, 'wick'),
+        expansion: n(p, 'expansion'),
+        tpRatio: n(p, 'tpRatio'),
+        stopBuf: n(p, 'stopBuf'),
+      });
+      const out = drawDoubleTops(bars, r);
+      return { values: {}, draw: out.draw, markers: out.markers };
     },
   },
 ];
