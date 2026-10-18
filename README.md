@@ -38,7 +38,7 @@ Linha de tendência, raio, linha de informação, linha estendida, linha com set
 Médias (SMA, EMA, WMA, HMA, DEMA, TEMA, VWMA e cruzamento), Bollinger, Keltner, Donchian, VWAP, Supertrend, Parabolic SAR, Ichimoku, ZigZag, Regressão linear, Pivots, Fractais, Volume, RSI, MACD, Estocástico, Stoch RSI, CCI, Williams %R, ADX/DMI, ATR, Desvio padrão, Largura de Bollinger, Momentum, ROC, Awesome Oscillator, TRIX, Aroon, OBV, MFI, CMF e mais. Todos com parâmetros, cores e painéis próprios.
 
 **Indicadores de método** (desenham caixas, linhas e etiquetas por cima do gráfico; só usam velas fechadas, por isso não repintam e servem no replay):
-- **Topo e Fundo Duplo (entradas):** caixa nos dois topos, entrada na vela de rejeição ou de expansão, stop além da caixa, saída no vale (correção a sério) ou na origem da pernada; resultado de cada sinal e placar.
+- **Topo e Fundo Duplo (entradas):** caixa nos dois topos, praticamente no mesmo nível (tolerância em pips, à escolha); entrada na vela de rejeição, na combinação de duas velas (a que tocou na zona e a seguinte) ou na vela de expansão; stop além da caixa, saída no vale (correção a sério) ou na origem da pernada; não entra com pouco R nem com o alvo longe demais; resultado de cada sinal e placar.
 - **Footprint + Layer Line:** footprint, layer line, rompimento com reteste e divergência escondida no Estocástico; escalonamentos a favor da nova tendência.
 - **Estrutura de Mercado (Top-Down):** topos e fundos reais, BOS e CHoCH em dois intervalos.
 - **Apocalypse:** zonas onde costumam começar pernadas longas, com sinais só quando há significância estatística.
