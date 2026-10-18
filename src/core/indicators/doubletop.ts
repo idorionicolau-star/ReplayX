@@ -17,7 +17,7 @@ import type { IndicatorMarker } from './registry';
  *      fazem uma rejeição — por exemplo, uma verde que chega ao topo e uma vermelha forte que a devolve;
  *    - ou vela de expansão: uma vela forte contra o topo logo depois de tocar na zona.
  * 5. Stop logo acima da caixa (os dois topos).
- * 6. Saída (alvo):
+ * 6. Saída (alvo): o fundo (topo, nas compras) mais próximo da entrada que ainda dê o R mínimo. Sem isso:
  *    - se o vale entre os topos foi uma correção a sério, a saída é o fundo desse vale;
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
@@ -50,6 +50,8 @@ export interface DtOptions {
   stopBuf: number;
   /** Breakeven: quando o preço anda a favor este múltiplo do risco (1 = 1:1), o stop passa para a entrada. 0 = sem breakeven. */
   be: number;
+  /** Saída no fundo (ou topo) mais próximo da entrada, que dê pelo menos o R mínimo. Desligado: vale entre os topos ou origem da pernada. */
+  tpNear: boolean;
   /** Folga do breakeven para cobrir spread e comissões, em preço (pips × pip). 0 = automática, `beAtr` do ATR. */
   bePrice: number;
   /** Folga automática do breakeven, em ATR. */
@@ -62,7 +64,7 @@ export interface DtOptions {
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, bePrice: 0, beAtr: 0.1 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, tpNear: true, bePrice: 0, beAtr: 0.1 };
 
 export interface DtPoint {
   idx: number;
@@ -85,7 +87,7 @@ export interface DtSignal {
   target: number;
   /** De onde vem a saída: o vale entre os topos ou a origem da pernada. */
   targetFrom: DtPoint;
-  targetKind: 'vale' | 'origem';
+  targetKind: 'vale' | 'origem' | 'fundo';
   /** Resultado, quando já se sabe: vela em que saiu e se foi pelo alvo ou pelo stop. */
   exit: { idx: number; result: 'alvo' | 'stop' | 'be' } | null;
   /** Vela em que o stop passou para o breakeven, se passou, e o nível dele (um pouco além da entrada, para cobrir spread e comissões). */
@@ -133,6 +135,8 @@ class TopScanner {
   private zones: Zone[] = [];
   private cursor = 0;
   private lastL: DtPoint | null = null;
+  /** Fundos (oscilações) já confirmados, os mais recentes no fim. */
+  private lows: DtPoint[] = [];
 
   constructor(bars: readonly Bar[], atr: readonly number[], o: DtOptions) {
     this.bars = bars;
@@ -168,6 +172,8 @@ class TopScanner {
       const p = this.pivots[this.cursor++];
       if (p.type === 'L') {
         this.lastL = { idx: p.idx, price: p.price };
+        this.lows.push(this.lastL);
+        if (this.lows.length > 40) this.lows.shift();
         continue;
       }
       if (!this.lastL) continue;
@@ -264,7 +270,21 @@ class TopScanner {
       const stop = boxHi + o.stopBuf * a;
       const leg = top - z.origin.price;
       const useValley = leg <= 0 || top - z.valley.price >= o.tpRatio * leg;
-      const targetFrom = useValley ? z.valley : z.origin;
+      let targetFrom = useValley ? z.valley : z.origin;
+      let kind: DtSignal['targetKind'] = useValley ? 'vale' : 'origem';
+      if (o.tpNear) {
+        // saída no fundo mais próximo abaixo da entrada que ainda dê o R mínimo
+        const risk = stop - entry;
+        const room = Math.max(o.minRR * risk, 1e-12);
+        let best: DtPoint | null = null;
+        for (const c of [...this.lows, z.valley, z.origin]) {
+          if (c.price <= entry - room && (!best || c.price > best.price)) best = c;
+        }
+        if (best) {
+          targetFrom = best;
+          kind = best === z.valley ? 'vale' : best === z.origin ? 'origem' : 'fundo';
+        }
+      }
       const target = targetFrom.price;
       z.dead = true;
       if (!(target < entry) || !(stop > entry)) continue;
@@ -284,7 +304,7 @@ class TopScanner {
         stop,
         target,
         targetFrom,
-        targetKind: useValley ? 'vale' : 'origem',
+        targetKind: kind,
         exit: null,
         beIdx: null,
         beStop: null,
