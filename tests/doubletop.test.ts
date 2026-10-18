@@ -25,7 +25,7 @@ function path(points: [number, number][]): Bar[] {
 
 const flip = (bars: Bar[]): Bar[] => bars.map((b) => ({ ...b, open: 200 - b.open, high: 200 - b.low, low: 200 - b.high, close: 200 - b.close }));
 /** Sem os limites de R e de alvo (os trajetos dos testes têm alvos longos); os limites têm os seus próprios testes. */
-const NO_MAX = { ...DT_DEFAULTS, minRR: 0, maxTarget: 0 };
+const NO_MAX = { ...DT_DEFAULTS, minRR: 0, maxTarget: 0, tpNear: false };
 const run = (bars: Bar[], o = NO_MAX) => scanDoubleTops(bars, atrFilled(bars, 14), o);
 
 /** Vela de expansão para baixo (venda) na vela i, a abrir onde a anterior fechou. */
@@ -334,6 +334,25 @@ describe('topo e fundo duplo', () => {
     const off = run(bars, { ...NO_MAX, be: 0 }).signals.filter((x) => x.dir === -1)[0];
     expect(off.exit?.result).toBe('stop');
     expect(signalR(off)).toBe(-1);
+  });
+
+  it('saída no fundo mais próximo: um pivô abaixo da entrada antes do vale fundo é o alvo; fundo (ou topo) mais perto que o R mínimo é saltado', () => {
+    // fundos: 90 (vela 30, fundo da correção), 108 (vela 46, pivô mais perto)
+    const bars = path([[0, 100], [20, 120], [30, 90], [38, 112], [46, 108], [56, 119.8], [57, 119.6], [100, 80]]);
+    expansionDown(bars, 57);
+    const old = run(bars).signals.filter((x) => x.dir === -1)[0];
+    const near = run(bars, { ...NO_MAX, tpNear: true }).signals.filter((x) => x.dir === -1)[0];
+    expect(near.target).toBeGreaterThan(old.target);
+    expect(near.target).toBeLessThan(near.entry);
+    expect(near.targetKind).not.toBe('origem');
+    // com R mínimo grande, salta o fundo perto demais e vai ao seguinte
+    const far = run(bars, { ...NO_MAX, tpNear: true, minRR: 3 }).signals.filter((x) => x.dir === -1)[0];
+    expect(far.target).toBeLessThan(near.target);
+    expect(DT_DEFAULTS.tpNear).toBe(true);
+    // fundo duplo: o espelho, alvo no topo mais próximo
+    const buy = run(flip(bars), { ...NO_MAX, tpNear: true }).signals.filter((x) => x.dir === 1)[0];
+    expect(buy.target).toBeGreaterThan(buy.entry);
+    expect(buy.target).toBeLessThan(200 - old.target);
   });
 
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
