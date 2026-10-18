@@ -33,7 +33,19 @@ export interface DrawPanel {
   corner?: 'tl' | 'tr' | 'bl' | 'br';
 }
 
+/** Caixa entre duas velas e dois preços (por exemplo a zona de um topo duplo). */
+export interface DrawRect {
+  i1: number;
+  i2: number;
+  p1: number;
+  p2: number;
+  fill: string;
+  stroke?: string;
+  dash?: boolean;
+}
+
 export interface DrawData {
+  rects?: DrawRect[];
   lines: DrawLine[];
   texts: DrawText[];
   panel?: DrawPanel;
@@ -86,6 +98,27 @@ export class SegmentLayer implements ISeriesPrimitive<Time> {
       const y = (p: number) => series.priceToCoordinate(p);
       ctx.save();
       ctx.lineCap = 'round';
+      for (const r of d.rects ?? []) {
+        const x1 = x(r.i1);
+        const x2 = x(r.i2);
+        const y1 = y(r.p1);
+        const y2 = y(r.p2);
+        if (x1 === null || x2 === null || y1 === null || y2 === null) continue;
+        const left = Math.min(x1, x2);
+        const top = Math.min(y1, y2);
+        const w = Math.max(1, Math.abs(x2 - x1));
+        const h = Math.max(1, Math.abs(y2 - y1));
+        if (left > mediaSize.width + 50 || left + w < -50) continue;
+        ctx.fillStyle = r.fill;
+        ctx.fillRect(left, top, w, h);
+        if (r.stroke) {
+          ctx.strokeStyle = r.stroke;
+          ctx.lineWidth = 1;
+          ctx.setLineDash(r.dash ? [4, 3] : []);
+          ctx.strokeRect(left + 0.5, top + 0.5, w - 1, h - 1);
+          ctx.setLineDash([]);
+        }
+      }
       for (const l of d.lines) {
         const x1 = x(l.i1);
         const x2 = x(l.i2);
