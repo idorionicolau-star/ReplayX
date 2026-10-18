@@ -27,7 +27,8 @@ input bool   InpTpNear      = true;  // Saída no fundo/topo mais próximo que a
 input double InpTpRatio     = 0.6;   // (saída antiga) vale conta a partir de (fração da pernada)
 input double InpMinR        = 1.0;   // R mínimo (entrada longe demais não entra; 0 = sem limite)
 input double InpMaxTargetAtr= 20.0;  // Alvo máximo desde a entrada (ATR; 0 = sem limite)
-input double InpBeAt        = 1.0;   // Breakeven: stop além da entrada quando anda a favor (R; 0 = desligado)
+input double InpBePct       = 75.0;  // Breakeven: quando anda esta % do caminho até à saída (0 = usa o R abaixo)
+input double InpBeAt        = 1.0;   // Breakeven em R (só se a % acima for 0; 0 = sem breakeven)
 input double InpBePips      = 0.0;   // Breakeven: folga para spread e comissões (pips; 0 = 0,1 ATR)
 
 input group "Risco e proteções"
@@ -65,6 +66,14 @@ double   gAtrPrev = 0.0;
 double   gAtrSeed = 0.0;
 int      gAtrCount = 0;
 bool     gAtrReady = false;
+
+// Distância a favor (em preço) a partir da qual o stop vai para o breakeven; 0 = breakeven desligado
+double BeDistance(double entry, double stop, double target)
+  {
+   if(InpBePct > 0.0) return InpBePct / 100.0 * MathAbs(entry - target);
+   if(InpBeAt > 0.0) return InpBeAt * MathAbs(entry - stop);
+   return 0.0;
+  }
 
 struct SPoint { int idx; double price; };
 
@@ -266,7 +275,8 @@ void CDtScanner::VirtualExits(int t)
    double stop = vBe ? vBeStop : vStop;
    if(H(t) >= stop) { vOpen = false; return; }
    if(L(t) <= vTarget) { vOpen = false; return; }
-   if(InpBeAt > 0.0 && !vBe && L(t) <= vEntry - InpBeAt * (vStop - vEntry))
+   double bd = BeDistance(vEntry, vStop, vTarget);
+   if(bd > 0.0 && !vBe && L(t) <= vEntry - bd)
      {
       vBe = true;
       double off = InpBePips > 0.0 ? InpBePips * gPip : 0.1 * gAtr[t];
@@ -740,10 +750,10 @@ void UpdateRecords(int t)
         { gRec[k].exitIdx = t; gRec[k].result = gRec[k].beIdx >= 0 ? 3 : 2; changed = true; }
       else if(sell ? gL[t] <= gRec[k].target : gH[t] >= gRec[k].target)
         { gRec[k].exitIdx = t; gRec[k].result = 1; changed = true; }
-      else if(InpBeAt > 0.0 && gRec[k].beIdx < 0)
+      else if(gRec[k].beIdx < 0)
         {
-         double risk = MathAbs(gRec[k].stop - gRec[k].entry);
-         bool reached = sell ? gL[t] <= gRec[k].entry - InpBeAt * risk : gH[t] >= gRec[k].entry + InpBeAt * risk;
+         double bd = BeDistance(gRec[k].entry, gRec[k].stop, gRec[k].target);
+         bool reached = bd > 0.0 && (sell ? gL[t] <= gRec[k].entry - bd : gH[t] >= gRec[k].entry + bd);
          if(reached)
            {
             double off = InpBePips > 0.0 ? InpBePips * gPip : 0.1 * gAtr[t];
@@ -807,7 +817,7 @@ void SyncBars()
 //--- Breakeven por tick: stop além da entrada quando anda BeAt x o risco a favor
 void ManageBreakeven()
   {
-   if(InpBeAt <= 0.0) return;
+   if(InpBePct <= 0.0 && InpBeAt <= 0.0) return;
    ulong tk;
    if(!FindPosition(tk)) return;
    if(!PositionSelectByTicket(tk)) return;
@@ -818,17 +828,19 @@ void ManageBreakeven()
    if(sl <= 0.0) return;
    // breakeven já feito: o stop está do lado do lucro
    if(buy ? sl >= open : sl <= open) return;
-   double risk = MathAbs(open - sl);
+   // distância a favor que dispara o breakeven: % do caminho até ao alvo (ou R, se não há alvo)
+   double bd = tp > 0.0 ? BeDistance(open, sl, tp) : InpBeAt * MathAbs(open - sl);
+   if(bd <= 0.0) return;
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double off = InpBePips > 0.0 ? InpBePips * gPip : 0.1 * (gN > 0 ? gAtr[gN - 1] : 0.0);
-   if(buy && bid >= open + InpBeAt * risk)
+   if(buy && bid >= open + bd)
      {
       double nsl = NormalizeDouble(open + off, _Digits);
       if(nsl < bid - SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point)
          gTrade.PositionModify(tk, nsl, tp);
      }
-   else if(!buy && ask <= open - InpBeAt * risk)
+   else if(!buy && ask <= open - bd)
      {
       double nsl = NormalizeDouble(open - off, _Digits);
       if(nsl > ask + SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point)

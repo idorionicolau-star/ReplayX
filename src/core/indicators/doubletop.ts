@@ -23,7 +23,7 @@ import type { IndicatorMarker } from './registry';
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
  * 8. O primeiro topo não pode ser antigo: no máximo 50 velas (ajustável) até à vela da entrada.
- * 9. Breakeven: se o preço anda 1:1 a favor (ajustável), o stop passa para um pouco além da entrada, o suficiente para
+ * 9. Breakeven: se o preço anda 75% do caminho até à saída (ajustável; ou N vezes o risco), o stop passa para um pouco além da entrada, o suficiente para
  *    cobrir spread e comissões (folga em pips, ou 0,1 ATR); se depois voltar, sai com esse pequeno ganho.
  * 10. Uma operação de cada vez: enquanto uma está aberta, as outras confirmações passam.
  *
@@ -51,6 +51,8 @@ export interface DtOptions {
   stopBuf: number;
   /** Breakeven: quando o preço anda a favor este múltiplo do risco (1 = 1:1), o stop passa para a entrada. 0 = sem breakeven. */
   be: number;
+  /** Breakeven em % do caminho da entrada até à saída (75 = quase no fim). 0 = usa `be` em R. */
+  bePct: number;
   /** Saída no fundo (ou topo) mais próximo da entrada, que dê pelo menos o R mínimo. Desligado: vale entre os topos ou origem da pernada. */
   tpNear: boolean;
   /** Folga do breakeven para cobrir spread e comissões, em preço (pips × pip). 0 = automática, `beAtr` do ATR. */
@@ -65,7 +67,7 @@ export interface DtOptions {
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, tpNear: true, bePrice: 0, beAtr: 0.1 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20, maxBars: 50, be: 1, bePct: 75, tpNear: true, bePrice: 0, beAtr: 0.1 };
 
 export interface DtPoint {
   idx: number;
@@ -146,6 +148,12 @@ class TopScanner {
     this.pivots = findPivots(bars, atr, o.sens);
   }
 
+  /** O breakeven dispara quando o preço anda a favor `bePct`% do caminho até à saída (ou `be` vezes o risco, se `bePct` for 0). */
+  private beReached(open: DtSignal, low: number): boolean {
+    const dist = this.o.bePct > 0 ? (this.o.bePct / 100) * (open.entry - open.target) : this.o.be > 0 ? this.o.be * (open.stop - open.entry) : 0;
+    return dist > 0 && low <= open.entry - dist;
+  }
+
   /** A operação aberta fecha no stop ou no alvo (na mesma vela, conta primeiro o stop). */
   exits(t: number) {
     const open = this.open;
@@ -155,7 +163,7 @@ class TopScanner {
     const stop = open.beStop ?? open.stop;
     if (b.high >= stop) open.exit = { idx: t, result: open.beStop !== null ? 'be' : 'stop' };
     else if (b.low <= open.target) open.exit = { idx: t, result: 'alvo' };
-    else if (this.o.be > 0 && open.beIdx === null && b.low <= open.entry - this.o.be * (open.stop - open.entry)) {
+    else if (open.beIdx === null && this.beReached(open, b.low)) {
       open.beIdx = t;
       open.beStop = open.entry - (this.o.bePrice > 0 ? this.o.bePrice : this.o.beAtr * this.atr[t]);
     }
