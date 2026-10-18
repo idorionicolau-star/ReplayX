@@ -307,6 +307,35 @@ describe('topo e fundo duplo', () => {
     expect(DT_DEFAULTS.maxBars).toBe(50);
   });
 
+  it('breakeven: anda 1:1 a favor, o stop vai para a entrada e, se o preço voltar, sai a zero (não a -1R)', () => {
+    // venda em 49 (entrada ~116,6); desce até 1:1, volta acima da entrada, depois sobe até ao stop original
+    const bars = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [60, 112], [70, 118], [80, 126]]);
+    expansionDown(bars, 49);
+    const s = run(bars).signals.filter((x) => x.dir === -1)[0];
+    const risk = s.stop - s.entry;
+    expect(Math.min(...bars.slice(50, 61).map((b) => b.low))).toBeLessThan(s.entry - risk);
+    expect(s.beIdx).not.toBeNull();
+    expect(s.exit?.result).toBe('be');
+    // o BE fica um pouco além da entrada (cobre spread e comissões): sai com um pequeno ganho, nunca perde
+    expect(s.beStop!).toBeLessThan(s.entry);
+    expect(signalR(s)!).toBeGreaterThan(0);
+    expect(signalR(s)!).toBeLessThan(0.3);
+    const pips = run(bars, { ...NO_MAX, bePrice: 0.5 }).signals.filter((x) => x.dir === -1)[0];
+    expect(pips.entry - pips.beStop!).toBeCloseTo(0.5, 6);
+    // no fundo duplo (espelho) o BE fica acima da entrada
+    const buy = run(flip(bars)).signals.filter((x) => x.dir === 1)[0];
+    expect(buy.beStop!).toBeGreaterThan(buy.entry);
+    expect(buy.exit?.result).toBe('be');
+    expect(signalR(buy)!).toBeGreaterThan(0);
+    const d = drawDoubleTops(bars, run(bars));
+    expect(d.draw.texts.some((t) => t.text === 'BE')).toBe(true);
+    expect(d.draw.texts.some((t) => /saiu no BE/.test(t.text))).toBe(true);
+    // desligado, o mesmo trajeto acaba no stop
+    const off = run(bars, { ...NO_MAX, be: 0 }).signals.filter((x) => x.dir === -1)[0];
+    expect(off.exit?.result).toBe('stop');
+    expect(signalR(off)).toBe(-1);
+  });
+
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
     // segundo topo 0,2 abaixo do primeiro
     const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
