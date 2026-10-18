@@ -49,6 +49,7 @@ describe('curva de capital com retiradas', () => {
     expect(e.account[47]).toBe(1000);
     expect(e.withdrawn[47]).toBeCloseTo(50, 6);
     expect(e.total[71]).toBeCloseTo(1050, 6);
+    expect(e.net[71]).toBeCloseTo(50, 6);
     expect(e.withdrawals).toBe(2);
   });
 
@@ -56,6 +57,16 @@ describe('curva de capital com retiradas', () => {
     const e = equityCurve(bars(48), [sig(5, 'stop')], { capital: 1000, riskPct: 1, everyDays: 1 });
     expect(e.account[47]).toBeCloseTo(990, 6);
     expect(e.withdrawn[47]).toBe(0);
+    expect(e.net[47]).toBeCloseTo(-10, 6);
+  });
+
+  it('o retirado bruto sobe com dias bons mesmo que o lucro líquido seja negativo', () => {
+    // dia 1: +2R (retira 20); dia 2: -1R, -1R, -1R...; a conta desce e o líquido fica abaixo de zero
+    const sigs = [sig(5, 'alvo', 2), sig(30, 'stop'), sig(31, 'stop'), sig(32, 'stop'), sig(40, 'stop')];
+    const e = equityCurve(bars(48), sigs, { capital: 1000, riskPct: 1, everyDays: 1 });
+    expect(e.withdrawn[47]).toBeCloseTo(20, 6);
+    expect(e.net[47]).toBeLessThan(0);
+    expect(e.total[47]).toBeCloseTo(1000 + e.net[47], 6);
   });
 
   it('retira a cada 2 dias: só no fim do segundo dia', () => {
@@ -76,7 +87,7 @@ describe('curva de capital com retiradas', () => {
   it('está no catálogo como painel extra (não é por cima do gráfico) e calcula sem erros', () => {
     const def = getIndicator('doubletop-equity')!;
     expect(def.overlay).toBe(false);
-    expect(def.outputs.map((o) => o.key)).toEqual(['account', 'withdrawn', 'total']);
+    expect(def.outputs.map((o) => o.key)).toEqual(['account', 'net', 'withdrawn', 'total']);
     const r = def.compute(bars(100), defaultParams(def), { historyDone: true });
     expect(r.values.account).toHaveLength(100);
     expect(r.values.account[99]).toBe(1000);

@@ -13,8 +13,10 @@ export interface EquityOptions {
 export interface EquityCurve {
   /** Capital na conta, vela a vela. */
   account: number[];
-  /** Total já retirado, vela a vela. */
+  /** Total já retirado (bruto: só conta os dias em que sobrou lucro acima do capital inicial), vela a vela. */
   withdrawn: number[];
+  /** Lucro líquido: conta + retiradas - capital inicial. Desce quando se perde. */
+  net: number[];
   /** Conta + retiradas. */
   total: number[];
   /** Quantas retiradas se fizeram e o maior capital da conta (para o utilizador ver o efeito de retirar). */
@@ -33,6 +35,7 @@ export function equityCurve(bars: readonly Bar[], signals: readonly DtSignal[], 
   const account = new Array<number>(n).fill(NaN);
   const withdrawn = new Array<number>(n).fill(NaN);
   const total = new Array<number>(n).fill(NaN);
+  const net = new Array<number>(n).fill(NaN);
   const byExit = new Map<number, number[]>();
   for (const s of signals) {
     const r = signalR(s);
@@ -60,6 +63,7 @@ export function equityCurve(bars: readonly Bar[], signals: readonly DtSignal[], 
     account[t] = acc;
     withdrawn[t] = out;
     total[t] = acc + out;
+    net[t] = acc + out - o.capital;
   }
-  return { account, withdrawn, total, withdrawals: count };
+  return { account, withdrawn, net, total, withdrawals: count };
 }
