@@ -160,7 +160,7 @@ describe('topo e fundo duplo', () => {
   it('pede mais passado enquanto tiver menos sinais que o objetivo; quando o histórico acaba, diz quantos encontrou', () => {
     const def = getIndicator('doubletop')!;
     const bars = deepValley();
-    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minRR: 0, maxTarget: 0 };
+    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minR: 0, maxTargetAtr: 0 };
     expect(p.minSignals).toBe(200);
     const more = def.compute(bars, p, { historyDone: false });
     expect(more.wantHistory).toBe(true);
@@ -180,7 +180,7 @@ describe('topo e fundo duplo', () => {
     const rr = (free[0].entry - free[0].target) / (free[0].stop - free[0].entry);
     expect(run(bars, { ...NO_MAX, minRR: rr + 0.1 }).signals.filter((x) => x.dir === -1)).toHaveLength(0);
     expect(run(bars, { ...NO_MAX, minRR: rr - 0.1 }).signals.filter((x) => x.dir === -1)).toHaveLength(1);
-    expect(DT_DEFAULTS.minRR).toBe(1.5);
+    expect(DT_DEFAULTS.minRR).toBe(1);
   });
 
   it('alvo longe demais da entrada (em ATR) não entra; sem limite, entra', () => {
@@ -247,6 +247,57 @@ describe('topo e fundo duplo', () => {
     expect(run(bars).signals.filter((x) => x.dir === -1 && x.idx === 49)).toHaveLength(0);
   });
 
+  it('combinação também quando é a segunda vela que chega ao nível (a verde ficou um pouco abaixo)', () => {
+    const bars = comboTop();
+    bars[48] = { ...bars[48], open: 119, close: 119.2, high: 119.3, low: 118.9 };
+    bars[49] = { ...bars[49], open: 119.2, close: 117.9, high: 120.4, low: 117.8 };
+    const s = run(bars).signals.filter((x) => x.dir === -1);
+    expect(s).toHaveLength(1);
+    expect(s[0].idx).toBe(49);
+    expect(s[0].trigger).toBe('combinação');
+  });
+
+  it('combinação em que a vermelha devolve só três quartos da verde ainda conta (como no V50)', () => {
+    const bars = comboTop();
+    bars[48] = { ...bars[48], open: 118, close: 120, high: 120.3, low: 117.9 };
+    bars[49] = { ...bars[49], open: 120, close: 118.52, high: 120.1, low: 118.4 };
+    const s = run(bars).signals.filter((x) => x.dir === -1);
+    expect(s).toHaveLength(1);
+    expect(s[0].idx).toBe(49);
+    expect(s[0].trigger).toBe('combinação');
+  });
+
+  it('a saída é o pivô do meio do W mais recente, não um ponto antigo e distante', () => {
+    // topo em 20, vale fundo em 35, toque sem confirmar em 50 (desce devagar), pivô do meio em 64, segundo toque em 76-77
+    const bars = path([[0, 100], [20, 120], [35, 90], [50, 119.8], [58, 116], [64, 100], [76, 119.8], [77, 119.6], [115, 80]]);
+    expansionDown(bars, 77);
+    const s = run(bars).signals.filter((x) => x.dir === -1);
+    expect(s).toHaveLength(1);
+    expect(s[0].idx).toBe(77);
+    expect(s[0].targetKind).toBe('vale');
+    expect(s[0].targetFrom.idx).toBe(64);
+    expect(s[0].target).toBeCloseTo(99.7, 5);
+  });
+
+  it('uma operação de cada vez: enquanto uma está aberta, não entra outra (nem do outro lado)', () => {
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    let p = 100;
+    const bars: Bar[] = Array.from({ length: 6000 }, (_, i) => {
+      const o = p;
+      p += (rnd() - 0.5) * 2;
+      return { time: T0 + i * 300, open: o, high: Math.max(o, p) + rnd(), low: Math.min(o, p) - rnd(), close: p };
+    });
+    const sig = run(bars).signals;
+    expect(sig.length).toBeGreaterThan(5);
+    expect(new Set(sig.map((s) => s.dir)).size).toBe(2);
+    for (let i = 1; i < sig.length; i++) {
+      const before = sig[i - 1];
+      expect(before.exit).not.toBeNull();
+      expect(sig[i].idx).toBeGreaterThanOrEqual(before.exit!.idx);
+    }
+  });
+
   it('mesmo nível em preço (pips): tolerância apertada recusa topos um pouco diferentes; mais larga aceita', () => {
     // segundo topo 0,2 abaixo do primeiro
     const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
@@ -265,7 +316,8 @@ describe('topo e fundo duplo', () => {
     small[48] = { ...small[48], open: 118.5, close: 119.0, high: 120.6, low: 118.3 };
     expect(run(small).signals.filter((x) => x.dir === -1)).toHaveLength(1);
     const big = base();
-    big[48] = { ...big[48], open: 118.5, close: 119.0, high: 122.5, low: 118.3 };
+    // 3,2 acima do topo: mais do que 3x a tolerância (aqui 5% da altura do padrão, ~0,8)
+    big[48] = { ...big[48], open: 118.5, close: 119.0, high: 123.5, low: 118.3 };
     expect(run(big).signals.filter((x) => x.dir === -1)).toHaveLength(0);
   });
 
@@ -273,11 +325,11 @@ describe('topo e fundo duplo', () => {
     const def = getIndicator('doubletop')!;
     const near = path([[0, 100], [20, 120], [35, 105], [48, 119.8], [49, 119.6], [80, 95]]);
     expansionDown(near, 49);
-    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minRR: 0, maxTarget: 0, minSignals: 0 };
+    const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minR: 0, maxTargetAtr: 0, minSignals: 0 };
     expect(p.tolPips).toBe(0);
     const auto = def.compute(near, p, { historyDone: true, pip: 0.01 });
     expect(auto.markers!.some((m) => m.text?.startsWith('VENDA'))).toBe(true);
-    expect(auto.draw!.panel!.lines.some((l) => /^mesmo nível: ±\d+ pips \(automático\)$/.test(l.text))).toBe(true);
+    expect(auto.draw!.panel!.lines.some((l) => /^mesmo nível: ±\d+ pips ou 5% do padrão \(automático\)$/.test(l.text))).toBe(true);
     const tight = def.compute(near, { ...p, tolPips: 5 }, { historyDone: true, pip: 0.01 });
     expect(tight.markers!.some((m) => m.text?.startsWith('VENDA'))).toBe(false);
     expect(tight.draw!.panel!.lines.some((l) => l.text === 'mesmo nível: ±5,0 pips')).toBe(true);

@@ -22,7 +22,7 @@ test('Topo e Fundo Duplo: entra no catálogo, desenha o cartão e corre no repla
   expect(data).not.toBeNull();
   expect(data!.panel!.lines[0].text).toMatch(/^Topo\/fundo duplo: \d+ sinais/);
   // a tolerância do mesmo nível aparece em pips do símbolo, para se poder escolher
-  expect(data!.panel!.lines.some((l) => /^mesmo nível: ±[\d,]+ pips \(automático\)$/.test(l.text))).toBe(true);
+  expect(data!.panel!.lines.some((l) => /^mesmo nível: ±[\d,]+ pips ou 5% do padrão \(automático\)$/.test(l.text))).toBe(true);
 
   await page.click('[data-testid=replay-button]');
   await page.mouse.click(600, 450);

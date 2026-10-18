@@ -1,5 +1,5 @@
 import type { Bar } from '../types';
-import { findPivots } from './apocalypse';
+import { findPivots, type Pivot } from './apocalypse';
 import type { DrawData, DrawLine, DrawRect, DrawText } from '../../chart/layer';
 import type { IndicatorMarker } from './registry';
 
@@ -10,17 +10,18 @@ import type { IndicatorMarker } from './registry';
  * 1. Primeiro topo: uma oscilação já confirmada (o preço afastou-se dele).
  * 2. O preço desce até um vale com profundidade suficiente e volta a subir à zona do primeiro topo.
  * 3. Os dois topos ficam praticamente no mesmo nível: o segundo chega ao primeiro com uma tolerância pequena
- *    (em pips, ou em ATR quando não se escolhe pips); o pavio pode furar um pouco o nível, o fecho não.
+ *    (em pips; ou, sem pips, uma fração do ATR ou da altura do padrão); o pavio pode furar um pouco o nível, o fecho não.
  * 4. Confirmação, que é a entrada (no fecho da vela):
  *    - vela de rejeição: toca na zona e rejeita a maior parte do corpo (pavio grande), pode ser de qualquer cor;
  *    - ou combinação de duas velas: a vela que tocou na zona e a seguinte, juntas (duas de M5 são uma de M10),
- *      fazem uma rejeição — por exemplo, uma verde que chega toda ao topo e uma vermelha que a devolve;
+ *      fazem uma rejeição — por exemplo, uma verde que chega ao topo e uma vermelha forte que a devolve;
  *    - ou vela de expansão: uma vela forte contra o topo logo depois de tocar na zona.
  * 5. Stop logo acima da caixa (os dois topos).
  * 6. Saída (alvo):
  *    - se o vale entre os topos foi uma correção a sério, a saída é o fundo desse vale;
  *    - se não (os topos estão no fim de uma tendência sem correção), a saída é a origem dessa pernada.
  * 7. Não entra quando a entrada ficou longe demais (pouco R até ao alvo) nem quando o alvo está longe demais.
+ * 8. Uma operação de cada vez: enquanto uma está aberta, as outras confirmações passam.
  *
  * Tudo é decidido só com as velas já fechadas: no replay o sinal aparece na vela em que se confirmou, nunca antes.
  */
@@ -30,6 +31,8 @@ export interface DtOptions {
   sens: number;
   /** Mesmo nível: quanto o segundo topo pode ficar abaixo (ou fechar acima) do primeiro, em ATR. Só conta quando `tolPrice` é 0. */
   tol: number;
+  /** Mesmo nível em fração da altura do padrão (do topo ao vale), quando dá mais do que `tol`. Só conta quando `tolPrice` é 0. */
+  tolPct: number;
   /** Mesmo nível em preço (pips × tamanho do pip). 0 = automático, pelo `tol` em ATR. */
   tolPrice: number;
   /** Profundidade mínima do vale entre os topos, em ATR. */
@@ -48,7 +51,7 @@ export interface DtOptions {
   maxTarget: number;
 }
 
-export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1.5, maxTarget: 8 };
+export const DT_DEFAULTS: DtOptions = { sens: 2, tol: 0.2, tolPct: 0.05, tolPrice: 0, minDepth: 2.5, wick: 0.5, expansion: 1, tpRatio: 0.6, stopBuf: 0.1, minRR: 1, maxTarget: 20 };
 
 export interface DtPoint {
   idx: number;
@@ -104,59 +107,73 @@ const MIN_GAP = 3;
 /** O pavio pode furar o nível até este múltiplo da tolerância; mais do que isso já é outro nível. */
 const PIERCE = 3;
 
-interface Side {
-  signals: DtSignal[];
-  pending: DtPending[];
-}
+/** Procura topos duplos (vendas) vela a vela. Os fundos duplos são o mesmo com os preços espelhados. */
+class TopScanner {
+  readonly signals: DtSignal[] = [];
+  /** Operação aberta deste lado (ainda sem stop nem alvo). */
+  open: DtSignal | null = null;
+  private readonly bars: readonly Bar[];
+  private readonly atr: readonly number[];
+  private readonly o: DtOptions;
+  private readonly pivots: Pivot[];
+  private zones: Zone[] = [];
+  private cursor = 0;
+  private lastL: DtPoint | null = null;
 
-/** Procura topos duplos (vendas). Os fundos duplos são o mesmo com os preços espelhados. */
-function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): Side {
-  const n = bars.length;
-  const pivots = findPivots(bars, atr, o.sens);
-  const signals: DtSignal[] = [];
-  let zones: Zone[] = [];
-  let cursor = 0;
-  let lastL: DtPoint | null = null;
+  constructor(bars: readonly Bar[], atr: readonly number[], o: DtOptions) {
+    this.bars = bars;
+    this.atr = atr;
+    this.o = o;
+    this.pivots = findPivots(bars, atr, o.sens);
+  }
 
-  let open: DtSignal | null = null;
-  for (let t = 1; t < n; t++) {
+  /** A operação aberta fecha no stop ou no alvo (na mesma vela, conta primeiro o stop). */
+  exits(t: number) {
+    const open = this.open;
+    if (!open || t <= open.idx) return;
+    const b = this.bars[t];
+    if (b.high >= open.stop) open.exit = { idx: t, result: 'stop' };
+    else if (b.low <= open.target) open.exit = { idx: t, result: 'alvo' };
+    if (open.exit) this.open = null;
+  }
+
+  /** Zonas desta vela. `busy`: já há uma operação aberta (de qualquer lado), e enquanto ela não acabar não se entra noutra. */
+  step(t: number, busy: boolean) {
+    const { bars, atr, o } = this;
     const b = bars[t];
     const prev = bars[t - 1];
     const a = atr[t];
-    const tol = o.tolPrice > 0 ? o.tolPrice : o.tol * a;
-    // a operação aberta fecha no stop ou no alvo (na mesma vela, conta primeiro o stop)
-    if (open && t > open.idx) {
-      if (b.high >= open.stop) open.exit = { idx: t, result: 'stop' };
-      else if (b.low <= open.target) open.exit = { idx: t, result: 'alvo' };
-      if (open.exit) open = null;
-    }
     // oscilações confirmadas até esta vela: cada topo novo abre uma zona
-    while (cursor < pivots.length && pivots[cursor].confirmedAt <= t) {
-      const p = pivots[cursor++];
+    while (this.cursor < this.pivots.length && this.pivots[this.cursor].confirmedAt <= t) {
+      const p = this.pivots[this.cursor++];
       if (p.type === 'L') {
-        lastL = { idx: p.idx, price: p.price };
+        this.lastL = { idx: p.idx, price: p.price };
         continue;
       }
-      if (!lastL) continue;
+      if (!this.lastL) continue;
       let valley: DtPoint = { idx: p.idx, price: bars[p.idx].low };
       for (let j = p.idx + 1; j <= t; j++) if (bars[j].low < valley.price) valley = { idx: j, price: bars[j].low };
-      zones.push({
+      this.zones.push({
         first: { idx: p.idx, price: p.price },
         firstBody: Math.max(bars[p.idx].open, bars[p.idx].close),
-        origin: lastL,
+        origin: this.lastL,
         valley,
         touchedAt: null,
         second: null,
         secondBody: -Infinity,
         dead: false,
       });
-      if (zones.length > MAX_ZONES) zones = zones.slice(-MAX_ZONES);
+      if (this.zones.length > MAX_ZONES) this.zones = this.zones.slice(-MAX_ZONES);
     }
 
     let fired = false;
-    for (const z of zones) {
+    // a zona mais recente primeiro: o W é feito com o topo anterior mais próximo
+    for (let zi = this.zones.length - 1; zi >= 0; zi--) {
+      const z = this.zones[zi];
       if (z.dead) continue;
       const top = z.first.price;
+      // mesmo nível: em pips, se escolhidos; se não, uma fração do ATR ou da altura do padrão (num W grande, uns pips a mais ainda é o mesmo nível)
+      const tol = o.tolPrice > 0 ? o.tolPrice : Math.max(o.tol * a, o.tolPct * (top - z.valley.price));
       // rompimento: um fecho acima do nível, ou um pavio que passa muito dele, já é outro nível
       if (b.close > top + tol || b.high > top + PIERCE * tol) {
         z.dead = true;
@@ -172,11 +189,17 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       } else if (reaches) {
         z.touchedAt = t;
       } else if (t - z.touchedAt > WAIT) {
-        // tocou e foi embora sem confirmar: volta a contar o vale para um novo teste
+        // tocou e foi embora sem confirmar: esse toque passa a ser o primeiro topo do próximo teste (no mesmo nível),
+        // e o vale conta-se a partir dele — a saída é o pivô do meio do novo W, não um ponto antigo e distante
+        if (z.second) {
+          z.first = { idx: z.second.idx, price: top };
+          z.firstBody = z.secondBody;
+          z.valley = { idx: t, price: b.low };
+          for (let j = z.second.idx + 1; j < t; j++) if (bars[j].low < z.valley.price) z.valley = { idx: j, price: bars[j].low };
+        }
         z.touchedAt = null;
         z.second = null;
         z.secondBody = -Infinity;
-        if (b.low < z.valley.price) z.valley = { idx: t, price: b.low };
         continue;
       }
       if (!z.second || b.high > z.second.price) z.second = { idx: t, price: b.high };
@@ -187,24 +210,23 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       const body = Math.abs(b.close - b.open);
       // rejeição: toca na zona, vela de tamanho a sério, pavio grande e fecha fora da zona do topo (rejeitou o nível)
       const rejection = reaches && range >= 0.8 * a && upperWick >= o.wick * range && b.close < top - 0.3 * a;
-      // expansão: vela forte contra o topo logo a seguir ao toque no nível (na própria vela ou na seguinte)
-      const expansion = b.close < b.open && body >= o.expansion * a && t - z.touchedAt <= 1;
-      // combinação: a vela que tocou na zona (verde, a subir até ao topo) e a seguinte, uma vermelha forte que devolve
-      // quase toda a verde; vistas como uma só vela (duas de M5 = uma de M10), fazem uma rejeição com fecho fora da zona
+      // combinação: a vela que tocou na zona e a seguinte (uma das duas chegou ao nível), vistas como uma só vela
+      // (duas de M5 = uma de M10): uma verde a subir e uma vermelha forte que fazem, juntas, uma rejeição
       const cHigh = Math.max(prev.high, b.high);
       const cRange = cHigh - Math.min(prev.low, b.low);
       const combo =
-        prevTouch === t - 1 &&
+        (reaches || prevTouch === t - 1) &&
         prev.close > prev.open &&
         b.close < b.open &&
         body >= 0.6 * a &&
-        prev.close - b.close >= 0.75 * (prev.close - prev.open) &&
         cRange >= 0.8 * a &&
         cHigh - Math.max(prev.open, b.close) >= o.wick * cRange &&
         b.close < top - 0.3 * a;
+      // expansão: vela forte contra o topo logo a seguir ao toque no nível (na própria vela ou na seguinte)
+      const expansion = b.close < b.open && body >= o.expansion * a && t - z.touchedAt <= 1;
       if (fired || !(rejection || combo || expansion)) continue;
-      // já há uma venda aberta: esta confirmação faz parte da mesma ideia
-      if (open) {
+      // já há uma operação aberta: esta confirmação passa, e só se entra noutra depois de aquela acabar
+      if (busy) {
         z.dead = true;
         continue;
       }
@@ -225,7 +247,7 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
       if (o.minRR > 0 && (entry - target) / (stop - entry) < o.minRR) continue;
       if (o.maxTarget > 0 && entry - target > o.maxTarget * a) continue;
       fired = true;
-      open = {
+      this.open = {
         dir: -1,
         first: z.first,
         second: z.second,
@@ -240,16 +262,19 @@ function scanTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions): S
         targetKind: useValley ? 'vale' : 'origem',
         exit: null,
       };
-      signals.push(open);
+      this.signals.push(this.open);
+      busy = true;
     }
-    zones = zones.filter((z) => !z.dead);
+    this.zones = this.zones.filter((z) => !z.dead);
   }
 
-  const last = n - 1;
-  const pending: DtPending[] = zones
-    .filter((z) => z.touchedAt !== null && z.second && last - z.touchedAt <= WAIT)
-    .map((z) => ({ dir: -1 as const, first: z.first, boxHi: Math.max(z.first.price, z.second!.price), boxLo: Math.min(z.first.price, z.second!.price, z.firstBody), touched: z.touchedAt! }));
-  return { signals, pending };
+  /** Zonas tocadas à espera de confirmação na última vela. */
+  pending(): DtPending[] {
+    const last = this.bars.length - 1;
+    return this.zones
+      .filter((z) => z.touchedAt !== null && z.second && last - z.touchedAt <= WAIT)
+      .map((z) => ({ dir: -1 as const, first: z.first, boxHi: Math.max(z.first.price, z.second!.price), boxLo: Math.min(z.first.price, z.second!.price, z.firstBody), touched: z.touchedAt! }));
+  }
 }
 
 const mirror = (b: Bar): Bar => ({ ...b, open: -b.open, high: -b.low, low: -b.high, close: -b.close });
@@ -259,10 +284,19 @@ export interface DtResult {
   pending: DtPending[];
 }
 
-/** Topos duplos (vendas) e fundos duplos (compras), já em preços reais. */
+/**
+ * Topos duplos (vendas) e fundos duplos (compras), já em preços reais.
+ * Uma operação de cada vez: enquanto uma compra ou venda está aberta, não entra outra (nem do outro lado).
+ */
 export function scanDoubleTops(bars: readonly Bar[], atr: readonly number[], o: DtOptions = DT_DEFAULTS): DtResult {
-  const tops = scanTops(bars, atr, o);
-  const m = scanTops(bars.map(mirror), atr, o);
+  const tops = new TopScanner(bars, atr, o);
+  const m = new TopScanner(bars.map(mirror), atr, o);
+  for (let t = 1; t < bars.length; t++) {
+    tops.exits(t);
+    m.exits(t);
+    tops.step(t, !!(tops.open || m.open));
+    m.step(t, !!(tops.open || m.open));
+  }
   const neg = (p: DtPoint): DtPoint => ({ idx: p.idx, price: -p.price });
   const bottoms = m.signals.map(
     (s): DtSignal => ({
@@ -278,10 +312,10 @@ export function scanDoubleTops(bars: readonly Bar[], atr: readonly number[], o: 
       targetFrom: neg(s.targetFrom),
     }),
   );
-  const pendingBottoms = m.pending.map((p): DtPending => ({ ...p, dir: 1, first: neg(p.first), boxHi: -p.boxLo, boxLo: -p.boxHi }));
+  const pendingBottoms = m.pending().map((p): DtPending => ({ ...p, dir: 1, first: neg(p.first), boxHi: -p.boxLo, boxLo: -p.boxHi }));
   return {
     signals: [...tops.signals, ...bottoms].sort((a, b) => a.idx - b.idx),
-    pending: [...tops.pending, ...pendingBottoms],
+    pending: [...tops.pending(), ...pendingBottoms],
   };
 }
 
