@@ -661,6 +661,11 @@ const rect: ToolDef = {
       { id: 1, ...b },
       { id: 2, x: a.x, y: b.y },
       { id: 3, x: b.x, y: a.y },
+      // meio de cada lado: estica só na horizontal (esquerda, direita) ou só na vertical (cima, baixo)
+      { id: 4, x: a.x, y: (a.y + b.y) / 2 },
+      { id: 5, x: b.x, y: (a.y + b.y) / 2 },
+      { id: 6, x: (a.x + b.x) / 2, y: a.y },
+      { id: 7, x: (a.x + b.x) / 2, y: b.y },
     ];
   },
   drag(d, id, p) {
@@ -668,7 +673,11 @@ const rect: ToolDef = {
     if (id === 0) return { points: [p, p1] };
     if (id === 1) return { points: [p0, p] };
     if (id === 2) return { points: [{ time: p.time, price: p0.price }, { time: p1.time, price: p.price }] };
-    return { points: [{ time: p0.time, price: p.price }, { time: p.time, price: p1.price }] };
+    if (id === 3) return { points: [{ time: p0.time, price: p.price }, { time: p.time, price: p1.price }] };
+    if (id === 4) return { points: [{ time: p.time, price: p0.price }, p1] };
+    if (id === 5) return { points: [p0, { time: p.time, price: p1.price }] };
+    if (id === 6) return { points: [{ time: p0.time, price: p.price }, p1] };
+    return { points: [p0, { time: p1.time, price: p.price }] };
   },
   axis: (d) => ({ prices: d.points.map((p) => p.price), times: d.points.map((p) => p.time) }),
 };
