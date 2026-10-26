@@ -89,10 +89,10 @@ function GroupButton({ group }: { group: (typeof TOOL_GROUPS)[number] }) {
           setTool(inGroup ? 'cross' : shown);
           if (!inGroup) closeMobileTools();
         }}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md transition-colors', inGroup ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md transition-colors', inGroup ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
         data-testid={`tool-${shown}`}
       >
-        <Ico size={19} />
+        <Ico size={22} className="pointer-coarse:size-[27px]" />
       </button>
       <button
         type="button"
@@ -154,15 +154,15 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const CursorIco = TOOL_ICONS[tool === 'cursor' ? 'cursor' : 'cross'];
 
   return (
-    <aside className={cn('flex w-[46px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-line bg-panel py-1.5 no-select', className)}>
+    <aside className={cn('flex w-[52px] pointer-coarse:w-[62px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-r border-line bg-panel py-1.5 no-select', className)}>
       <button
         ref={ref}
         type="button"
         title="Cursor"
         onClick={() => (tool === 'cross' || tool === 'cursor' ? setCursorOpen(true) : setTool('cross'))}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', tool === 'cross' || tool === 'cursor' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', tool === 'cross' || tool === 'cursor' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <CursorIco size={19} />
+        <CursorIco size={22} className="pointer-coarse:size-[27px]" />
       </button>
       <Popover anchor={ref} open={cursorOpen} onClose={() => setCursorOpen(false)} placement="right-start">
         <MenuList>
@@ -187,10 +187,10 @@ export function DrawingToolbar({ className }: { className?: string }) {
                   setTool(tool === t ? 'cross' : t);
                   if (tool !== t) closeMobileTools();
                 }}
-                className={cn('flex h-8 w-9 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
+                className={cn('flex h-9 w-10 pointer-coarse:h-11 pointer-coarse:w-12 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
                 data-testid={`fav-tool-${t}`}
               >
-                <I size={17} />
+                <I size={20} className="pointer-coarse:size-[25px]" />
               </button>
             );
           })}
@@ -201,15 +201,15 @@ export function DrawingToolbar({ className }: { className?: string }) {
         <GroupButton key={g.id} group={g} />
       ))}
       <span className="my-0.5 h-px w-7 bg-line" />
-      <SavedElements className="h-9 w-9" onPicked={closeMobileTools} />
+      <SavedElements className="h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12" onPicked={closeMobileTools} />
       <button
         ref={magRef}
         type="button"
         title={magnet === 'off' ? 'Íman desligado' : magnet === 'weak' ? 'Íman fraco' : 'Íman forte'}
         onClick={() => setMagOpen(true)}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <Magnet size={18} />
+        <Magnet size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <Popover anchor={magRef} open={magOpen} onClose={() => setMagOpen(false)} placement="right-start">
         <MenuList>
@@ -223,28 +223,28 @@ export function DrawingToolbar({ className }: { className?: string }) {
         title={angleSnap ? 'Alinhar ângulo: ligado (linhas encaixam de 15 em 15°)' : 'Alinhar ângulo (também com Shift)'}
         aria-label="Alinhar ângulo"
         onClick={() => setSettings({ angleSnap: !angleSnap })}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
         data-testid="angle-snap"
       >
-        <AngleIcon size={18} />
+        <AngleIcon size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <button
         type="button"
         title={loupe ? 'Lupa ao desenhar com o dedo: ligada' : 'Lupa ao desenhar com o dedo: desligada'}
         aria-label="Lupa"
         onClick={() => setSettings({ loupe: !loupe })}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', loupe ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', loupe ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <ZoomIn size={18} />
+        <ZoomIn size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <button
         type="button"
         title={favBar ? 'Esconder a barra de favoritos' : 'Mostrar a barra de favoritos'}
         aria-label="Barra de favoritos"
         onClick={() => setSettings({ favoritesBar: !favBar })}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', favBar ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', favBar ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <PanelTop size={18} />
+        <PanelTop size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <button
         type="button"
@@ -254,18 +254,18 @@ export function DrawingToolbar({ className }: { className?: string }) {
           setSettings({ stayInDrawingMode: !stay });
           toast(stay ? 'Cada ferramenta serve para um desenho' : 'Modo contínuo: a ferramenta fica ativa (só com rato)', { duration: 2200 });
         }}
-        className={cn('flex h-9 w-9 items-center justify-center rounded-md', stay ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', stay ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
-        <PenLine size={18} />
+        <PenLine size={21} className="pointer-coarse:size-[25px]" />
       </button>
-      <button type="button" title={locked ? 'Desbloquear desenhos' : 'Bloquear todos os desenhos'} onClick={() => setLocked(!locked)} className={cn('flex h-9 w-9 items-center justify-center rounded-md', locked ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}>
-        {locked ? <Lock size={18} /> : <LockOpen size={18} />}
+      <button type="button" title={locked ? 'Desbloquear desenhos' : 'Bloquear todos os desenhos'} onClick={() => setLocked(!locked)} className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', locked ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}>
+        {locked ? <Lock size={21} className="pointer-coarse:size-[25px]" /> : <LockOpen size={21} className="pointer-coarse:size-[25px]" />}
       </button>
-      <button type="button" title={hidden ? 'Mostrar desenhos' : 'Ocultar todos os desenhos'} onClick={() => setHidden(!hidden)} className={cn('flex h-9 w-9 items-center justify-center rounded-md', hidden ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}>
-        {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+      <button type="button" title={hidden ? 'Mostrar desenhos' : 'Ocultar todos os desenhos'} onClick={() => setHidden(!hidden)} className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', hidden ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}>
+        {hidden ? <EyeOff size={21} className="pointer-coarse:size-[25px]" /> : <Eye size={21} className="pointer-coarse:size-[25px]" />}
       </button>
-      <button type="button" title="Árvore de objetos" onClick={() => useWorkspace.getState().setRightTab('objects')} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-hover">
-        <ListTree size={18} />
+      <button type="button" title="Árvore de objetos" onClick={() => useWorkspace.getState().setRightTab('objects')} className="flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md hover:bg-hover">
+        <ListTree size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <button
         type="button"
@@ -274,9 +274,9 @@ export function DrawingToolbar({ className }: { className?: string }) {
           if (symbolId && confirm('Remover todos os desenhos deste símbolo? (pode desfazer com Ctrl+Z)')) clear(symbolId);
           useUi.getState().set({ mobileTools: false });
         }}
-        className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-hover hover:text-down"
+        className="flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md hover:bg-hover hover:text-down"
       >
-        <Trash2 size={18} />
+        <Trash2 size={21} className="pointer-coarse:size-[25px]" />
       </button>
     </aside>
   );

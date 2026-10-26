@@ -2,9 +2,9 @@
  * Lupa para desenhar com o dedo (como no MT5): mostra ampliada a zona debaixo do dedo, com uma mira no centro,
  * um pouco acima do dedo para não ficar tapada. Copia os canvases do gráfico (velas, desenhos e mira).
  */
-const SIZE = 132;
+const SIZE = 100;
 const ZOOM = 2;
-const GAP = 34;
+const GAP = 28;
 const MARGIN = 8;
 
 export type LoupePlace = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'follow';

@@ -143,7 +143,8 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         for (const h of hs) {
           ctx.beginPath();
           ctx.arc(h.x, h.y, host.coarse() ? 7.5 : 5, 0, Math.PI * 2);
-          ctx.fillStyle = host.dark() ? '#131722' : '#ffffff';
+          // fundo quase transparente: vê-se o ponto exato por baixo da pega
+          ctx.fillStyle = host.dark() ? 'rgba(19,23,34,0.15)' : 'rgba(255,255,255,0.15)';
           ctx.fill();
           ctx.lineWidth = 1.5;
           ctx.strokeStyle = '#2962ff';
@@ -211,9 +212,10 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       if (snap) {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(snap.x, snap.y, 7, 0, Math.PI * 2);
+        // só o anel, sem fundo: o ponto onde o íman prendeu vê-se por dentro
+        ctx.arc(snap.x, snap.y, 8, 0, Math.PI * 2);
         ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.restore();
       }
