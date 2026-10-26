@@ -1037,6 +1037,11 @@ export class ChartController {
         visible: !inst.hidden && o.visible,
         title: '',
         crosshairMarkerVisible: o.style !== 'histogram',
+        // o ponto que acompanha o cursor nas linhas é pequeno e translúcido: deixa ver a linha e o ponto exato por baixo
+        crosshairMarkerBackgroundColor: 'rgba(0,0,0,0)',
+        crosshairMarkerBorderColor: withAlpha(o.color, 0.4),
+        crosshairMarkerBorderWidth: 1,
+        crosshairMarkerRadius: 3,
         priceFormat: def?.overlayScale === 'volume' ? { type: 'volume' as const } : { type: 'price' as const, precision, minMove: Math.pow(10, -precision) },
         ...(def?.scale && !view.overlay ? { autoscaleInfoProvider: () => ({ priceRange: { minValue: def.scale!.min ?? 0, maxValue: def.scale!.max ?? 100 } }) } : {}),
       };

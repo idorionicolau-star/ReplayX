@@ -192,26 +192,32 @@ export function stdev(src: Series, len: number): Series {
   return out;
 }
 
+/** Máximo das últimas `len` velas; como no Pine, é `na` enquanto a janela tem algum valor em falta. */
 export function highest(src: Series, len: number): Series {
   const out = nan(src.length);
   const dq: number[] = [];
+  let lastBad = -1;
   for (let i = 0; i < src.length; i++) {
+    if (!ok(src[i])) lastBad = i;
     while (dq.length && dq[0] <= i - len) dq.shift();
     while (dq.length && !(src[dq[dq.length - 1]] > src[i])) dq.pop();
     dq.push(i);
-    if (i >= len - 1) out[i] = src[dq[0]];
+    if (i >= len - 1 && i - lastBad >= len) out[i] = src[dq[0]];
   }
   return out;
 }
 
+/** Mínimo das últimas `len` velas; como no Pine, é `na` enquanto a janela tem algum valor em falta. */
 export function lowest(src: Series, len: number): Series {
   const out = nan(src.length);
   const dq: number[] = [];
+  let lastBad = -1;
   for (let i = 0; i < src.length; i++) {
+    if (!ok(src[i])) lastBad = i;
     while (dq.length && dq[0] <= i - len) dq.shift();
     while (dq.length && !(src[dq[dq.length - 1]] < src[i])) dq.pop();
     dq.push(i);
-    if (i >= len - 1) out[i] = src[dq[0]];
+    if (i >= len - 1 && i - lastBad >= len) out[i] = src[dq[0]];
   }
   return out;
 }

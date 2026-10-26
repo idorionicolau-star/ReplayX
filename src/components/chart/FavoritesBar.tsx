@@ -50,7 +50,7 @@ export function FavoritesBar() {
         aria-label="Mostrar a barra de favoritos"
         title="Mostrar a barra de favoritos"
         onClick={() => set({ favoritesBar: true })}
-        className="absolute top-2 left-1/2 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-elev/90 text-warn shadow-sm active:bg-hover"
+        className="absolute top-2 left-1/2 z-20 flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-elev/90 text-warn shadow-sm active:bg-hover"
         data-testid="favorites-show"
       >
         <Star size={15} fill="currentColor" />
@@ -108,20 +108,20 @@ export function FavoritesBar() {
             title={def.label}
             aria-label={def.label}
             onClick={() => setTool(tool === t ? 'cross' : t)}
-            className={cn('flex h-8 w-8 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
+            className={cn('flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md transition-colors', tool === t ? 'bg-accent-soft text-accent' : 'text-text hover:bg-hover')}
           >
-            <I size={17} />
+            <I size={20} className="pointer-coarse:size-[25px]" />
           </button>
         );
       })}
       <span className={cn('shrink-0 bg-line', vertical ? 'my-0.5 h-px w-5' : 'mx-0.5 h-5 w-px')} />
-      <SavedElements className="h-8 w-8" size={16} placement="bottom-start" />
+      <SavedElements className="h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11" size={16} placement="bottom-start" />
       <button
         type="button"
         title={`${MAGNET_LABEL[magnet]} (toque para mudar)`}
         aria-label="Íman"
         onClick={() => set({ magnet: MAGNET_NEXT[magnet] })}
-        className={cn('relative flex h-8 w-8 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
         <Magnet size={16} />
         {magnet === 'strong' && <span className="absolute right-1 bottom-1 h-1.5 w-1.5 rounded-full bg-accent" />}
@@ -131,7 +131,7 @@ export function FavoritesBar() {
         title={angleSnap ? 'Alinhar ângulo: ligado' : 'Alinhar ângulo: desligado'}
         aria-label="Alinhar ângulo"
         onClick={() => set({ angleSnap: !angleSnap })}
-        className={cn('flex h-8 w-8 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        className={cn('flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
         <AngleIcon size={16} />
       </button>
@@ -140,7 +140,7 @@ export function FavoritesBar() {
         title={vertical ? 'Barra na horizontal' : 'Barra na vertical'}
         aria-label={vertical ? 'Barra na horizontal' : 'Barra na vertical'}
         onClick={() => set({ favoritesBarVertical: !vertical })}
-        className={cn('flex shrink-0 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text', vertical ? 'h-8 w-8' : 'h-8 w-6')}
+        className={cn('flex shrink-0 items-center justify-center rounded-md text-faint hover:bg-hover hover:text-text', vertical ? 'h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11' : 'h-8 w-6')}
         data-testid="favorites-orient"
       >
         {vertical ? <PanelTop size={14} /> : <PanelLeft size={14} />}
