@@ -30,7 +30,8 @@ export type ToolId =
   | 'short'
   | 'pricerange'
   | 'daterange'
-  | 'measure';
+  | 'measure'
+  | 'vpfixed';
 
 export interface FibLevel {
   value: number;
