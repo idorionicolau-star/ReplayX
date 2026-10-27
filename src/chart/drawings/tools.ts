@@ -2,6 +2,7 @@ import type { Bar, PricePoint } from '@/core/types';
 import { DEFAULT_FIBEXT_LEVELS, DEFAULT_FIB_LEVELS, type Drawing, type DrawingStyle, type PositionSizing, type ToolId } from './types';
 import { distToEllipse, distToPolyline, distToSegment, extendSegment, nearRectBorder, pointInPolygon, pointInRect, withAlpha, type Pt } from './geometry';
 import { fmtDuration } from '@/lib/format';
+import { volumeProfile, type VpResult } from '@/core/volumeProfile';
 
 export interface Viewport {
   width: number;
@@ -1142,6 +1143,123 @@ function rangeTool(id: 'pricerange' | 'daterange' | 'measure', label: string): T
   };
 }
 
+// ---------- perfil de volume (intervalo fixo) ----------
+
+/** 1.º índice de `bars` com tempo >= t (as velas estão por ordem de tempo). */
+function barIndexAt(bars: readonly Bar[], t: number): number {
+  let lo = 0;
+  let hi = bars.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (bars[mid].time < t) lo = mid + 1;
+    else hi = mid;
+  }
+  return Math.min(bars.length - 1, lo);
+}
+
+const VP_CACHE = new Map<string, { key: string; res: VpResult | null }>();
+const VP_ROWS = 24;
+
+function vpOf(d: Drawing, vp: Viewport): VpResult | null {
+  const bars = vp.bars;
+  if (!bars.length || d.points.length < 2) return null;
+  const t0 = Math.min(d.points[0].time, d.points[1].time);
+  const t1 = Math.max(d.points[0].time, d.points[1].time);
+  const i0 = barIndexAt(bars, t0);
+  const i1 = Math.min(bars.length - 1, Math.max(i0, barIndexAt(bars, t1)));
+  const last = bars[i1];
+  const key = `${i0}:${i1}:${bars.length}:${last.volume ?? 0}:${last.high}:${last.low}`;
+  const hit = VP_CACHE.get(d.id);
+  if (hit && hit.key === key) return hit.res;
+  const res = volumeProfile(bars, i0, i1, { rows: VP_ROWS, valueArea: 0.7 });
+  if (VP_CACHE.size > 200) VP_CACHE.clear();
+  VP_CACHE.set(d.id, { key, res });
+  return res;
+}
+
+const vpFixed: ToolDef = {
+  id: 'vpfixed',
+  label: 'Perfil de volume (intervalo fixo)',
+  group: 'measure',
+  points: 2,
+  style: { color: '#f23645', width: 1, dash: 1, fill: 'rgba(120,123,134,0.06)' },
+  render(ctx, d, vp, sel) {
+    const pts = allXY(d, vp);
+    if (!pts || pts.length < 2) return;
+    const res = vpOf(d, vp);
+    if (!res) return;
+    const xa = Math.min(pts[0].x, pts[1].x);
+    const xb = Math.max(pts[0].x, pts[1].x);
+    const yHi = vp.priceToY(res.hi);
+    const yLo = vp.priceToY(res.lo);
+    if (yHi === null || yLo === null) return;
+    const w = Math.max(2, xb - xa);
+    ctx.save();
+    if (d.style.fill) {
+      ctx.fillStyle = d.style.fill;
+      ctx.fillRect(xa, Math.min(yHi, yLo), w, Math.abs(yLo - yHi));
+    }
+    for (const l of res.levels) {
+      if (!(l.total > 0)) continue;
+      const y1 = vp.priceToY(l.hi);
+      const y2 = vp.priceToY(l.lo);
+      if (y1 === null || y2 === null) continue;
+      const top = Math.min(y1, y2);
+      const h = Math.max(1, Math.abs(y2 - y1) - 1);
+      const len = (l.total / res.max) * w * 0.92;
+      const upLen = (l.up / l.total) * len;
+      ctx.fillStyle = l.inVa ? 'rgba(41,98,255,0.60)' : 'rgba(41,98,255,0.28)';
+      ctx.fillRect(xa, top, upLen, h);
+      ctx.fillStyle = l.inVa ? 'rgba(251,140,0,0.60)' : 'rgba(251,140,0,0.28)';
+      ctx.fillRect(xa + upLen, top, len - upLen, h);
+    }
+    // frame
+    stroke(ctx, { ...d.style, color: sel ? '#2962ff' : '#787b86', dash: 1 }, sel);
+    ctx.strokeRect(xa + 0.5, Math.min(yHi, yLo) + 0.5, w, Math.abs(yLo - yHi));
+    // POC e área de valor por todo o intervalo
+    const yPoc = vp.priceToY(res.poc);
+    const yVah = vp.priceToY(res.vah);
+    const yVal = vp.priceToY(res.val);
+    if (yPoc !== null) {
+      stroke(ctx, { ...d.style, color: '#f23645', dash: 0 });
+      line(ctx, { x: xa, y: yPoc }, { x: xb, y: yPoc });
+      labelBox(ctx, [`POC ${vp.fmtPrice(res.poc)}`], xb, yPoc, { bg: '#f23645', fg: '#ffffff', align: 'left' });
+    }
+    stroke(ctx, { ...d.style, color: '#787b86', dash: 1 });
+    if (yVah !== null) line(ctx, { x: xa, y: yVah }, { x: xb, y: yVah });
+    if (yVal !== null) line(ctx, { x: xa, y: yVal }, { x: xb, y: yVal });
+    if (res.mode === 'tempo') labelBox(ctx, ['sem volume: tempo em cada preço'], xa, Math.min(yHi, yLo) - 4, { bg: 'rgba(120,123,134,0.9)', fg: '#ffffff', align: 'left', valign: 'bottom' });
+    ctx.restore();
+  },
+  hit(d, vp, p) {
+    const pts = allXY(d, vp);
+    if (!pts || pts.length < 2) return false;
+    const res = vpOf(d, vp);
+    if (!res) return false;
+    const yHi = vp.priceToY(res.hi);
+    const yLo = vp.priceToY(res.lo);
+    if (yHi === null || yLo === null) return false;
+    return pointInRect(p, { x: pts[0].x, y: yHi }, { x: pts[1].x, y: yLo }, 3);
+  },
+  handles(d, vp) {
+    const pts = allXY(d, vp);
+    const res = vpOf(d, vp);
+    if (!pts || pts.length < 2 || !res) return [];
+    const yHi = vp.priceToY(res.hi);
+    const yLo = vp.priceToY(res.lo);
+    if (yHi === null || yLo === null) return [];
+    const y = (yHi + yLo) / 2;
+    return [
+      { id: 0, x: pts[0].x, y },
+      { id: 1, x: pts[1].x, y },
+    ];
+  },
+  drag(d, id, p) {
+    const [p0, p1] = d.points;
+    return id === 0 ? { points: [{ time: p.time, price: p0.price }, p1] } : { points: [p0, { time: p.time, price: p1.price }] };
+  },
+};
+
 export const TOOLS: ToolDef[] = [
   trendFamily('trendline', 'Linha de tendência', {}, {}),
   trendFamily('ray', 'Raio', { extendRight: true }),
@@ -1171,6 +1289,7 @@ export const TOOLS: ToolDef[] = [
   rangeTool('pricerange', 'Intervalo de preço'),
   rangeTool('daterange', 'Intervalo de datas'),
   rangeTool('measure', 'Medir (data e preço)'),
+  vpFixed,
 ];
 
 TOOLS.find((t) => t.id === 'trendline')!.shortcut = 'Alt+T';
@@ -1186,5 +1305,5 @@ export const TOOL_GROUPS: { id: ToolGroup; label: string; tools: ToolId[] }[] = 
   { id: 'fib', label: 'Fibonacci e Gann', tools: ['fib', 'fibext', 'pitchfork'] },
   { id: 'shapes', label: 'Formas', tools: ['rect', 'ellipse', 'triangle', 'path', 'brush'] },
   { id: 'text', label: 'Texto e marcas', tools: ['text', 'note', 'pricelabel', 'arrowup', 'arrowdown'] },
-  { id: 'measure', label: 'Previsão e medição', tools: ['long', 'short', 'pricerange', 'daterange', 'measure'] },
+  { id: 'measure', label: 'Previsão e medição', tools: ['long', 'short', 'pricerange', 'daterange', 'measure', 'vpfixed'] },
 ];

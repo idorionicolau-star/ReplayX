@@ -213,6 +213,13 @@ export const ToolIconSet: Record<ToolId, Icon> = {
       <Dia x={12} y={12} />
     </>
   )),
+  vpfixed: make(() => (
+    <>
+      <path d="M3.5 4v16" />
+      <path d="M3.5 6h9M3.5 9.5h14M3.5 13h7M3.5 16.5h11" strokeWidth={2.4} />
+      <Dia x={20} y={12} r={2.4} />
+    </>
+  )),
   measure: make(() => (
     <>
       <path d="M4 16L16 4l4 4L8 20z" />

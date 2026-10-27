@@ -762,7 +762,45 @@ export class ChartController {
     return !this.isAutoScale();
   }
 
+  private rangeRaf = 0;
+
+  /** Indicadores que dependem do que se vê (perfil de volume do intervalo visível) recalculam quando o gráfico mexe. */
+  private scheduleRangeIndicators() {
+    if (this.rangeRaf) return;
+    for (const v of this.indicators.values()) {
+      if (v.def?.usesRange && !v.inst.hidden) {
+        this.rangeRaf = requestAnimationFrame(() => {
+          this.rangeRaf = 0;
+          this.refreshRangeIndicators();
+        });
+        return;
+      }
+    }
+  }
+
+  private refreshRangeIndicators() {
+    const bars = this.bars;
+    if (!bars.length || this.destroyed) return;
+    const ctx = this.indicatorCtx();
+    for (const view of this.indicators.values()) {
+      if (!view.def?.usesRange) continue;
+      try {
+        const r = view.def.compute(bars, { ...Object.fromEntries(view.def.inputs.map((i) => [i.key, i.default])), ...view.inst.params } as Record<string, ParamValue>, ctx);
+        view.layer?.set(view.inst.hidden ? null : (r.draw ?? null));
+        view.error = undefined;
+      } catch (e) {
+        view.error = (e as Error).message;
+      }
+    }
+  }
+
+  private indicatorCtx() {
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    return { historyDone: this.historyDone(), pip: this.symbol ? pipSize(this.symbol) : undefined, range: r ? { from: r.from, to: r.to } : undefined };
+  }
+
   private onRange = (range: { from: number; to: number } | null) => {
+    this.scheduleRangeIndicators();
     if (range && this.autoFit && !this.isAutoScale()) this.chart.priceScale('right').applyOptions({ autoScale: true });
     if (!range || this.loadingMore || this.startReached || !this.symbol || !this.bars.length) return;
     if (range.from > 30) return;
@@ -1193,7 +1231,7 @@ export class ChartController {
     const bars = this.bars;
     if (!bars.length) return;
     let wantHistory = false;
-    const ctx = { historyDone: this.historyDone(), pip: this.symbol ? pipSize(this.symbol) : undefined };
+    const ctx = this.indicatorCtx();
     for (const view of this.indicators.values()) {
       try {
         if (view.def) {
@@ -1571,6 +1609,7 @@ export class ChartController {
     this.gen++;
     this.stopLive();
     if (this.rafLegend) cancelAnimationFrame(this.rafLegend);
+    if (this.rangeRaf) cancelAnimationFrame(this.rangeRaf);
     if (this.indTimer) clearTimeout(this.indTimer);
     if (this.markerTimer) clearTimeout(this.markerTimer);
     this.resizeObs?.disconnect();

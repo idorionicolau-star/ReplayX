@@ -4,6 +4,7 @@ import { apocalypse, atrFilled, readingLines } from './apocalypse';
 import { drawFootprint, scanFootprint } from './footprint';
 import { drawDoubleTops, scanDoubleTops, type DtOptions } from './doubletop';
 import { equityCurve } from './equity';
+import { drawVolumeProfile, VP_DEFAULTS } from './volprofile';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
@@ -51,6 +52,8 @@ export interface ComputeContext {
   historyDone: boolean;
   /** Tamanho de um pip (ou ponto) do símbolo, para entradas em pips. */
   pip?: number;
+  /** Intervalo visível do gráfico, em posições de velas (para indicadores que dependem do que se vê). */
+  range?: { from: number; to: number };
 }
 
 export interface IndicatorResult {
@@ -74,6 +77,8 @@ export interface IndicatorDef {
   overlayScale?: 'volume';
   /** Desenha por cima do gráfico (linhas, etiquetas e cartão) em vez de séries. */
   layer?: boolean;
+  /** Recalcula quando o intervalo visível muda (ex.: perfil de volume do intervalo visível). */
+  usesRange?: boolean;
   inputs: InputDef[];
   outputs: OutputDef[];
   fills?: { a: string; b: string; color: string }[];
@@ -1224,6 +1229,43 @@ export const INDICATORS: IndicatorDef[] = [
       }
       const out = drawDoubleTops(bars, r, undefined, goal ? { target: goal, historyDone } : undefined, levelNote);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
+    },
+  },
+  {
+    id: 'vpvr',
+    name: 'Perfil de volume (intervalo visível)',
+    short: 'VP',
+    category: 'Volume',
+    overlay: true,
+    layer: true,
+    usesRange: true,
+    description:
+      'Perfil de volume do que está visível no gráfico, como o VPVR do TradingView: histograma horizontal por faixa de preço (volume de subida e de descida), linha de controlo (POC, a faixa com mais volume) e área de valor (VAH e VAL, 70% do volume por padrão). Muda quando mexes no gráfico. Em dados sem volume (índices sintéticos e forex da Deriv) mostra o tempo que o preço passou em cada faixa, e diz-o no cartão.',
+    inputs: [
+      { key: 'rows', label: 'Número de linhas', type: 'int', default: VP_DEFAULTS.rows, min: 4, max: 300, step: 4 },
+      numInput('widthPct', 'Largura máxima (% do gráfico)', VP_DEFAULTS.widthPct, 5, 5, 100),
+      numInput('valueArea', 'Área de valor (% do volume)', VP_DEFAULTS.valueArea * 100, 5, 10, 99),
+      { key: 'place', label: 'Posição', type: 'select', default: 'right', options: [{ value: 'right', label: 'Direita' }, { value: 'left', label: 'Esquerda' }] },
+      { key: 'mode', label: 'Origem', type: 'select', default: 'auto', options: [{ value: 'auto', label: 'Automática (volume, ou tempo se não houver)' }, { value: 'volume', label: 'Volume' }, { value: 'tempo', label: 'Tempo (tempo em cada preço)' }] },
+      { key: 'split', label: 'Separar subida e descida', type: 'bool', default: true },
+      { key: 'showPoc', label: 'Mostrar a linha de controlo (POC)', type: 'bool', default: true },
+      { key: 'showVa', label: 'Mostrar VAH e VAL', type: 'bool', default: true },
+    ],
+    outputs: [],
+    compute(bars, p, ctx) {
+      const n0 = bars.length;
+      const range = ctx?.range ?? { from: Math.max(0, n0 - 200), to: n0 - 1 };
+      const out = drawVolumeProfile(bars, range.from, range.to, {
+        rows: Math.round(n(p, 'rows')),
+        widthPct: n(p, 'widthPct'),
+        valueArea: n(p, 'valueArea') / 100,
+        place: s(p, 'place') === 'left' ? 'left' : 'right',
+        mode: (['auto', 'volume', 'tempo'].includes(s(p, 'mode')) ? s(p, 'mode') : 'auto') as 'auto' | 'volume' | 'tempo',
+        showPoc: p.showPoc !== false,
+        showVa: p.showVa !== false,
+        split: p.split !== false,
+      });
+      return { values: {}, draw: out.draw };
     },
   },
   {

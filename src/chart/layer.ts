@@ -94,7 +94,14 @@ export class SegmentLayer implements ISeriesPrimitive<Time> {
     if (!chart || !series || !d) return;
     const ts = chart.timeScale();
     target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
-      const x = (i: number) => ts.logicalToCoordinate(i as Logical);
+      // posições fracionárias (largura das barras do perfil de volume): interpola entre as duas velas vizinhas
+      const x = (i: number) => {
+        const f = Math.floor(i);
+        const a = ts.logicalToCoordinate(f as Logical);
+        if (a === null || i === f) return a;
+        const b = ts.logicalToCoordinate((f + 1) as Logical);
+        return b === null ? a : a + (i - f) * (b - a);
+      };
       const y = (p: number) => series.priceToCoordinate(p);
       ctx.save();
       ctx.lineCap = 'round';
