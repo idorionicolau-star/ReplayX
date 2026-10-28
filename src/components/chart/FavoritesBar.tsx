@@ -90,7 +90,7 @@ export function FavoritesBar() {
   return (
     <div
       ref={ref}
-      className={cn('absolute z-20 flex items-center gap-0.5 rounded-lg border border-line bg-elev/95 p-0.5 shadow-pop backdrop-blur no-select', vertical && 'max-h-[calc(100%-16px)] flex-col overflow-y-auto', !at && (vertical ? 'top-2 left-2' : 'top-2 left-1/2 -translate-x-1/2'))}
+      className={cn('absolute z-20 flex items-center gap-0.5 rounded-lg border border-line bg-elev/95 p-0.5 shadow-pop backdrop-blur no-select', vertical ? 'max-h-[calc(100%-16px)] flex-col overflow-y-auto' : 'max-w-[calc(100%-16px)] overflow-x-auto', !at && (vertical ? 'top-2 left-2' : 'top-2 left-1/2 -translate-x-1/2'))}
       style={at ? { left: at.x, top: at.y } : undefined}
       data-testid="favorites-bar"
     >
