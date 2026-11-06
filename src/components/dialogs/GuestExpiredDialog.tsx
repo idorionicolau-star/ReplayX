@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Gift, Loader2, Mail, Sparkles, UserRound } from 'lucide-react';
+import { Clock, Gift, Loader2, Mail, Sparkles, X } from 'lucide-react';
 import { authError, loginEmail, loginGoogle, registerEmail, useAuth, logout } from '@/lib/auth';
-import { useGuestTimer } from '@/lib/guestTimer';
+import { useGuestTimer, formatGuestTime } from '@/lib/guestTimer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Segmented } from '@/components/ui/Tabs';
@@ -22,7 +22,7 @@ function GoogleIcon() {
 export function GuestExpiredDialog() {
   const user = useAuth((s) => s.user);
   const router = useRouter();
-  const { isExpired, dialogOpen, setDialogOpen, tick } = useGuestTimer();
+  const { isExpired, remainingMs, dialogOpen, setDialogOpen, tick } = useGuestTimer();
 
   const [mode, setMode] = useState<'register' | 'login'>('register');
   const [name, setName] = useState('');
@@ -40,6 +40,19 @@ export function GuestExpiredDialog() {
     }, 1000);
     return () => clearInterval(interval);
   }, [user?.guest, tick]);
+
+  // Tecla Escape fecha a janela se ainda houver tempo
+  useEffect(() => {
+    if (!dialogOpen || isExpired) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setDialogOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [dialogOpen, isExpired, setDialogOpen]);
 
   if (!user?.guest || (!isExpired && !dialogOpen)) {
     return null;
@@ -63,24 +76,70 @@ export function GuestExpiredDialog() {
     router.replace('/');
   };
 
+  const handleClose = () => {
+    if (!isExpired) {
+      setDialogOpen(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in"
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget && !isExpired) {
+          handleClose();
+        }
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
-        className="flex max-h-[90vh] w-full max-w-[460px] flex-col overflow-y-auto rounded-2xl border border-line bg-elev p-6 text-text shadow-pop animate-pop"
+        className="relative flex max-h-[90vh] w-full max-w-[460px] flex-col overflow-y-auto rounded-2xl border border-line bg-elev p-6 text-text shadow-pop animate-pop"
       >
+        {/* Botão de Fechar se ainda tiver tempo */}
+        {!isExpired && (
+          <button
+            type="button"
+            aria-label="Voltar ao teste"
+            onClick={handleClose}
+            className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-hover hover:text-text transition-colors"
+          >
+            <X size={18} />
+          </button>
+        )}
+
         <div className="flex items-center gap-2 text-accent">
-          <Sparkles size={20} className="animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wider">A sua experiência continua</span>
+          {isExpired ? (
+            <>
+              <Sparkles size={20} className="animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider">A sua experiência continua</span>
+            </>
+          ) : (
+            <>
+              <Clock size={18} className="text-warn animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider text-warn">
+                Demonstração ativa · {formatGuestTime(remainingMs)} restantes
+              </span>
+            </>
+          )}
         </div>
 
         <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">
-          Não terminou! <span className="text-accent">A sua jornada está só a começar</span>
+          {isExpired ? (
+            <>
+              Não terminou! <span className="text-accent">A sua jornada está só a começar</span>
+            </>
+          ) : (
+            <>
+              Guarde os seus estudos <span className="text-accent">e ganhe 14 dias de Pro</span>
+            </>
+          )}
         </h2>
 
         <p className="mt-2 text-[13px] leading-relaxed text-muted">
-          O seu tempo de demonstração terminou, mas as suas análises continuam aqui. Registe-se agora para continuar o seu teste grátis sem perder os seus desenhos, configurações e sessões de treino!
+          {isExpired
+            ? 'O seu tempo de demonstração terminou, mas as suas análises continuam aqui. Registe-se agora para continuar o seu teste grátis sem perder os seus desenhos, configurações e sessões de treino!'
+            : 'Pode continuar a testar livremente durante o tempo restante. Se quiser guardar os seus desenhos e desbloquear todos os recursos Pro sem limites, crie a sua conta gratuita agora!'}
         </p>
 
         {/* Card de Bónus Pro */}
@@ -149,6 +208,13 @@ export function GuestExpiredDialog() {
             {mode === 'register' ? 'Criar conta e guardar progresso' : 'Entrar na minha conta'}
           </Button>
         </form>
+
+        {/* Botão de Retorno se ainda houver tempo */}
+        {!isExpired && (
+          <Button variant="ghost" size="md" block onClick={handleClose} className="mt-2 text-xs text-muted hover:text-text">
+            Continuar a testar ({formatGuestTime(remainingMs)} restantes)
+          </Button>
+        )}
 
         <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-xs text-muted">
           <span>Os seus dados ficam guardados</span>
