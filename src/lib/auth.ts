@@ -33,6 +33,30 @@ interface AuthState {
 }
 
 const GUEST_KEY = 'rx-guest';
+export const GUEST_START_KEY = 'rx-guest-start';
+export const GUEST_DURATION_MS = 20 * 60 * 1000; // 20 minutos de degustação
+
+export function getGuestStart(): number | null {
+  if (typeof window === 'undefined') return null;
+  const s = localStorage.getItem(GUEST_START_KEY);
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export function getGuestRemainingMs(): number {
+  if (typeof window === 'undefined') return GUEST_DURATION_MS;
+  const start = getGuestStart();
+  if (!start) return GUEST_DURATION_MS;
+  return Math.max(0, GUEST_DURATION_MS - (Date.now() - start));
+}
+
+export function isGuestExpired(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hasGuestKey = localStorage.getItem(GUEST_KEY) === '1' || !!getGuestStart();
+  if (!hasGuestKey) return false;
+  return getGuestRemainingMs() <= 0;
+}
+
 const GUEST_USER: SessionUser = { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true, emailVerified: false, createdAt: null };
 
 export const useAuth = create<AuthState>(() => ({ user: null, ready: false }));
@@ -60,6 +84,7 @@ export function startAuth() {
     onAuthStateChanged(auth(), (u) => {
       if (u) {
         localStorage.removeItem(GUEST_KEY);
+        localStorage.removeItem(GUEST_START_KEY);
         useAuth.setState({ user: fromFirebase(u), ready: true });
       } else if (localStorage.getItem(GUEST_KEY) === '1') {
         useAuth.setState({ user: GUEST_USER, ready: true });
@@ -123,6 +148,10 @@ export async function resetPassword(email: string) {
 }
 
 export function enterAsGuest() {
+  if (typeof window === 'undefined') return;
+  if (!getGuestStart()) {
+    localStorage.setItem(GUEST_START_KEY, String(Date.now()));
+  }
   localStorage.setItem(GUEST_KEY, '1');
   useAuth.setState({ user: GUEST_USER, ready: true });
 }

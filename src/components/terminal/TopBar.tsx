@@ -29,6 +29,7 @@ import {
   FunctionSquare,
   Menu as MenuIcon,
   Crown,
+  Clock,
 } from 'lucide-react';
 import { useWorkspace, type LayoutId } from '@/store/workspace';
 import { useSettings } from '@/store/settings';
@@ -52,6 +53,8 @@ import { setChartTf, setLayoutGated } from '@/lib/gates';
 import { useSymbolWheel, useTfWheel } from './useWheels';
 import { canAddIndicator, openUpgrade, usePlan } from '@/lib/billing';
 import { getIndicator } from '@/core/indicators/registry';
+import { useAuth } from '@/lib/auth';
+import { useGuestTimer, formatGuestTime } from '@/lib/guestTimer';
 
 const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
   { id: 'candles', label: 'Velas', icon: CandlestickChart },
@@ -323,6 +326,7 @@ export function TopBar() {
 
       <div className="flex-1" />
 
+      <GuestCountdownBadge />
       <PlanBadge />
       <LayoutMenu />
       <IconButton label="Captura do gráfico" onClick={screenshot}>
@@ -343,10 +347,33 @@ export function TopBar() {
   );
 }
 
+/** Badge do tempo de demonstração (20 min) para utilizadores convidados */
+function GuestCountdownBadge() {
+  const user = useAuth((s) => s.user);
+  const { remainingMs, setDialogOpen } = useGuestTimer();
+  if (!user?.guest) return null;
+  const urgent = remainingMs < 3 * 60 * 1000;
+  return (
+    <button
+      type="button"
+      onClick={() => setDialogOpen(true)}
+      title="Tempo restante da demonstração (20 min). Clique para guardar as suas análises e receber 14 dias de Pro Grátis!"
+      className={cn(
+        'mr-1.5 flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors',
+        urgent ? 'border border-down/40 bg-down/20 text-down animate-pulse' : 'border border-warn/30 bg-warn/15 text-warn hover:bg-warn/25',
+      )}
+    >
+      <Clock size={13} />
+      <span>Demonstração · {formatGuestTime(remainingMs)}</span>
+    </button>
+  );
+}
+
 /** Plano atual: "Pro" (pago ou em teste) ou botão para assinar. */
 function PlanBadge() {
+  const user = useAuth((s) => s.user);
   const plan = usePlan();
-  if (!plan.loaded) return null;
+  if (user?.guest || !plan.loaded) return null;
   const label = plan.reason === 'paid' || plan.reason === 'lifetime' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : 'Assinar Pro';
   return (
     <button

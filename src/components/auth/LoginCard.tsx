@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Loader2, Mail, UserRound } from 'lucide-react';
-import { authError, enterAsGuest, loginEmail, loginGoogle, registerEmail, resetPassword } from '@/lib/auth';
+import { authError, enterAsGuest, isGuestExpired, loginEmail, loginGoogle, registerEmail, resetPassword } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Segmented } from '@/components/ui/Tabs';
@@ -49,7 +49,7 @@ export function LoginCard() {
         Continuar com Google
       </Button>
 
-      <div className="my-5 flex items-center gap-3 text-[11px] text-muted uppercase">
+      <div className="my-5 flex items-center gap-3 text-[11px] uppercase text-muted">
         <span className="h-px flex-1 bg-line" />
         ou com e-mail
         <span className="h-px flex-1 bg-line" />
@@ -116,9 +116,22 @@ export function LoginCard() {
       )}
 
       <div className="mt-5 border-t border-line pt-4">
-        <Button variant="ghost" block onClick={enterAsGuest} disabled={!!busy}>
-          <UserRound size={16} />
-          Continuar sem conta (dados só neste dispositivo)
+        <Button
+          variant="ghost"
+          block
+          onClick={() => {
+            if (isGuestExpired()) {
+              setError('A sua demonstração de 20 minutos terminou. Crie a sua conta gratuita para continuar com 14 dias de Pro Grátis!');
+              setMode('register');
+              return;
+            }
+            enterAsGuest();
+          }}
+          disabled={!!busy}
+          className="text-xs text-muted hover:text-text"
+        >
+          <UserRound size={16} className="text-accent" />
+          Experimentar demonstração gratuita (20 min)
         </Button>
       </div>
       <p className="mt-3 text-center text-[11px] leading-snug text-muted" data-testid="consent">

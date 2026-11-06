@@ -10,6 +10,7 @@ import { startSync, stopSync } from '@/lib/cloud';
 import { setChartTf } from '@/lib/gates';
 import { startBilling, usePlan } from '@/lib/billing';
 import { UpgradeDialog } from '@/components/dialogs/UpgradeDialog';
+import { GuestExpiredDialog } from '@/components/dialogs/GuestExpiredDialog';
 import { FavoritesBar } from '@/components/chart/FavoritesBar';
 import { AlertPopups } from '@/components/dialogs/AlertPopups';
 import { PwaPrompts } from './PwaPrompts';
@@ -239,13 +240,13 @@ export function Terminal() {
       <AlertDialog />
       <ChartContextMenu />
       <UpgradeDialog />
+      <GuestExpiredDialog />
       <AlertPopups />
       <PwaPrompts />
       <Toaster />
     </div>
   );
 }
-
 
 function MobileNav() {
   const tab = useWorkspace((s) => s.rightTab);
