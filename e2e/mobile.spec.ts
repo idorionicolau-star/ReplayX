@@ -36,7 +36,7 @@ test('barra de ferramentas não fecha ao mexer nas opções; fecha ao escolher u
   // opções (íman, ângulo, bloquear…) deixam a barra aberta
   await page.getByTestId('mobile-tools').getByRole('button', { name: 'Alinhar ângulo' }).click();
   await page.getByTestId('mobile-tools').getByRole('button', { name: /Íman/ }).click();
-  await page.getByRole('button', { name: 'Íman fraco (perto do preço)' }).click();
+  await page.getByRole('button', { name: 'Íman 1 · fraco (perto do preço)' }).click();
   await expect(page.getByTestId('mobile-tools')).toBeVisible();
   // escolher uma ferramenta fecha-a para se desenhar logo
   await page.getByTestId('mobile-tools').getByTestId('tool-trendline').click();

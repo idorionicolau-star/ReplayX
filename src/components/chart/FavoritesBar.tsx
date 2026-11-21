@@ -8,9 +8,8 @@ import { toolDef } from '@/chart/drawings/tools';
 import { TOOL_ICONS } from '@/components/terminal/DrawingToolbar';
 import { cn } from '@/components/ui/cn';
 import { SavedElements } from './SavedElements';
+import { magnetLevel, magnetTitle, nextMagnet } from '@/core/magnet';
 
-const MAGNET_NEXT = { off: 'weak', weak: 'strong', strong: 'off' } as const;
-const MAGNET_LABEL = { off: 'Íman desligado', weak: 'Íman fraco', strong: 'Íman forte' } as const;
 
 /** Barra flutuante com as ferramentas favoritas, como no TradingView. Arrasta-se pela pega. */
 export function FavoritesBar() {
@@ -118,13 +117,13 @@ export function FavoritesBar() {
       <SavedElements className="h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11" size={16} placement="bottom-start" />
       <button
         type="button"
-        title={`${MAGNET_LABEL[magnet]} (toque para mudar)`}
+        title={`${magnetTitle(magnet)} (toque para mudar)`}
         aria-label="Íman"
-        onClick={() => set({ magnet: MAGNET_NEXT[magnet] })}
+        onClick={() => set({ magnet: nextMagnet(magnet) })}
         className={cn('relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
         <Magnet size={16} />
-        {magnet === 'strong' && <span className="absolute right-1 bottom-1 h-1.5 w-1.5 rounded-full bg-accent" />}
+        {magnet !== 'off' && <span className="absolute right-0.5 bottom-0 text-[9px] leading-none font-semibold">{magnetLevel(magnet)?.level}</span>}
       </button>
       <button
         type="button"
