@@ -173,146 +173,145 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(120% 90% at 50% 40%, #151b33 0%, #0a0d18 70%);
+  background: #000;
   color: #fff;
   overflow: hidden;
   cursor: pointer;
-  animation: rx-out 0.55s cubic-bezier(0.4, 0, 0.2, 1) 3s forwards;
+  animation: rx-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) 3.05s forwards;
 }
 .no-splash .rx-splash {
   display: none;
 }
-.rx-splash-bg {
+/* grelha de cenas, inclinada em perspetiva, a subir devagar */
+.rx-grid-wrap {
   position: absolute;
-  inset: 0;
+  inset: -25% -35%;
+  perspective: 1100px;
+  animation: rx-dim 0.9s ease-out 1.7s forwards;
+}
+.rx-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+  transform: rotateX(22deg) rotateZ(-9deg) scale(1.05);
+  transform-origin: 50% 30%;
+  animation: rx-drift 3.4s linear forwards;
+}
+@media (min-width: 900px) {
+  .rx-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+.rx-tile {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(160deg, #161616 0%, #050505 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  opacity: 0;
+  transform: translateY(46px) scale(0.94);
+  animation: rx-tile-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.rx-tile .rx-art {
+  display: block;
   width: 100%;
   height: 100%;
+}
+.rx-tile figcaption {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font: 600 8px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+}
+/* escurece as bordas e o meio para a marca ler-se */
+.rx-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 55% at 50% 50%, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.1) 100%);
   opacity: 0;
-  animation: rx-fade 0.8s ease-out 0.05s forwards;
+  animation: rx-fade 0.7s ease-out 1.65s forwards;
 }
-.rx-candle {
-  transform: scaleY(0);
-  animation: rx-grow 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+/* cantos de mira, como num visor */
+.rx-hud {
+  position: absolute;
+  inset: 18px;
+  pointer-events: none;
 }
-.rx-curve {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 1.2px rgba(45, 255, 192, 0.7));
-  animation: rx-draw 1.5s cubic-bezier(0.5, 0, 0.2, 1) 0.3s forwards;
+.rx-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 0 solid rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  animation: rx-fade 0.3s ease-out 0.15s forwards;
 }
-.rx-splash-center {
+.rx-c1 { top: 0; left: 0; border-width: 1.5px 0 0 1.5px; }
+.rx-c2 { top: 0; right: 0; border-width: 1.5px 1.5px 0 0; }
+.rx-c3 { bottom: 0; left: 0; border-width: 0 0 1.5px 1.5px; }
+.rx-c4 { bottom: 0; right: 0; border-width: 0 1.5px 1.5px 0; }
+.rx-center {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 0 24px;
   text-align: center;
 }
 .rx-mark {
-  position: relative;
-  width: 132px;
-  height: 132px;
-  filter: drop-shadow(0 18px 40px rgba(76, 80, 255, 0.45));
-}
-.rx-tile {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(0.2) rotate(-18deg);
   opacity: 0;
-  animation: rx-pop 0.75s cubic-bezier(0.2, 1.2, 0.3, 1) 0.45s forwards;
-}
-.rx-s {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  opacity: 0;
-  animation: rx-draw 0.45s cubic-bezier(0.5, 0, 0.2, 1) forwards;
-}
-.rx-s1 { animation-delay: 0.95s; }
-.rx-s2 { animation-delay: 1.05s; }
-.rx-s3 { animation-delay: 1.15s; }
-.rx-s4 { animation-delay: 1.45s; }
-.rx-ring {
-  position: absolute;
-  inset: -6px;
-  border-radius: 34px;
-  border: 2px solid rgba(45, 255, 192, 0.8);
-  opacity: 0;
-  animation: rx-ring 0.9s ease-out 1.55s forwards;
+  transform: scale(1.5);
+  filter: blur(6px);
+  animation: rx-mark-in 0.55s cubic-bezier(0.2, 0.9, 0.2, 1) 1.75s forwards;
 }
 .rx-word {
   display: flex;
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  overflow: hidden;
-  padding: 2px 4px;
+  gap: 0.28em;
+  font: 800 30px/1 var(--font-sans);
+  letter-spacing: 0.1em;
 }
 .rx-letter {
   display: inline-block;
-  transform: translateY(110%);
   opacity: 0;
-  animation: rx-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
-}
-.rx-x {
-  background: linear-gradient(135deg, #2dffc0, #22d3ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  transform: translateY(14px);
+  animation: rx-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 .rx-tag {
-  font-size: 14px;
-  color: rgba(214, 222, 255, 0.75);
-  letter-spacing: 0.04em;
+  font: 500 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
   opacity: 0;
-  transform: translateY(6px);
-  animation: rx-up 0.6s ease-out 1.85s forwards;
+  animation: rx-fade 0.5s ease-out 2.4s forwards;
 }
-.rx-track {
-  position: relative;
-  width: min(260px, 70vw);
-  height: 3px;
-  margin-top: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.12);
+.rx-line {
+  width: min(260px, 60vw);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
   opacity: 0;
-  animation: rx-fade 0.4s ease-out 1.9s forwards;
+  animation: rx-fade 0.3s ease-out 2.35s forwards;
 }
-.rx-fill {
-  position: absolute;
-  inset: 0;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #2b5cff, #2dffc0);
-  transform-origin: left;
-  transform: scaleX(0);
-  animation: rx-fillx 1.05s cubic-bezier(0.5, 0, 0.2, 1) 1.9s forwards;
-}
-.rx-head {
-  position: absolute;
-  top: -4px;
-  left: 0;
-  width: 11px;
-  height: 11px;
-  margin-left: -5px;
-  border-radius: 50%;
+.rx-line span {
+  display: block;
+  height: 100%;
   background: #fff;
-  box-shadow: 0 0 12px rgba(45, 255, 192, 0.9);
-  animation: rx-sweep 1.05s cubic-bezier(0.5, 0, 0.2, 1) 1.9s forwards;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: rx-fillx 0.7s cubic-bezier(0.5, 0, 0.2, 1) 2.4s forwards;
 }
+@keyframes rx-tile-in { to { opacity: 1; transform: none; } }
+@keyframes rx-drift { from { translate: 0 6%; } to { translate: 0 -6%; } }
+@keyframes rx-dim { to { opacity: 0.38; filter: blur(1.5px); } }
 @keyframes rx-fade { to { opacity: 1; } }
-@keyframes rx-grow { to { transform: scaleY(1); } }
-@keyframes rx-draw { to { stroke-dashoffset: 0; opacity: 1; } }
-@keyframes rx-pop { to { transform: scale(1) rotate(0); opacity: 1; } }
-@keyframes rx-ring { 0% { opacity: 0.9; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.35); } }
-@keyframes rx-rise { to { transform: translateY(0); opacity: 1; } }
-@keyframes rx-up { to { opacity: 1; transform: translateY(0); } }
+@keyframes rx-mark-in { to { opacity: 1; transform: none; filter: none; } }
+@keyframes rx-rise { to { transform: none; opacity: 1; } }
 @keyframes rx-fillx { to { transform: scaleX(1); } }
-@keyframes rx-sweep { to { left: 100%; } }
-@keyframes rx-out { to { opacity: 0; transform: scale(1.06); visibility: hidden; } }
+@keyframes rx-out { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) {
   .rx-splash { animation: rx-out 0.4s ease-out 0.9s forwards; }
-  .rx-splash *, .rx-splash-bg { animation-duration: 0.01s !important; animation-delay: 0s !important; }
+  .rx-splash *, .rx-grid-wrap { animation-duration: 0.01s !important; animation-delay: 0s !important; }
 }
 
 /* a barra do replay sobe suavemente ao aparecer */
