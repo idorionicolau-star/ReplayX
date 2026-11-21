@@ -6,7 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
-import type { Magnet } from '@/store/settings';
+import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
   | { type: 'close-position'; id: string }
@@ -140,8 +140,12 @@ export class Interaction {
     if (magnet !== 'off') {
       // candidatos: OHLC das barras vizinhas (e, com Ctrl, pontos de outros desenhos)
       const cands: { time: number; price: number }[] = [];
-      const reach = aggressive ? 400 : 0;
       const centre = Math.round(l);
+      // largura de uma vela em px (para os níveis do meio olharem para as vizinhas dentro do alcance)
+      const x0 = this.c.bars[centre] ? this.c.timeToX(this.c.bars[centre].time) : null;
+      const x1 = this.c.bars[centre + 1] ? this.c.timeToX(this.c.bars[centre + 1].time) : null;
+      const spacing = x0 !== null && x1 !== null ? Math.abs(x1 - x0) : 6;
+      const reach = aggressive ? 400 : magnetBarReach(magnet, spacing);
       for (let i = centre - reach; i <= centre + reach; i++) {
         const bar = this.c.bars[i];
         if (!bar) continue;
@@ -165,8 +169,9 @@ export class Interaction {
           best = { ...cand, x: cx, y: cy };
         }
       }
-      // íman fraco: só perto; forte: sempre à barra do cursor; Ctrl: alcance largo, apanha pontos de outros desenhos
-      const reachPx = aggressive ? 5000 : magnet === 'strong' ? Infinity : 14;
+      // íman fraco: só perto; os do meio, cada vez mais longe; forte: sempre à barra do cursor;
+      // Ctrl: alcance largo, apanha pontos de outros desenhos
+      const reachPx = aggressive ? 5000 : magnetLevel(magnet)?.reachPx ?? 0;
       if (best && bestDist <= reachPx) {
         price = best.price;
         if (aggressive) time = best.time;

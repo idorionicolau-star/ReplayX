@@ -15,6 +15,7 @@ import {
   PanelTop,
 } from 'lucide-react';
 import { AngleIcon } from '@/components/ui/AngleIcon';
+import { MAGNET_LEVELS, magnetTitle } from '@/core/magnet';
 import { useDrawings } from '@/store/drawings';
 import { useSettings } from '@/store/settings';
 import { useWorkspace } from '@/store/workspace';
@@ -205,7 +206,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
       <button
         ref={magRef}
         type="button"
-        title={magnet === 'off' ? 'Íman desligado' : magnet === 'weak' ? 'Íman fraco' : 'Íman forte'}
+        title={magnetTitle(magnet)}
         onClick={() => setMagOpen(true)}
         className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
@@ -214,8 +215,9 @@ export function DrawingToolbar({ className }: { className?: string }) {
       <Popover anchor={magRef} open={magOpen} onClose={() => setMagOpen(false)} placement="right-start">
         <MenuList>
           <MenuItem label="Sem íman" checked={magnet === 'off'} onClick={() => (setSettings({ magnet: 'off' }), setMagOpen(false))} />
-          <MenuItem label="Íman fraco (perto do preço)" checked={magnet === 'weak'} onClick={() => (setSettings({ magnet: 'weak' }), setMagOpen(false))} />
-          <MenuItem label="Íman forte (sempre OHLC)" checked={magnet === 'strong'} onClick={() => (setSettings({ magnet: 'strong' }), setMagOpen(false))} />
+          {MAGNET_LEVELS.map((l) => (
+            <MenuItem key={l.id} label={l.label} checked={magnet === l.id} onClick={() => (setSettings({ magnet: l.id }), setMagOpen(false))} />
+          ))}
         </MenuList>
       </Popover>
       <button

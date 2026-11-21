@@ -5,7 +5,8 @@ import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 
 export type Theme = 'dark' | 'light';
-export type Magnet = 'off' | 'weak' | 'strong';
+export type { Magnet } from '@/core/magnet';
+import type { Magnet } from '@/core/magnet';
 
 export interface TradingSettings {
   initialBalance: number;
