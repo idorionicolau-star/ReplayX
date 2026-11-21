@@ -1,4 +1,5 @@
 import type { Appearance } from './appearance';
+import { contrastOf } from './drawings/auto';
 
 /** Cores de um estilo num dos modos (claro ou escuro). `null` = automático do tema. */
 export interface PresetColors {
@@ -93,18 +94,22 @@ export const DEFAULT_PRESET_ID = 'classic';
 /** O que o estilo escreve nas definições, no modo pedido. */
 export function presetPatch(p: ChartPreset, dark: boolean): { appearance: Partial<Appearance>; upColor: string; downColor: string } {
   const c = dark ? p.dark : p.light;
+  const bg = c.background ?? (dark ? '#131722' : '#ffffff');
+  // vela que quase se confunde com o fundo (ex.: branca em papel claro) ganha contorno, para nunca ficar invisível
+  const outline = c.text ?? (dark ? '#d1d4dc' : '#131722');
+  const outlined = !!c.border || contrastOf(c.up, bg) < 2.2 || contrastOf(c.down, bg) < 2.2;
   return {
     upColor: c.up,
     downColor: c.down,
     appearance: {
       bodyUp: null,
       bodyDown: null,
-      borderUp: null,
-      borderDown: null,
-      wickUp: null,
-      wickDown: null,
+      borderUp: outlined ? outline : null,
+      borderDown: outlined ? outline : null,
+      wickUp: outlined ? outline : null,
+      wickDown: outlined ? outline : null,
       showBody: true,
-      showBorder: !!c.border,
+      showBorder: outlined,
       background: c.background,
       background2: c.background2 ?? null,
       gridVert: c.grid,

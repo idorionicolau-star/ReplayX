@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { contrastOf } from '@/chart/drawings/auto';
 import { useSettings } from '@/store/settings';
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -24,6 +25,28 @@ describe('estilos pré-definidos do gráfico', () => {
     const { appearance } = presetPatch(CHART_PRESETS[1], true);
     expect(appearance.bodyUp).toBeNull();
     expect(appearance.showBorder).toBe(true);
+  });
+});
+
+describe('velas sempre visíveis', () => {
+  it('velas brancas sobre fundo claro ganham contorno visível (borda e pavio)', () => {
+    for (const id of ['mono', 'paper']) {
+      const p = CHART_PRESETS.find((x) => x.id === id)!;
+      const a = presetPatch(p, false).appearance;
+      expect(a.showBorder, id).toBe(true);
+      expect(a.borderUp, id).not.toBe('#ffffff');
+      expect(a.borderUp, id).toBeTruthy();
+      expect(a.wickUp, id).toBe(a.borderUp);
+    }
+  });
+  it('nenhum estilo tem corpo igual ao fundo sem contorno', () => {
+    for (const p of CHART_PRESETS) for (const dark of [false, true]) {
+      const c = dark ? p.dark : p.light;
+      const a = presetPatch(p, dark).appearance;
+      const bg = c.background ?? (dark ? '#131722' : '#ffffff');
+      const weak = contrastOf(c.up, bg) < 2.2 || contrastOf(c.down, bg) < 2.2;
+      if (weak) expect(a.showBorder, `${p.id} ${dark ? 'escuro' : 'claro'}`).toBe(true);
+    }
   });
 });
 

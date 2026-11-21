@@ -39,6 +39,13 @@ export function contrast(a: Rgb, b: Rgb): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
+/** Contraste entre duas cores em texto (hex ou rgb); 21 se alguma não for reconhecida. */
+export function contrastOf(a: string, b: string): number {
+  const x = parse(a);
+  const y = parse(b);
+  return x && y ? contrast(x, y) : 21;
+}
+
 function toHsl({ r, g, b }: Rgb): [number, number, number] {
   const R = r / 255, G = g / 255, B = b / 255;
   const mx = Math.max(R, G, B), mn = Math.min(R, G, B);

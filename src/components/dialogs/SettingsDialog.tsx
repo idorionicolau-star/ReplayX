@@ -280,6 +280,8 @@ function PresetsMenu() {
             {CHART_PRESETS.map((p) => {
               const c = dark ? p.dark : p.light;
               const bg = c.background ?? (dark ? '#131722' : '#ffffff');
+              const ap = presetPatch(p, dark).appearance;
+              const edge = ap.showBorder ? ap.borderUp : null;
               return (
                 <button
                   key={p.id}
@@ -297,8 +299,8 @@ function PresetsMenu() {
                       [54, 4, 14, c.up],
                     ].map(([x, y, h, col], i) => (
                       <g key={i}>
-                        <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={col as string} strokeWidth="1" />
-                        <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={c.border ? bg : (col as string)} stroke={col as string} strokeWidth="1" />
+                        <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={edge ?? (col as string)} strokeWidth="1" />
+                        <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={c.border ? bg : (col as string)} stroke={edge ?? (col as string)} strokeWidth="1" />
                       </g>
                     ))}
                   </svg>
