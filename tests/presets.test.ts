@@ -1,18 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { useSettings } from '@/store/settings';
+
+const HEX = /^#[0-9a-f]{6}$/i;
 
 describe('estilos pré-definidos do gráfico', () => {
-  it('são 20 (10 + 10 nudes), com ids únicos e cores válidas', () => {
+  it('são 20, com ids únicos e, em cada um, versão clara e escura válidas', () => {
     expect(CHART_PRESETS).toHaveLength(20);
     expect(new Set(CHART_PRESETS.map((p) => p.id)).size).toBe(20);
+    for (const p of CHART_PRESETS) for (const c of [p.light, p.dark]) {
+      expect(c.up).toMatch(HEX);
+      expect(c.down).toMatch(HEX);
+    }
+  });
+  it('a versão clara tem fundo claro e a escura fundo escuro (quando definem fundo)', () => {
+    const lum = (h: string) => parseInt(h.slice(1, 3), 16) * 0.3 + parseInt(h.slice(3, 5), 16) * 0.59 + parseInt(h.slice(5, 7), 16) * 0.11;
     for (const p of CHART_PRESETS) {
-      expect(p.up).toMatch(/^#[0-9a-f]{6}$/i);
-      expect(p.down).toMatch(/^#[0-9a-f]{6}$/i);
+      if (p.light.background) expect(lum(p.light.background), p.id).toBeGreaterThan(150);
+      if (p.dark.background) expect(lum(p.dark.background), p.id).toBeLessThan(70);
     }
   });
   it('o estilo limpa as cores individuais das velas', () => {
-    const { appearance } = presetPatch(CHART_PRESETS[2]);
+    const { appearance } = presetPatch(CHART_PRESETS[1], true);
     expect(appearance.bodyUp).toBeNull();
     expect(appearance.showBorder).toBe(true);
+  });
+});
+
+describe('estilo dinâmico com o botão sol/lua', () => {
+  it('trocar o tema troca a versão do estilo; mexer à mão nas cores deixa de seguir', () => {
+    const cap = CHART_PRESETS.find((p) => p.id === 'nude-cappuccino')!;
+    const st = useSettings.getState();
+    const a = presetPatch(cap, true);
+    st.set({ theme: 'dark', chartStyle: cap.id, upColor: a.upColor, downColor: a.downColor, appearance: { ...st.appearance, ...a.appearance } });
+    expect(useSettings.getState().appearance.background).toBe(cap.dark.background);
+    useSettings.getState().set({ theme: 'light' });
+    expect(useSettings.getState().appearance.background).toBe(cap.light.background);
+    expect(useSettings.getState().upColor).toBe(cap.light.up);
+    useSettings.getState().set({ upColor: '#123456' });
+    expect(useSettings.getState().chartStyle).toBeNull();
+    useSettings.getState().set({ theme: 'dark' });
+    expect(useSettings.getState().upColor).toBe('#123456');
   });
 });
