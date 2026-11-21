@@ -126,7 +126,7 @@ export class Interaction {
     return { x, y, inside: x >= 0 && y >= 0 && x <= size.width && y <= size.height };
   }
 
-  /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. Ctrl = íman agressivo (como no TradingView). */
+  /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. Ctrl inverte o íman (como no TradingView). */
   private toPoint(x: number, y: number, snapTime = true): PricePoint | null {
     const l = this.c.xToLogical(x);
     let price = this.c.yToPrice(y);
@@ -135,8 +135,11 @@ export class Interaction {
     const li = snapTime ? Math.round(l) : l;
     let time = this.c.logicalToTime(li);
     if (time === null) return null;
-    const aggressive = this.mods.ctrl;
-    const magnet = aggressive ? 'strong' : this.cb.magnet();
+    // Ctrl inverte o íman enquanto está premido (como no TradingView): desligado → liga (forte, apanha pontos de outros
+    // desenhos); ligado → desliga (livre, só encaixa na vela).
+    const set = this.cb.magnet();
+    const aggressive = this.mods.ctrl && set === 'off';
+    const magnet: Magnet = this.mods.ctrl ? (set === 'off' ? 'strong' : 'off') : set;
     if (magnet !== 'off') {
       // candidatos: OHLC das barras vizinhas (e, com Ctrl, pontos de outros desenhos)
       const cands: { time: number; price: number }[] = [];
