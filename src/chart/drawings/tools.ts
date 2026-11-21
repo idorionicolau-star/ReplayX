@@ -3,6 +3,7 @@ import { DEFAULT_FIBEXT_LEVELS, DEFAULT_FIB_LEVELS, type Drawing, type DrawingSt
 import { distToEllipse, distToPolyline, distToSegment, extendSegment, nearRectBorder, pointInPolygon, pointInRect, withAlpha, type Pt } from './geometry';
 import { fmtDuration } from '@/lib/format';
 import { AUTO } from './auto';
+import { positionOutcome } from './positionOutcome';
 import { volumeProfile, type VpResult } from '@/core/volumeProfile';
 
 export interface Viewport {
@@ -998,36 +999,23 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       // resultado até ao cursor/última barra
       const endT = Math.max(d.points[0].time, d.points[1].time);
       const bars = vp.bars.filter((b) => b.time >= d.points[0].time && b.time <= endT);
-      let outcome: 'tp' | 'sl' | null = null;
-      let lastPrice = entry;
-      let lastTime = d.points[0].time;
-      for (const b of bars) {
-        lastTime = b.time;
-        const hitT = long ? b.high >= data.target : b.low <= data.target;
-        const hitS = long ? b.low <= data.stop : b.high >= data.stop;
-        if (hitS) {
-          outcome = 'sl';
-          lastPrice = data.stop;
-          break;
-        }
-        if (hitT) {
-          outcome = 'tp';
-          lastPrice = data.target;
-          break;
-        }
-        lastPrice = b.close;
-      }
-      if (bars.length) {
-        const xl = vp.timeToX(lastTime);
-        const yl = vp.priceToY(lastPrice);
-        if (xl !== null && yl !== null) {
+      const res = positionOutcome(bars, long, entry, data.stop, data.target);
+      const outcome = res.status === 'tp' || res.status === 'sl' ? res.status : null;
+      if (res.fillTime !== null && res.endTime !== null) {
+        const xf = vp.timeToX(res.fillTime);
+        const xl = vp.timeToX(res.endTime);
+        const yl = vp.priceToY(res.endPrice);
+        if (xf !== null && xl !== null && yl !== null) {
+          const a0 = Math.max(left, Math.min(xf, left + w));
+          const a1 = Math.min(xl, left + w);
           ctx.fillStyle = outcome === 'tp' ? 'rgba(8,153,129,0.28)' : outcome === 'sl' ? 'rgba(242,54,69,0.28)' : 'rgba(120,123,134,0.22)';
-          ctx.fillRect(left, Math.min(ye, yl), Math.max(0, Math.min(xl, left + w) - left), Math.abs(yl - ye));
+          ctx.fillRect(a0, Math.min(ye, yl), Math.max(0, a1 - a0), Math.abs(yl - ye));
           ctx.strokeStyle = '#787b86';
           ctx.setLineDash([4, 3]);
-          line(ctx, { x: left, y: ye }, { x: Math.min(xl, left + w), y: yl });
+          line(ctx, { x: a0, y: ye }, { x: a1, y: yl });
         }
       }
+      const prefix = outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : res.status === 'pending' ? '⏳ À espera da entrada · ' : res.status === 'missed' ? '⊘ Sem entrada (o preço foi ao alvo/stop sem a tocar) · ' : '';
 
       ctx.setLineDash([]);
       ctx.strokeStyle = '#787b86';
@@ -1050,7 +1038,7 @@ function positionTool(id: 'long' | 'short'): ToolDef {
         labelBox(ctx, [`Stop: ${vp.fmtPrice(data.stop)} (${pctChange(entry, data.stop).toFixed(2)}%) -${riskAmt.toFixed(2)}`], left + w / 2, long ? Math.max(ys, ye) + 4 : Math.min(ys, ye) - 4, { bg: '#f23645', fg, valign: long ? 'top' : 'bottom', font });
         labelBox(
           ctx,
-          [`${outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : ''}${sz ? `${sz.label} · ` : ''}R:R ${rr.toFixed(2)} · Lote ${qtyText}${sz?.minExceeds ? ' ⚠' : ''}`],
+          [`${prefix}${sz ? `${sz.label} · ` : ''}R:R ${rr.toFixed(2)} · Lote ${qtyText}${sz?.minExceeds ? ' ⚠' : ''}`],
           left + w / 2,
           ye,
           { bg: long ? 'rgba(8,153,129,0.95)' : 'rgba(242,54,69,0.95)', fg, font },
