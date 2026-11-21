@@ -1,4 +1,4 @@
-import { contrastOf } from './drawings/auto';
+import { contrastOf, shade } from './drawings/auto';
 
 /** Aparência do gráfico (como em "Definições do gráfico" do TradingView). `null` = automático (segue o tema). */
 export type ScaleMode = 'normal' | 'log' | 'percent' | 'indexed';
@@ -11,6 +11,10 @@ export interface Appearance {
   borderDown: string | null;
   wickUp: string | null;
   wickDown: string | null;
+  /** Velas com gradiente: o corpo vai da cor de cima (bodyUp/bodyDown) à de baixo (bodyUp2/bodyDown2, null = automática: a mesma mais escura). */
+  gradient: boolean;
+  bodyUp2: string | null;
+  bodyDown2: string | null;
   showBody: boolean;
   showBorder: boolean;
   showWick: boolean;
@@ -46,6 +50,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
   borderDown: null,
   wickUp: null,
   wickDown: null,
+  gradient: false,
+  bodyUp2: null,
+  bodyDown2: null,
   showBody: true,
   showBorder: false,
   showWick: true,
@@ -111,6 +118,8 @@ export function resolveAppearance(a: Appearance, dark: boolean, up: string, down
     showBorder,
     bodyUp,
     bodyDown,
+    bodyUp2: a.bodyUp2 ?? shade(bodyUp, -0.22),
+    bodyDown2: a.bodyDown2 ?? shade(bodyDown, -0.22),
     borderUp,
     borderDown,
     wickUp,

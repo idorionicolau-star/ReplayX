@@ -27,6 +27,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts';
 import type { Bar, ChartType, SymbolInfo } from '@/core/types';
+import { GradientCandles } from './gradientCandles';
 import { heikinAshi, lowerBound, mergeBars, upperBound } from '@/core/bars';
 import { alignTime, parseTf, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
@@ -148,6 +149,8 @@ export class ChartController {
   chart: IChartApi;
   main!: AnySeries;
   overlay: OverlayPrimitive;
+  private gradient: GradientCandles;
+  private gradBars: { key: string; bars: readonly { open: number; close: number }[] } = { key: '', bars: [] };
   private markersApi: ISeriesMarkersPluginApi<Time> | null = null;
   private watermark: ITextWatermarkPluginApi<Time> | null = null;
 
@@ -236,6 +239,7 @@ export class ChartController {
       events: () => this.events,
     };
     this.overlay = new OverlayPrimitive(host);
+    this.gradient = new GradientCandles(() => this.gradientBodies());
     this.overlay.fmtTime = (t) => fmtDateTime(t, this.theme.timezone);
     this.createMainSeries();
     this.chart.subscribeCrosshairMove(this.onCrosshair);
@@ -366,8 +370,8 @@ export class ChartController {
       default:
         return {
           ...common,
-          upColor: a.showBody ? up : clear,
-          downColor: a.showBody ? down : clear,
+          upColor: a.showBody && !this.gradientOn() ? up : clear,
+          downColor: a.showBody && !this.gradientOn() ? down : clear,
           borderVisible: a.showBorder || !a.showBody,
           borderUpColor: a.borderUp,
           borderDownColor: a.borderDown,
@@ -400,11 +404,33 @@ export class ChartController {
         this.main = this.chart.addSeries(CandlestickSeries, opts) as AnySeries;
     }
     this.main.attachPrimitive(this.overlay);
+    this.main.attachPrimitive(this.gradient);
+    this.syncGradient();
     this.markersApi = createSeriesMarkers(this.main, []);
   }
 
   private applyMainStyle() {
     this.main.applyOptions(this.mainOptions() as never);
+    this.syncGradient();
+  }
+
+  /** Gradiente só nas velas normais e Heikin-Ashi. */
+  private gradientOn(): boolean {
+    return this.look.gradient && this.look.showBody && (this.chartType === 'candles' || this.chartType === 'heikin');
+  }
+
+  private syncGradient() {
+    const a = this.look;
+    this.gradient.setLook({ enabled: this.gradientOn(), up: a.bodyUp, up2: a.bodyUp2, down: a.bodyDown, down2: a.bodyDown2 });
+  }
+
+  /** Corpos (abertura/fecho) por posição, na mesma ordem das velas do gráfico (Heikin-Ashi calculado uma vez por dados). */
+  private gradientBodies(): readonly { open: number; close: number }[] {
+    if (this.chartType !== 'heikin') return this.bars;
+    const last = this.bars[this.bars.length - 1];
+    const key = `${this.bars.length}:${last?.time}:${last?.close}:${last?.high}:${last?.low}`;
+    if (this.gradBars.key !== key) this.gradBars = { key, bars: heikinAshi(this.bars) };
+    return this.gradBars.bars;
   }
 
   setChartType(type: ChartType) {
@@ -412,6 +438,7 @@ export class ChartController {
     this.chartType = type;
     const range = this.chart.timeScale().getVisibleLogicalRange();
     this.main.detachPrimitive(this.overlay);
+    this.main.detachPrimitive(this.gradient);
     this.markersApi?.detach();
     this.chart.removeSeries(this.main);
     this.createMainSeries();

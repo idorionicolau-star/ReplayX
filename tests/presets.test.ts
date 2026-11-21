@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_APPEARANCE, resolveAppearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { contrastOf } from '@/chart/drawings/auto';
 import { useSettings } from '@/store/settings';
@@ -25,6 +26,31 @@ describe('estilos pré-definidos do gráfico', () => {
     const { appearance } = presetPatch(CHART_PRESETS[1], true);
     expect(appearance.bodyUp).toBeNull();
     expect(appearance.showBorder).toBe(true);
+  });
+});
+
+describe('velas com gradiente', () => {
+  it('5 dos 20 estilos têm gradiente, nos dois modos, com contorno na cor de baixo', () => {
+    const grad = CHART_PRESETS.filter((p) => p.light.up2 && p.dark.up2);
+    expect(grad).toHaveLength(5);
+    for (const p of grad) {
+      const a = presetPatch(p, false).appearance;
+      expect(a.gradient).toBe(true);
+      expect(a.bodyUp2).toBe(p.light.up2);
+      expect(a.borderDown).toBe(p.light.down2);
+      expect(a.showBorder).toBe(true);
+    }
+    expect(presetPatch(CHART_PRESETS[0], true).appearance.gradient).toBe(false);
+  });
+  it('a cor de baixo automática é a de cima mais escura', () => {
+    const r = resolveAppearance({ ...DEFAULT_APPEARANCE, gradient: true }, true, '#26a69a', '#ef5350');
+    expect(r.bodyUp2).not.toBe('#26a69a');
+    const lum = (h: string) => parseInt(h.slice(1, 3), 16) + parseInt(h.slice(3, 5), 16) + parseInt(h.slice(5, 7), 16);
+    expect(lum(r.bodyUp2)).toBeLessThan(lum('#26a69a'));
+  });
+  it('as 20 identidades têm cores de vela todas diferentes entre si (no modo claro)', () => {
+    const pairs = new Set(CHART_PRESETS.map((p) => `${p.light.up}/${p.light.down}`));
+    expect(pairs.size).toBeGreaterThanOrEqual(18);
   });
 });
 
@@ -67,7 +93,6 @@ describe('estilo dinâmico com o botão sol/lua', () => {
   });
 });
 
-import { DEFAULT_APPEARANCE, resolveAppearance } from '@/chart/appearance';
 
 describe('cores manuais das velas também ficam visíveis', () => {
   it('corpo branco sobre fundo claro ganha contorno e pavio na cor do texto', () => {

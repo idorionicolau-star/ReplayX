@@ -66,6 +66,14 @@ function fromHsl(h: number, s: number, l: number): Rgb {
 
 const hex = ({ r, g, b }: Rgb) => '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
 
+/** Mesma cor mais escura (delta < 0) ou mais clara (delta > 0): `delta` é a variação de luminosidade, de -1 a 1. */
+export function shade(color: string, delta: number): string {
+  const c = parse(color);
+  if (!c) return color;
+  const [h, s, l] = toHsl(c);
+  return hex(fromHsl(h, s, Math.max(0, Math.min(1, l + delta))));
+}
+
 const MIN_CONTRAST = 3;
 
 /**
