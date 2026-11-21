@@ -309,7 +309,7 @@ export function TopBar() {
       <button
         type="button"
         onClick={() => (replayActive ? replay.exit() : replay.enter())}
-        className={cn('flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors', replayActive ? 'bg-accent text-white hover:bg-accent-hover' : 'hover:bg-hover')}
+        className={cn('flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors', replayActive ? 'bg-accent text-on-accent hover:bg-accent-hover' : 'hover:bg-hover')}
         title="Bar Replay"
         data-testid="replay-button"
       >
@@ -382,7 +382,7 @@ function PlanBadge() {
       title={plan.reason === 'trial' ? 'Teste do Pro' : plan.reason === 'lifetime' ? 'Pro vitalício' : plan.reason === 'paid' ? 'Plano Pro' : 'Ver o plano Pro'}
       className={cn(
         'mr-1 flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
-        plan.reason === 'free' ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-warn/15 text-warn hover:bg-warn/25',
+        plan.reason === 'free' ? 'bg-accent text-on-accent hover:bg-accent-hover' : 'bg-warn/15 text-warn hover:bg-warn/25',
       )}
       data-testid="plan-badge"
     >

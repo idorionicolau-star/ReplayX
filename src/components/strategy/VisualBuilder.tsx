@@ -270,7 +270,7 @@ export function VisualBuilder() {
                   const def = getIndicator(vi.type);
                   return (
                     <div key={vi.key} className="flex flex-wrap items-center gap-1.5 rounded-md bg-sunken p-1.5 text-xs">
-                      <span className="flex h-6 w-6 items-center justify-center rounded bg-accent font-bold text-white">{vi.key}</span>
+                      <span className="flex h-6 w-6 items-center justify-center rounded bg-accent font-bold text-on-accent">{vi.key}</span>
                       <span className="w-28 truncate font-medium">{def?.name ?? vi.type}</span>
                       {def?.inputs.map((inp) =>
                         inp.type === 'int' || inp.type === 'float' ? (
@@ -373,7 +373,7 @@ export function VisualBuilder() {
                       key={i}
                       type="button"
                       onClick={() => patch({ session: { ...s.session, days: s.session.days.includes(i) ? s.session.days.filter((x) => x !== i) : [...s.session.days, i] } })}
-                      className={cn('h-6 w-6 rounded text-[11px] font-semibold', s.session.days.includes(i) ? 'bg-accent text-white' : 'bg-hover text-muted')}
+                      className={cn('h-6 w-6 rounded text-[11px] font-semibold', s.session.days.includes(i) ? 'bg-accent text-on-accent' : 'bg-hover text-muted')}
                     >
                       {d}
                     </button>

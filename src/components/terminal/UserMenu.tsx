@@ -36,7 +36,7 @@ export function UserMenu() {
         {user.photo ? (
           <img src={user.photo} alt="" className="h-7 w-7 rounded-full" referrerPolicy="no-referrer" />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">{initials || '?'}</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-on-accent">{initials || '?'}</span>
         )}
         <span className={cn('absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-panel', dot)} />
       </button>

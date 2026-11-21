@@ -34,7 +34,7 @@ export function Segmented<T extends string>({ value, onChange, items, className 
           key={it.value}
           type="button"
           onClick={() => onChange(it.value)}
-          className={cn('h-6 flex-1 rounded px-2.5 text-xs font-medium whitespace-nowrap transition-colors', value === it.value ? 'bg-accent text-white' : 'text-muted hover:text-text')}
+          className={cn('h-6 flex-1 rounded px-2.5 text-xs font-medium whitespace-nowrap transition-colors', value === it.value ? 'bg-accent text-on-accent' : 'text-muted hover:text-text')}
         >
           {it.label}
         </button>

@@ -36,7 +36,7 @@ function Seg<T extends string>({ value, onChange, items }: { value: T; onChange:
   return (
     <div className="inline-flex rounded-md border border-line p-0.5">
       {items.map((it) => (
-        <button key={it.value} type="button" title={it.title} aria-label={it.title} onClick={() => onChange(it.value)} className={cn('flex h-6 min-w-7 items-center justify-center rounded px-1.5 text-xs', value === it.value ? 'bg-accent text-white' : 'text-muted hover:text-text')}>
+        <button key={it.value} type="button" title={it.title} aria-label={it.title} onClick={() => onChange(it.value)} className={cn('flex h-6 min-w-7 items-center justify-center rounded px-1.5 text-xs', value === it.value ? 'bg-accent text-on-accent' : 'text-muted hover:text-text')}>
           {it.label}
         </button>
       ))}
@@ -92,7 +92,7 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
         <div className="divide-y divide-line">
           {!isPos && (
             <Row label="Linha">
-              <ColorPicker value={d.style.color} onChange={(c) => setStyle({ color: c })} />
+              <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} />
               <Select className="w-20" value={String(d.style.width)} onChange={(e) => setStyle({ width: Number(e.target.value) })}>
                 {[1, 2, 3, 4].map((w) => (
                   <option key={w} value={w}>

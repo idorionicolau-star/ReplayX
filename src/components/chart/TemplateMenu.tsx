@@ -73,7 +73,7 @@ export function TemplateMenu({ symbolId, d, compact }: { symbolId: string; d: Dr
                 className="h-7 min-w-0 flex-1 rounded-md border border-line bg-input px-2 text-[13px] outline-none focus:border-accent"
                 data-testid="template-name"
               />
-              <button type="button" aria-label="Guardar modelo" onClick={save} className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-white">
+              <button type="button" aria-label="Guardar modelo" onClick={save} className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-on-accent">
                 <Check size={14} />
               </button>
             </div>
@@ -93,7 +93,7 @@ export function TemplateMenu({ symbolId, d, compact }: { symbolId: string; d: Dr
               {list.map((t) => (
                 <MenuItem
                   key={t.id}
-                  icon={<span className="block h-3 w-3 rounded-sm" style={{ background: t.style.color }} />}
+                  icon={<span className="block h-3 w-3 rounded-sm" style={{ background: t.style.color === 'auto' ? 'var(--c-text)' : t.style.color }} />}
                   label={t.name}
                   hint={t.style.text ? '“T”' : undefined}
                   onClick={() => apply(t)}

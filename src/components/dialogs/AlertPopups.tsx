@@ -47,7 +47,7 @@ export function AlertPopups() {
                 Fechar todos
               </button>
             )}
-            <button type="button" className="h-7 rounded-md bg-accent px-4 text-xs font-medium text-white hover:bg-accent-hover" onClick={() => st.closePopup(p.id)}>
+            <button type="button" className="h-7 rounded-md bg-accent px-4 text-xs font-medium text-on-accent hover:bg-accent-hover" onClick={() => st.closePopup(p.id)}>
               OK
             </button>
           </div>

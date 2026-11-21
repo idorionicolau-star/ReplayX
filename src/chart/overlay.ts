@@ -10,6 +10,7 @@ import type {
 } from 'lightweight-charts';
 import type { Drawing } from './drawings/types';
 import { labelBox, toolDef, type Viewport } from './drawings/tools';
+import { autoColor, resolveAuto, shownColor } from './drawings/auto';
 import type { Order, Position } from '@/core/trading/engine';
 
 export interface TradeRegion {
@@ -118,7 +119,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         if (!def) continue;
         ctx.save();
         try {
-          def.render(ctx, d, view, d.id === selected || d.id === hovered);
+          def.render(ctx, resolveAuto(d, host.dark()), view, d.id === selected || d.id === hovered);
         } catch {
           /* desenho inválido: ignora */
         }
@@ -129,7 +130,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         const def = toolDef(pv.type);
         ctx.save();
         try {
-          def?.render(ctx, pv, view, true);
+          def?.render(ctx, resolveAuto(pv, host.dark()), view, true);
         } catch {
           /* ignora */
         }
@@ -147,7 +148,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
           ctx.fillStyle = host.dark() ? 'rgba(19,23,34,0.15)' : 'rgba(255,255,255,0.15)';
           ctx.fill();
           ctx.lineWidth = 1.5;
-          ctx.strokeStyle = '#2962ff';
+          ctx.strokeStyle = autoColor(host.dark());
           ctx.setLineDash([]);
           ctx.stroke();
         }
@@ -200,7 +201,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       const aim = host.aimMark();
       if (aim) {
         ctx.save();
-        ctx.strokeStyle = '#2962ff';
+        ctx.strokeStyle = autoColor(host.dark());
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(aim.x, aim.y, 9, 0, Math.PI * 2);
@@ -384,11 +385,11 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
     };
     for (const d of this.host.drawings()) {
       if (d.hidden) continue;
-      if ((d.type === 'hline' || d.type === 'hray') && d.style.showLabel !== false) add(d.points[0].price, d.style.color);
+      if ((d.type === 'hline' || d.type === 'hray') && d.style.showLabel !== false) add(d.points[0].price, shownColor(d.style.color, this.host.dark()));
     }
     const selId = this.host.selectedId();
     const sel = this.host.drawings().find((d) => d.id === selId) ?? this.host.preview();
-    if (sel) toolDef(sel.type)?.axis?.(sel).prices.forEach((p) => add(p, '#2962ff'));
+    if (sel) toolDef(sel.type)?.axis?.(sel).prices.forEach((p) => add(p, '#363a45'));
     const t = this.host.trading();
     if (t) {
       for (const p of t.positions) {

@@ -92,7 +92,7 @@ export function MobileStrip() {
       <button type="button" aria-label="Indicadores" onClick={() => useUi.getState().set({ indicators: true })} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
         <FunctionSquare size={19} />
       </button>
-      <button type="button" aria-label="Bar Replay" onClick={() => (replayActive ? replay.exit() : replay.enter())} className={cn('flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover', replayActive && 'bg-accent text-white')}>
+      <button type="button" aria-label="Bar Replay" onClick={() => (replayActive ? replay.exit() : replay.enter())} className={cn('flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover', replayActive && 'bg-accent text-on-accent')}>
         <Rewind size={19} />
       </button>
       <button

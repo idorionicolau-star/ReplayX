@@ -1,4 +1,5 @@
 'use client';
+import { AUTO, shownColor } from '@/chart/drawings/auto';
 import { useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
@@ -89,7 +90,10 @@ export function ColorPicker({
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const custom = useSettings((s) => s.customColors);
-  const { hex, alpha } = parseColor(value || '#2962ff');
+  const dark = useSettings((s) => s.theme === 'dark');
+  const auto = value === AUTO;
+  const shown = shownColor(value || AUTO, dark);
+  const { hex, alpha } = parseColor(shown);
   const [hexText, setHexText] = useState(hex);
   const [lastHex, setLastHex] = useState(hex);
   // acompanha mudanças de fora (padrão "estado anterior" do React)
@@ -110,8 +114,8 @@ export function ColorPicker({
         onClick={() => setOpen((o) => !o)}
         className="relative h-7 w-7 shrink-0 rounded-md border border-line p-[3px] hover:border-accent"
       >
-        <span className="block h-full w-full rounded-[3px]" style={{ background: `linear-gradient(${value}, ${value}), ${checker}` }} />
-        {isAuto && <span className="absolute -right-1 -bottom-1 rounded bg-elev px-0.5 text-[8px] leading-tight font-bold text-muted">A</span>}
+        <span className="block h-full w-full rounded-[3px]" style={{ background: `linear-gradient(${shown}, ${shown}), ${checker}` }} />
+        {(isAuto || auto) && <span className="absolute -right-1 -bottom-1 rounded bg-elev px-0.5 text-[8px] leading-tight font-bold text-muted">A</span>}
       </button>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} className="w-[252px] p-3">
         <div className="grid grid-cols-10 gap-1">
