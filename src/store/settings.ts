@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { DEFAULT_LOT_RULES, type LotRules } from '@/core/trading/lots';
 import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
+import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 
 export type Theme = 'dark' | 'light';
 export type { Magnet } from '@/core/magnet';
@@ -32,6 +33,8 @@ export interface DrawingTemplate {
 
 export interface SettingsState {
   theme: Theme;
+  /** Estilo do gráfico escolhido (id): muda de versão clara/escura com o tema. null = cores manuais. */
+  chartStyle: string | null;
   timezone: string;
   upColor: string;
   downColor: string;
@@ -97,6 +100,7 @@ export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
       theme: 'dark',
+      chartStyle: null,
       timezone: 'local',
       upColor: '#089981',
       downColor: '#f23645',
@@ -127,7 +131,21 @@ export const useSettings = create<SettingsState>()(
       replaySpeedMs: 1000,
       replayIntrabar: true,
       updatedAt: 0,
-      set: (patch) => set({ ...patch, updatedAt: Date.now() }),
+      set: (patch) =>
+        set((st) => {
+          let next: Partial<SettingsState> = patch;
+          // trocar o tema (botão sol/lua) troca também a versão clara/escura do estilo do gráfico
+          const style = 'chartStyle' in patch ? patch.chartStyle : st.chartStyle;
+          const theme = patch.theme ?? st.theme;
+          const preset = style ? CHART_PRESETS.find((x) => x.id === style) : undefined;
+          if (preset && patch.theme && patch.theme !== st.theme && !('appearance' in patch)) {
+            const pp = presetPatch(preset, theme === 'dark');
+            next = { ...patch, upColor: pp.upColor, downColor: pp.downColor, appearance: { ...st.appearance, ...pp.appearance } };
+          }
+          // mexer à mão nas cores do gráfico deixa de seguir o estilo
+          if (!('chartStyle' in patch) && ('appearance' in patch || 'upColor' in patch || 'downColor' in patch)) next = { ...next, chartStyle: null };
+          return { ...next, updatedAt: Date.now() };
+        }),
       setTrading: (patch) => set((s) => ({ trading: { ...s.trading, ...patch }, updatedAt: Date.now() })),
     }),
     {

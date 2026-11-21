@@ -102,7 +102,7 @@ export function SettingsDialog() {
               size="sm"
               variant="ghost"
               onClick={() => {
-                s.set({ appearance: DEFAULT_APPEARANCE, upColor: '#089981', downColor: '#f23645', showWatermark: true });
+                s.set({ chartStyle: null, appearance: DEFAULT_APPEARANCE, upColor: '#089981', downColor: '#f23645', showWatermark: true });
                 toast('Aparência reposta', { kind: 'success' });
               }}
             >
@@ -257,21 +257,16 @@ function UpDown({ label, up, down, autoUp, autoDown, onUp, onDown, show, onShow 
 /** Estilos pré-definidos das cores do gráfico, num menu expansível. */
 function PresetsMenu() {
   const [open, setOpen] = useState(false);
-  const cur = useSettings((st) => st.appearance);
-  const upC = useSettings((st) => st.upColor);
-  const downC = useSettings((st) => st.downColor);
+  const active = useSettings((st) => st.chartStyle);
+  const dark = useSettings((st) => st.theme === 'dark');
   const apply = (id: string) => {
     const p = CHART_PRESETS.find((x) => x.id === id);
     if (!p) return;
     const st = useSettings.getState();
-    const patch = presetPatch(p);
-    st.set({ theme: p.dark ? 'dark' : 'light', upColor: patch.upColor, downColor: patch.downColor, appearance: { ...st.appearance, ...patch.appearance } });
+    const patch = presetPatch(p, st.theme === 'dark');
+    st.set({ chartStyle: id, upColor: patch.upColor, downColor: patch.downColor, appearance: { ...st.appearance, ...patch.appearance } });
     toast(`Estilo “${p.name}” aplicado`, { kind: 'success' });
   };
-  const active = CHART_PRESETS.find((p) => {
-    const q = presetPatch(p).appearance;
-    return p.up === upC && p.down === downC && q.background === cur.background && q.gridVert === cur.gridVert && q.textColor === cur.textColor;
-  })?.id;
   return (
     <div className="mb-3 rounded-md border border-line" data-testid="chart-presets">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-hover">
@@ -279,36 +274,40 @@ function PresetsMenu() {
         <span className="text-xs text-muted">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto border-t border-line p-2 sm:grid-cols-5">
-          {CHART_PRESETS.map((p) => {
-            const bg = p.background ?? (p.dark ? '#131722' : '#ffffff');
-            return (
-              <button
-                key={p.id}
-                type="button"
-                data-testid={`preset-${p.id}`}
-                onClick={() => apply(p.id)}
-                className={`rounded-md border p-1.5 text-left text-[11px] hover:border-accent ${active === p.id ? 'border-accent' : 'border-line'}`}
-              >
-                <svg viewBox="0 0 60 28" className="mb-1 block h-8 w-full rounded-sm" style={{ background: bg }} aria-hidden>
-                  {[
-                    [6, 8, 18, p.up],
-                    [18, 12, 22, p.down],
-                    [30, 6, 16, p.up],
-                    [42, 10, 20, p.down],
-                    [54, 4, 14, p.up],
-                  ].map(([x, y, h, c], i) => (
-                    <g key={i}>
-                      <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={c as string} strokeWidth="1" />
-                      <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={p.border ? bg : (c as string)} stroke={c as string} strokeWidth="1" />
-                    </g>
-                  ))}
-                </svg>
-                {p.name}
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <p className="px-3 pt-2 text-[11px] text-muted">Cada estilo tem versão clara e escura: o botão sol/lua do topo troca entre elas.</p>
+          <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto p-2 sm:grid-cols-5">
+            {CHART_PRESETS.map((p) => {
+              const c = dark ? p.dark : p.light;
+              const bg = c.background ?? (dark ? '#131722' : '#ffffff');
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  data-testid={`preset-${p.id}`}
+                  onClick={() => apply(p.id)}
+                  className={`rounded-md border p-1.5 text-left text-[11px] hover:border-accent ${active === p.id ? 'border-accent' : 'border-line'}`}
+                >
+                  <svg viewBox="0 0 60 28" className="mb-1 block h-8 w-full rounded-sm" style={{ background: bg }} aria-hidden>
+                    {[
+                      [6, 8, 18, c.up],
+                      [18, 12, 22, c.down],
+                      [30, 6, 16, c.up],
+                      [42, 10, 20, c.down],
+                      [54, 4, 14, c.up],
+                    ].map(([x, y, h, col], i) => (
+                      <g key={i}>
+                        <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={col as string} strokeWidth="1" />
+                        <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={c.border ? bg : (col as string)} stroke={col as string} strokeWidth="1" />
+                      </g>
+                    ))}
+                  </svg>
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
