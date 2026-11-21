@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 export async function enterAsGuest(page: Page) {
   await page.goto('/');
-  await page.getByText('Continuar sem conta').click();
+  await page.getByText('Experimentar demonstração gratuita').click();
   await page.waitForURL('**/terminal');
   await page.waitForFunction(() => (window as unknown as { __rxCharts?: Map<string, unknown> }).__rxCharts?.size);
 }

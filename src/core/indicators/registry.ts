@@ -4,6 +4,7 @@ import { apocalypse, atrFilled, readingLines } from './apocalypse';
 import { drawFootprint, scanFootprint } from './footprint';
 import { drawDoubleTops, scanDoubleTops, type DtOptions } from './doubletop';
 import { equityCurve } from './equity';
+import { drawPatterns, scanPatterns, PAT_DEFAULTS } from './patterns';
 import { drawVolumeProfile, VP_DEFAULTS } from './volprofile';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
@@ -1266,6 +1267,50 @@ export const INDICATORS: IndicatorDef[] = [
         split: p.split !== false,
       });
       return { values: {}, draw: out.draw };
+    },
+  },
+  {
+    id: 'patterns',
+    name: 'Padrões gráficos (ombro-cabeça-ombro e triângulos)',
+    short: 'PG',
+    category: 'Tendência',
+    overlay: true,
+    layer: true,
+    description:
+      'Reconhece ombro-cabeça-ombro (normal e invertido) e triângulos (ascendente, descendente e simétrico) a partir das oscilações confirmadas. Só usa velas fechadas: um padrão aparece a tracejado enquanto se forma e só vira sinal quando uma vela fecha para lá do pescoço ou da linha do triângulo. A entrada é no fecho dessa vela, o alvo é a altura do padrão medida a partir do rompimento e o stop fica do outro lado (acima do ombro direito, ou na linha oposta do triângulo). Cada sinal mostra o resultado (alvo ou stop) e o cartão faz o placar por tipo de padrão. Os padrões são subjetivos: este indicador dá candidatos, com falsos positivos e padrões perdidos.',
+    inputs: [
+      { key: 'hs', label: 'Ombro-cabeça-ombro', type: 'bool', default: PAT_DEFAULTS.hs },
+      { key: 'tri', label: 'Triângulos', type: 'bool', default: PAT_DEFAULTS.tri },
+      numInput('sensHs', 'Oscilação mínima do ombro-cabeça-ombro (ATR)', PAT_DEFAULTS.sensHs, 0.25, 0.5, 6),
+      numInput('sensTri', 'Oscilação mínima dos triângulos (ATR)', PAT_DEFAULTS.sensTri, 0.1, 0.4, 5),
+      numInput('shoulderTol', 'Diferença máxima entre os ombros (fração da altura)', PAT_DEFAULTS.shoulderTol, 0.05, 0.05, 1),
+      numInput('minHeightHs', 'Altura mínima do ombro-cabeça-ombro (ATR)', PAT_DEFAULTS.minHeightHs, 0.25, 0.5, 20),
+      numInput('minHeightTri', 'Altura mínima do triângulo (ATR)', PAT_DEFAULTS.minHeightTri, 0.25, 0.5, 20),
+      { key: 'triPoints', label: 'Oscilações do triângulo (4 ou 5)', type: 'int', default: PAT_DEFAULTS.triPoints, min: 4, max: 5, step: 1 },
+      { key: 'maxBars', label: 'Velas máximas do padrão', type: 'int', default: PAT_DEFAULTS.maxBars, min: 20, max: 500, step: 10 },
+      numInput('stopBuf', 'Folga do stop (ATR)', PAT_DEFAULTS.stopBuf, 0.05, 0, 2),
+      numInput('minR', 'R mínimo (0 = sem limite)', PAT_DEFAULTS.minR, 0.25, 0, 10),
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 100, min: 0, max: 2000, step: 10 },
+    ],
+    outputs: [],
+    compute(bars, p, ctx) {
+      const r = scanPatterns(bars, atrFilled(bars, 14), {
+        sensHs: n(p, 'sensHs'),
+        sensTri: n(p, 'sensTri'),
+        shoulderTol: n(p, 'shoulderTol'),
+        minHeightHs: n(p, 'minHeightHs'),
+        minHeightTri: n(p, 'minHeightTri'),
+        maxBars: Math.max(20, Math.round(n(p, 'maxBars')) || PAT_DEFAULTS.maxBars),
+        minR: n(p, 'minR'),
+        stopBuf: n(p, 'stopBuf'),
+        triPoints: Math.round(n(p, 'triPoints')) >= 5 ? 5 : 4,
+        hs: p.hs !== false,
+        tri: p.tri !== false,
+      });
+      const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
+      const historyDone = ctx?.historyDone ?? true;
+      const out = drawPatterns(bars, r, goal ? { target: goal, historyDone } : undefined);
+      return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },
   {
