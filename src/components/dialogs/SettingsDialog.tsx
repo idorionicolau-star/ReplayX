@@ -16,6 +16,7 @@ import { DEFAULT_LOT_RULES, LOT_CLASS_LABEL } from '@/core/trading/lots';
 import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { shade } from '@/chart/drawings/auto';
 
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
@@ -281,7 +282,6 @@ function PresetsMenu() {
               const c = dark ? p.dark : p.light;
               const bg = c.background ?? (dark ? '#131722' : '#ffffff');
               const ap = presetPatch(p, dark).appearance;
-              const edge = ap.showBorder ? ap.borderUp : null;
               return (
                 <button
                   key={p.id}
@@ -291,18 +291,34 @@ function PresetsMenu() {
                   className={`rounded-md border p-1.5 text-left text-[11px] hover:border-accent ${active === p.id ? 'border-accent' : 'border-line'}`}
                 >
                   <svg viewBox="0 0 60 28" className="mb-1 block h-8 w-full rounded-sm" style={{ background: bg }} aria-hidden>
+                    {c.up2 && c.down2 && (
+                      <defs>
+                        <linearGradient id={`gu-${p.id}`} x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0" stopColor={c.up} />
+                          <stop offset="1" stopColor={c.up2} />
+                        </linearGradient>
+                        <linearGradient id={`gd-${p.id}`} x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0" stopColor={c.down} />
+                          <stop offset="1" stopColor={c.down2} />
+                        </linearGradient>
+                      </defs>
+                    )}
                     {[
-                      [6, 8, 18, c.up],
-                      [18, 12, 22, c.down],
-                      [30, 6, 16, c.up],
-                      [42, 10, 20, c.down],
-                      [54, 4, 14, c.up],
-                    ].map(([x, y, h, col], i) => (
-                      <g key={i}>
-                        <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={edge ?? (col as string)} strokeWidth="1" />
-                        <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={c.border ? bg : (col as string)} stroke={edge ?? (col as string)} strokeWidth="1" />
-                      </g>
-                    ))}
+                      [6, 8, 18, c.up, true],
+                      [18, 12, 22, c.down, false],
+                      [30, 6, 16, c.up, true],
+                      [42, 10, 20, c.down, false],
+                      [54, 4, 14, c.up, true],
+                    ].map(([x, y, h, col, isUp], i) => {
+                      const line = ap.showBorder ? (isUp ? ap.borderUp : ap.borderDown) ?? (col as string) : (col as string);
+                      const fill = c.up2 ? `url(#${isUp ? 'gu' : 'gd'}-${p.id})` : c.border ? bg : (col as string);
+                      return (
+                        <g key={i}>
+                          <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={line} strokeWidth="1" />
+                          <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={fill} stroke={line} strokeWidth="1" />
+                        </g>
+                      );
+                    })}
                   </svg>
                   {p.name}
                 </button>
@@ -326,6 +342,15 @@ function SymbolTab() {
       <Row label="Cores base (alta / baixa)">
         <ColorPicker label="Alta" value={s.upColor} onChange={(c) => s.set({ upColor: c })} />
         <ColorPicker label="Baixa" value={s.downColor} onChange={(c) => s.set({ downColor: c })} />
+      </Row>
+      <Row label="Gradiente no corpo (cor de cima → cor de baixo)">
+        <Switch checked={a.gradient} onChange={(v) => set({ gradient: v })} />
+        {a.gradient && (
+          <>
+            <ColorPicker label="Alta — cor de baixo" value={a.bodyUp2 ?? shade(up, -0.22)} isAuto={a.bodyUp2 === null} onReset={() => set({ bodyUp2: null })} onChange={(c) => set({ bodyUp2: c })} />
+            <ColorPicker label="Baixa — cor de baixo" value={a.bodyDown2 ?? shade(down, -0.22)} isAuto={a.bodyDown2 === null} onReset={() => set({ bodyDown2: null })} onChange={(c) => set({ bodyDown2: c })} />
+          </>
+        )}
       </Row>
       <UpDown label="Corpo" up={a.bodyUp} down={a.bodyDown} autoUp={s.upColor} autoDown={s.downColor} onUp={(c) => set({ bodyUp: c })} onDown={(c) => set({ bodyDown: c })} show={a.showBody} onShow={(v) => set({ showBody: v })} />
       <UpDown label="Borda" up={a.borderUp} down={a.borderDown} autoUp={up} autoDown={down} onUp={(c) => set({ borderUp: c })} onDown={(c) => set({ borderDown: c })} show={a.showBorder} onShow={(v) => set({ showBorder: v })} />
