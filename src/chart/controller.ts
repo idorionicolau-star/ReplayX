@@ -227,6 +227,7 @@ export class ChartController {
       },
       alerts: () => this.alerts,
       dark: () => this.theme.dark,
+      background: () => this.look.background,
       hint: () => this.hint,
       snapMark: () => this.snapMark,
       aimMark: () => this.aimMark,

@@ -27,6 +27,17 @@ export const CHART_PRESETS: ChartPreset[] = [
   { id: 'sand', name: 'Areia', dark: false, up: '#2e7d32', down: '#c62828', background: '#fbf6ea', grid: 'rgba(120,95,40,0.10)', text: '#4a3f2a', crosshair: '#9a8a63' },
   { id: 'daltonic', name: 'Daltónico (azul/laranja)', dark: true, up: '#2196f3', down: '#ff9800', background: null, grid: null, text: null, crosshair: null },
   { id: 'contrast', name: 'Alto contraste', dark: true, up: '#00ff88', down: '#ff2e2e', background: '#000000', grid: 'rgba(255,255,255,0.10)', text: '#ffffff', crosshair: '#ffffff' },
+  // nudes (tons de pele, bege, cappuccino)
+  { id: 'nude-rose', name: 'Nude rosado', dark: false, up: '#7a8f6b', down: '#b5495b', background: '#f4e4de', grid: 'rgba(120,70,60,0.10)', text: '#5a3b36', crosshair: '#a0746c' },
+  { id: 'nude-beige', name: 'Nude bege', dark: false, up: '#4f7a5a', down: '#a8554a', background: '#efe1d0', grid: 'rgba(110,80,50,0.11)', text: '#4d3b2a', crosshair: '#9c8467' },
+  { id: 'nude-cream', name: 'Nude creme', dark: false, up: '#5b8a72', down: '#c0604f', background: '#faf3e7', grid: 'rgba(130,100,60,0.09)', text: '#54442f', crosshair: '#a8946f' },
+  { id: 'nude-caramel', name: 'Caramelo', dark: false, up: '#5d7f4a', down: '#9c3d2e', background: '#e8d2b5', grid: 'rgba(100,60,20,0.12)', text: '#3f2d18', crosshair: '#8e6d45' },
+  { id: 'nude-cappuccino', name: 'Cappuccino', dark: false, up: '#3f6f5a', down: '#a3483c', background: '#d9c3ad', grid: 'rgba(80,50,30,0.13)', text: '#3a2a1c', crosshair: '#7d6048' },
+  { id: 'nude-champagne', name: 'Champanhe', dark: false, up: '#6b8e5a', down: '#b8574a', background: '#f3e8d3', grid: 'rgba(140,110,50,0.10)', text: '#5a4a28', crosshair: '#b09a64' },
+  { id: 'nude-peach', name: 'Pêssego', dark: false, up: '#6a9a7e', down: '#d2604f', background: '#fbe3d3', grid: 'rgba(160,90,60,0.10)', text: '#5e3a2c', crosshair: '#c28a72' },
+  { id: 'nude-terracotta', name: 'Terracota', dark: false, up: '#56785c', down: '#a24a35', background: '#e5c7b3', grid: 'rgba(110,60,40,0.12)', text: '#472d22', crosshair: '#94684f' },
+  { id: 'nude-taupe', name: 'Taupe', dark: true, up: '#c9b79c', down: '#c2766a', background: '#2b2623', grid: 'rgba(220,200,180,0.07)', text: '#cdbfae', crosshair: '#8f7f6d' },
+  { id: 'nude-mocha', name: 'Mocha escuro', dark: true, up: '#d6b98c', down: '#d98873', background: '#1f1814', background2: '#2a211b', grid: 'rgba(230,200,160,0.07)', text: '#d8c6ae', crosshair: '#9b8466' },
 ];
 
 /** O que o estilo escreve nas definições. */

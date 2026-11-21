@@ -51,6 +51,8 @@ export interface OverlayHost {
   replayPick(): { x: number; label?: string; handle?: boolean } | null;
   alerts(): { price: number; label: string }[];
   dark(): boolean;
+  /** Cor de fundo do gráfico (para adaptar as cores dos desenhos). */
+  background(): string;
   /** Etiqueta temporária junto ao dedo/rato (ex.: ângulo da linha). */
   hint(): { x: number; y: number; text: string } | null;
   /** Círculo no ponto onde o íman prendeu. */
@@ -119,7 +121,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         if (!def) continue;
         ctx.save();
         try {
-          def.render(ctx, resolveAuto(d, host.dark()), view, d.id === selected || d.id === hovered);
+          def.render(ctx, resolveAuto(d, host.dark(), host.background()), view, d.id === selected || d.id === hovered);
         } catch {
           /* desenho inválido: ignora */
         }
@@ -130,7 +132,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         const def = toolDef(pv.type);
         ctx.save();
         try {
-          def?.render(ctx, resolveAuto(pv, host.dark()), view, true);
+          def?.render(ctx, resolveAuto(pv, host.dark(), host.background()), view, true);
         } catch {
           /* ignora */
         }
@@ -385,7 +387,7 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
     };
     for (const d of this.host.drawings()) {
       if (d.hidden) continue;
-      if ((d.type === 'hline' || d.type === 'hray') && d.style.showLabel !== false) add(d.points[0].price, shownColor(d.style.color, this.host.dark()));
+      if ((d.type === 'hline' || d.type === 'hray') && d.style.showLabel !== false) add(d.points[0].price, shownColor(d.style.color, this.host.dark(), this.host.background()));
     }
     const selId = this.host.selectedId();
     const sel = this.host.drawings().find((d) => d.id === selId) ?? this.host.preview();
