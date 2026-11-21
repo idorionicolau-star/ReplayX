@@ -279,7 +279,7 @@ function PresetsMenu() {
         <span className="text-xs text-muted">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div className="grid grid-cols-2 gap-2 border-t border-line p-2 sm:grid-cols-5">
+        <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto border-t border-line p-2 sm:grid-cols-5">
           {CHART_PRESETS.map((p) => {
             const bg = p.background ?? (p.dark ? '#131722' : '#ffffff');
             return (

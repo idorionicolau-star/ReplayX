@@ -173,8 +173,9 @@ export class Interaction {
       // Ctrl: alcance largo, apanha pontos de outros desenhos
       const reachPx = aggressive ? 5000 : magnetLevel(magnet)?.reachPx ?? 0;
       if (best && bestDist <= reachPx) {
+        // o ponto vai exatamente onde o anel está: preço E vela do candidato (antes só o preço, e a ponta ficava na vela do cursor)
         price = best.price;
-        if (aggressive) time = best.time;
+        time = best.time;
         this.c.snapMark = { x: best.x, y: best.y };
       } else if (magnet === 'strong' && !aggressive) {
         const bar = this.c.bars[centre];
@@ -187,6 +188,10 @@ export class Interaction {
               price = v;
             }
           }
+          time = bar.time;
+          const bx = this.c.timeToX(bar.time);
+          const by = this.c.priceToY(price);
+          if (bx !== null && by !== null) this.c.snapMark = { x: bx, y: by };
         }
       }
     }
