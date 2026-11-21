@@ -66,3 +66,28 @@ describe('estilo dinâmico com o botão sol/lua', () => {
     expect(useSettings.getState().upColor).toBe('#123456');
   });
 });
+
+import { DEFAULT_APPEARANCE, resolveAppearance } from '@/chart/appearance';
+
+describe('cores manuais das velas também ficam visíveis', () => {
+  it('corpo branco sobre fundo claro ganha contorno e pavio na cor do texto', () => {
+    const r = resolveAppearance({ ...DEFAULT_APPEARANCE, bodyUp: '#ffffff', background: '#ffffff' }, false, '#089981', '#f23645');
+    expect(r.showBorder).toBe(true);
+    expect(r.borderUp).toBe('#131722');
+    expect(r.wickUp).toBe('#131722');
+    expect(r.borderDown).toBe('#f23645');
+  });
+  it('corpo preto sobre fundo escuro também', () => {
+    const r = resolveAppearance({ ...DEFAULT_APPEARANCE, bodyDown: '#000000' }, true, '#089981', '#f23645');
+    expect(r.showBorder).toBe(true);
+    expect(r.borderDown).toBe('#d1d4dc');
+  });
+  it('cores legíveis e bordas escolhidas à mão não mudam', () => {
+    const r = resolveAppearance({ ...DEFAULT_APPEARANCE, bodyUp: '#ffffff', borderUp: '#ff0000', wickUp: '#ff0000', background: '#ffffff' }, false, '#089981', '#f23645');
+    expect(r.borderUp).toBe('#ff0000');
+    expect(r.wickUp).toBe('#ff0000');
+    const n = resolveAppearance(DEFAULT_APPEARANCE, true, '#089981', '#f23645');
+    expect(n.showBorder).toBe(false);
+    expect(n.borderUp).toBe('#089981');
+  });
+});
