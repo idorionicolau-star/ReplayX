@@ -120,7 +120,7 @@ export function CalendarPanel() {
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {CCYS.map((c) => (
-            <button key={c} type="button" onClick={() => setCcys((s) => (s.includes(c) ? s.filter((x) => x !== c) : [...s, c]))} className={cn('h-6 rounded px-1.5 text-[11px] font-semibold', ccys.includes(c) ? 'bg-accent text-white' : 'bg-hover text-muted')}>
+            <button key={c} type="button" onClick={() => setCcys((s) => (s.includes(c) ? s.filter((x) => x !== c) : [...s, c]))} className={cn('h-6 rounded px-1.5 text-[11px] font-semibold', ccys.includes(c) ? 'bg-accent text-on-accent' : 'bg-hover text-muted')}>
               {c}
             </button>
           ))}

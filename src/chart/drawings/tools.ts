@@ -2,6 +2,7 @@ import type { Bar, PricePoint } from '@/core/types';
 import { DEFAULT_FIBEXT_LEVELS, DEFAULT_FIB_LEVELS, type Drawing, type DrawingStyle, type PositionSizing, type ToolId } from './types';
 import { distToEllipse, distToPolyline, distToSegment, extendSegment, nearRectBorder, pointInPolygon, pointInRect, withAlpha, type Pt } from './geometry';
 import { fmtDuration } from '@/lib/format';
+import { AUTO } from './auto';
 import { volumeProfile, type VpResult } from '@/core/volumeProfile';
 
 export interface Viewport {
@@ -48,7 +49,9 @@ export interface ToolDef {
   axis?(d: Drawing): { prices: number[]; times: number[] };
 }
 
-const BLUE = '#2962ff';
+/** Cor padrão dos desenhos: automática (preto no tema claro, branco no escuro). */
+const BLUE = AUTO;
+const NEUTRAL_FILL = 'rgba(120,123,134,0.14)';
 let TOL = 6;
 /** Tolerância (px) para acertar num desenho: maior com o dedo do que com o rato. */
 export function setHitTolerance(px: number) {
@@ -401,7 +404,7 @@ const channel: ToolDef = {
   label: 'Canal paralelo',
   group: 'lines',
   points: 3,
-  style: { color: BLUE, width: 2, dash: 0, fill: 'rgba(41,98,255,0.08)', extendRight: false },
+  style: { color: BLUE, width: 2, dash: 0, fill: 'rgba(120,123,134,0.08)', extendRight: false },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -579,7 +582,7 @@ const pitchfork: ToolDef = {
   label: 'Forquilha de Andrews',
   group: 'fib',
   points: 3,
-  style: { color: '#ff9800', width: 1, dash: 0, fill: 'rgba(255,152,0,0.07)' },
+  style: { color: AUTO, width: 1, dash: 0, fill: 'rgba(120,123,134,0.08)' },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -633,7 +636,7 @@ const rect: ToolDef = {
   group: 'shapes',
   shortcut: 'Alt+Shift+R',
   points: 2,
-  style: { color: '#9c27b0', width: 1, dash: 0, fill: 'rgba(156,39,176,0.15)' },
+  style: { color: AUTO, width: 1, dash: 0, fill: NEUTRAL_FILL },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -688,7 +691,7 @@ const ellipse: ToolDef = {
   label: 'Elipse',
   group: 'shapes',
   points: 2,
-  style: { color: '#ff9800', width: 1, dash: 0, fill: 'rgba(255,152,0,0.12)' },
+  style: { color: AUTO, width: 1, dash: 0, fill: NEUTRAL_FILL },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -716,7 +719,7 @@ const triangle: ToolDef = {
   label: 'Triângulo',
   group: 'shapes',
   points: 3,
-  style: { color: '#089981', width: 1, dash: 0, fill: 'rgba(8,153,129,0.12)' },
+  style: { color: AUTO, width: 1, dash: 0, fill: NEUTRAL_FILL },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -767,7 +770,7 @@ const brush: ToolDef = {
   label: 'Pincel',
   group: 'shapes',
   points: 0,
-  style: { color: '#f23645', width: 2, dash: 0 },
+  style: { color: AUTO, width: 2, dash: 0 },
   render(ctx, d, vp, sel) {
     const pts = allXY(d, vp);
     if (!pts || pts.length < 2) return;
@@ -809,7 +812,7 @@ const text: ToolDef = {
   group: 'text',
   shortcut: 'Alt+T',
   points: 1,
-  style: { color: BLUE, width: 1, dash: 0, text: 'Texto', textColor: '#2962ff', fontSize: 14 },
+  style: { color: BLUE, width: 1, dash: 0, text: 'Texto', textColor: AUTO, fontSize: 14 },
   render(ctx, d, vp, sel) {
     const p = xy(d, 0, vp);
     if (!p) return;
@@ -824,7 +827,7 @@ const text: ToolDef = {
     ctx.textBaseline = 'top';
     (d.style.text || 'Texto').split('\n').forEach((l, i) => ctx.fillText(l, p.x, b.y + 2 + i * ((d.style.fontSize ?? 14) + 4)));
     if (sel) {
-      ctx.strokeStyle = BLUE;
+      ctx.strokeStyle = d.style.color;
       ctx.setLineDash([3, 3]);
       ctx.strokeRect(b.x - 4, b.y, b.w, b.h);
     }
@@ -844,7 +847,7 @@ const note: ToolDef = {
   label: 'Nota (balão)',
   group: 'text',
   points: 1,
-  style: { color: '#2962ff', width: 1, dash: 0, text: 'Nota', textColor: '#ffffff', fontSize: 13, fill: '#2962ff' },
+  style: { color: '#363a45', width: 1, dash: 0, text: 'Nota', textColor: '#ffffff', fontSize: 13, fill: '#363a45' },
   render(ctx, d, vp, sel) {
     const p = xy(d, 0, vp);
     if (!p) return;
@@ -876,7 +879,7 @@ const pricelabel: ToolDef = {
   label: 'Etiqueta de preço',
   group: 'text',
   points: 1,
-  style: { color: '#2962ff', width: 1, dash: 0 },
+  style: { color: AUTO, width: 1, dash: 0 },
   render(ctx, d, vp, sel) {
     const p = xy(d, 0, vp);
     if (!p) return;
@@ -930,7 +933,7 @@ function arrowMark(id: 'arrowup' | 'arrowdown'): ToolDef {
       ctx.closePath();
       ctx.fill();
       if (sel) {
-        ctx.strokeStyle = BLUE;
+        ctx.strokeStyle = d.style.color;
         ctx.stroke();
       }
       if (d.style.text) {
@@ -1105,15 +1108,15 @@ function rangeTool(id: 'pricerange' | 'daterange' | 'measure', label: string): T
     label,
     group: 'measure',
     points: 2,
-    style: { color: BLUE, width: 1, dash: 0, fill: 'rgba(41,98,255,0.15)' },
+    style: { color: BLUE, width: 1, dash: 0, fill: NEUTRAL_FILL },
     render(ctx, d, vp, sel) {
       const pts = allXY(d, vp);
       if (!pts || pts.length < 2) return;
       const [a, b] = pts;
       const up = d.points[1].price >= d.points[0].price;
-      const color = id === 'measure' ? (up ? '#2962ff' : '#f23645') : d.style.color;
+      const color = id === 'measure' ? (up ? '#089981' : '#f23645') : d.style.color;
       ctx.save();
-      ctx.fillStyle = id === 'measure' ? withAlpha(color, 0.15) : d.style.fill ?? 'rgba(41,98,255,0.15)';
+      ctx.fillStyle = id === 'measure' ? withAlpha(color, 0.15) : d.style.fill ?? NEUTRAL_FILL;
       ctx.fillRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y));
       stroke(ctx, { ...d.style, color }, sel);
       const mx = (a.x + b.x) / 2;
@@ -1208,13 +1211,13 @@ const vpFixed: ToolDef = {
       const h = Math.max(1, Math.abs(y2 - y1) - 1);
       const len = (l.total / res.max) * w * 0.92;
       const upLen = (l.up / l.total) * len;
-      ctx.fillStyle = l.inVa ? 'rgba(41,98,255,0.60)' : 'rgba(41,98,255,0.28)';
+      ctx.fillStyle = l.inVa ? 'rgba(120,123,134,0.60)' : 'rgba(120,123,134,0.28)';
       ctx.fillRect(xa, top, upLen, h);
-      ctx.fillStyle = l.inVa ? 'rgba(251,140,0,0.60)' : 'rgba(251,140,0,0.28)';
+      ctx.fillStyle = l.inVa ? 'rgba(120,123,134,0.60)' : 'rgba(120,123,134,0.28)';
       ctx.fillRect(xa + upLen, top, len - upLen, h);
     }
     // frame
-    stroke(ctx, { ...d.style, color: sel ? '#2962ff' : '#787b86', dash: 1 }, sel);
+    stroke(ctx, { ...d.style, color: sel ? d.style.color : '#787b86', dash: 1 }, sel);
     ctx.strokeRect(xa + 0.5, Math.min(yHi, yLo) + 0.5, w, Math.abs(yLo - yHi));
     // POC e área de valor por todo o intervalo
     const yPoc = vp.priceToY(res.poc);

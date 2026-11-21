@@ -105,7 +105,7 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
         onClick={() => onChange(!checked)}
         className={cn('relative h-[18px] w-8 shrink-0 rounded-full transition-colors', checked ? 'bg-accent' : 'bg-faint')}
       >
-        <span className={cn('absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all', checked ? 'left-[16px]' : 'left-[2px]')} />
+        <span className={cn('absolute top-[2px] h-[14px] w-[14px] rounded-full shadow transition-all', checked ? 'left-[16px] bg-on-accent' : 'left-[2px] bg-white')} />
       </button>
       {label && <span className="text-[13px]">{label}</span>}
     </label>

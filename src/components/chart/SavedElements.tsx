@@ -40,7 +40,7 @@ export function SavedElements({ className, placement = 'right-start', size = 18,
             return (
               <MenuItem
                 key={t.id}
-                icon={I ? <I size={16} /> : <span className="block h-3 w-3 rounded-sm" style={{ background: t.style.color }} />}
+                icon={I ? <I size={16} /> : <span className="block h-3 w-3 rounded-sm" style={{ background: t.style.color === 'auto' ? 'var(--c-text)' : t.style.color }} />}
                 label={t.name}
                 hint={toolDef(type)?.label}
                 onClick={() => {

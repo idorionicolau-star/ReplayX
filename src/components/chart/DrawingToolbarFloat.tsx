@@ -51,7 +51,7 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   return (
     <div data-testid="drawing-float" className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
       <TemplateMenu symbolId={symbolId} d={d} compact />
-      {!isPosition && <ColorPicker value={d.style.color} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
+      {!isPosition && <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
       {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
       {textTool && <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label="Cor do texto" />}
       {!isPosition && !textTool && (
@@ -127,10 +127,10 @@ function PositionControls({ symbolId, d }: { symbolId: string; d: Drawing }) {
         <ArrowUpDown size={15} />
       </IconButton>
       <div className="flex overflow-hidden rounded-md border border-line" title="Como calcular o lote">
-        <button type="button" onClick={() => (patch({ sizing: 'qty', qty: sz?.qty ?? defaultQty }), setTrading({ sizing: 'qty' }))} className={cn(seg, sizing === 'qty' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="position-mode-lot">
+        <button type="button" onClick={() => (patch({ sizing: 'qty', qty: sz?.qty ?? defaultQty }), setTrading({ sizing: 'qty' }))} className={cn(seg, sizing === 'qty' ? 'bg-accent text-on-accent' : 'hover:bg-hover')} data-testid="position-mode-lot">
           Lote
         </button>
-        <button type="button" onClick={() => (patch({ sizing: 'risk' }), setTrading({ sizing: 'risk' }))} className={cn(seg, sizing === 'risk' ? 'bg-accent text-white' : 'hover:bg-hover')} data-testid="position-mode-risk">
+        <button type="button" onClick={() => (patch({ sizing: 'risk' }), setTrading({ sizing: 'risk' }))} className={cn(seg, sizing === 'risk' ? 'bg-accent text-on-accent' : 'hover:bg-hover')} data-testid="position-mode-risk">
           Risco
         </button>
       </div>
