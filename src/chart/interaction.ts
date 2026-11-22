@@ -397,6 +397,9 @@ export class Interaction {
     this.edgeDir = 0;
   }
 
+  /** Desenho antigo que acabou de ser selecionado com o rato (para abrir a barra junto ao clique se for só um clique). */
+  private clickSelect: string | null = null;
+
   private selectTap: { id: string; x: number; y: number; t: number } | null = null;
 
   private onSelectTap = (e: PointerEvent) => {
@@ -404,7 +407,10 @@ export class Interaction {
     this.selectTap = null;
     if (!t || this.touches.size > 1 || e.type === 'pointercancel') return;
     const p = this.local(e);
-    if (Math.hypot(p.x - t.x, p.y - t.y) < 10 && performance.now() - t.t < 500) this.cb.select(t.id);
+    if (Math.hypot(p.x - t.x, p.y - t.y) < 10 && performance.now() - t.t < 500) {
+      this.c.floatAnchor = { id: t.id, x: p.x, y: p.y, kind: 'click' };
+      this.cb.select(t.id);
+    }
   };
 
   private onPickTap = (e: PointerEvent) => {
@@ -616,6 +622,7 @@ export class Interaction {
     }
     if (hit) {
       this.consume(e);
+      this.clickSelect = hit.d.id !== this.c.selectedId ? hit.d.id : null;
       this.cb.select(hit.d.id);
       if (hit.d.locked || this.cb.globalLocked()) return;
       const start = this.toPoint(p.x, p.y, false);
@@ -810,7 +817,7 @@ export class Interaction {
     const last = d.points[d.points.length - 1];
     const ax = last ? this.c.timeToX(last.time) : null;
     const ay = last ? this.c.priceToY(last.price) : null;
-    this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay } : null;
+    this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay, kind: 'new' } : null;
     this.cb.addDrawing(d);
     this.cb.select(d.id);
     // no dedo a ferramenta volta sempre ao cursor depois de criar (senão o toque seguinte, para arrastar ou
@@ -939,6 +946,12 @@ export class Interaction {
       this.mode = { kind: 'idle' };
       this.endDrag();
       if (m.moved) this.cb.commit();
+      else if (this.clickSelect === m.id) {
+        // só um clique num desenho antigo: a barra pode abrir junto ao clique
+        this.c.floatAnchor = { id: m.id, x: p.x, y: p.y, kind: 'click' };
+        this.cb.select(m.id);
+      }
+      this.clickSelect = null;
       return;
     }
     if (m.kind === 'trade') {

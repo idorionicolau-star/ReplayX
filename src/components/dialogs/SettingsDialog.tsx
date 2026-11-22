@@ -79,6 +79,9 @@ export function SettingsDialog() {
           <Row label="Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)">
             <Switch checked={s.floatNearMouse} onChange={(v) => s.set({ floatNearMouse: v })} />
           </Row>
+          <Row label="Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)">
+            <Switch checked={s.floatOnSelect} onChange={(v) => s.set({ floatOnSelect: v })} />
+          </Row>
           <Row label="Íman de preço automático (linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo; Alt faz o mesmo em qualquer ferramenta)">
             <Switch checked={s.priceSnap} onChange={(v) => s.set({ priceSnap: v })} />
           </Row>

@@ -31,10 +31,12 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   const [widthOpen, setWidthOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
-  const nearMouse = useSettings((s) => s.floatNearMouse && !s.stayInDrawingMode);
+  const nearNew = useSettings((s) => s.floatNearMouse && !s.stayInDrawingMode);
+  const nearClick = useSettings((s) => s.floatOnSelect);
   const boxRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ id: string; left: number; top: number } | null>(null);
   const anchor = d && ctrl.floatAnchor?.id === d.id ? ctrl.floatAnchor : null;
+  const nearMouse = anchor?.kind === 'click' ? nearClick : nearNew;
   // recém-terminado: a barra abre junto ao rato (no último clique), dentro do gráfico e sem tapar o ponto
   useLayoutEffect(() => {
     const box = boxRef.current;
