@@ -991,16 +991,17 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       const w = Math.max(4, Math.abs(x1 - x0));
       const entry = d.points[0].price;
       ctx.save();
-      ctx.fillStyle = 'rgba(8,153,129,0.18)';
-      ctx.fillRect(left, Math.min(ye, yt), w, Math.abs(yt - ye));
-      ctx.fillStyle = 'rgba(242,54,69,0.18)';
-      ctx.fillRect(left, Math.min(ye, ys), w, Math.abs(ys - ye));
-
       // resultado até ao cursor/última barra
       const endT = Math.max(d.points[0].time, d.points[1].time);
       const bars = vp.bars.filter((b) => b.time >= d.points[0].time && b.time <= endT);
       const res = positionOutcome(bars, long, entry, data.stop, data.target);
       const outcome = res.status === 'tp' || res.status === 'sl' ? res.status : null;
+      // terminada (alvo ou stop atingido): tudo mais discreto, para não pesar no gráfico
+      const calm = outcome !== null && !sel;
+      ctx.fillStyle = calm ? 'rgba(8,153,129,0.07)' : 'rgba(8,153,129,0.18)';
+      ctx.fillRect(left, Math.min(ye, yt), w, Math.abs(yt - ye));
+      ctx.fillStyle = calm ? 'rgba(242,54,69,0.07)' : 'rgba(242,54,69,0.18)';
+      ctx.fillRect(left, Math.min(ye, ys), w, Math.abs(ys - ye));
       if (res.fillTime !== null && res.endTime !== null) {
         const xf = vp.timeToX(res.fillTime);
         const xl = vp.timeToX(res.endTime);
@@ -1008,9 +1009,9 @@ function positionTool(id: 'long' | 'short'): ToolDef {
         if (xf !== null && xl !== null && yl !== null) {
           const a0 = Math.max(left, Math.min(xf, left + w));
           const a1 = Math.min(xl, left + w);
-          ctx.fillStyle = outcome === 'tp' ? 'rgba(8,153,129,0.28)' : outcome === 'sl' ? 'rgba(242,54,69,0.28)' : 'rgba(120,123,134,0.22)';
+          ctx.fillStyle = calm ? (outcome === 'tp' ? 'rgba(8,153,129,0.10)' : 'rgba(242,54,69,0.10)') : outcome === 'tp' ? 'rgba(8,153,129,0.28)' : outcome === 'sl' ? 'rgba(242,54,69,0.28)' : 'rgba(120,123,134,0.22)';
           ctx.fillRect(a0, Math.min(ye, yl), Math.max(0, a1 - a0), Math.abs(yl - ye));
-          ctx.strokeStyle = '#787b86';
+          ctx.strokeStyle = calm ? 'rgba(120,123,134,0.45)' : '#787b86';
           ctx.setLineDash([4, 3]);
           line(ctx, { x: a0, y: ye }, { x: a1, y: yl });
         }
@@ -1018,7 +1019,7 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       const prefix = outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : res.status === 'pending' ? '⏳ À espera da entrada · ' : res.status === 'missed' ? '⊘ Sem entrada (o preço foi ao alvo/stop sem a tocar) · ' : '';
 
       ctx.setLineDash([]);
-      ctx.strokeStyle = '#787b86';
+      ctx.strokeStyle = calm ? 'rgba(120,123,134,0.45)' : '#787b86';
       ctx.lineWidth = 1;
       line(ctx, { x: left, y: ye }, { x: left + w, y: ye });
 
@@ -1033,7 +1034,8 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       const qtyText = sz ? sz.qtyText : qty >= 100 ? qty.toFixed(0) : qty.toFixed(3);
       const fg = '#ffffff';
       const font = '11px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif';
-      if (sel || w > 70) {
+      // as descrições (alvo, stop e resultado) só aparecem com a caixa selecionada ou com o rato por cima
+      if (sel) {
         labelBox(ctx, [`Alvo: ${vp.fmtPrice(data.target)} (${pctChange(entry, data.target).toFixed(2)}%) +${rewardAmt.toFixed(2)}`], left + w / 2, long ? Math.min(yt, ye) - 4 : Math.max(yt, ye) + 4, { bg: '#089981', fg, valign: long ? 'bottom' : 'top', font });
         labelBox(ctx, [`Stop: ${vp.fmtPrice(data.stop)} (${pctChange(entry, data.stop).toFixed(2)}%) -${riskAmt.toFixed(2)}`], left + w / 2, long ? Math.max(ys, ye) + 4 : Math.min(ys, ye) - 4, { bg: '#f23645', fg, valign: long ? 'top' : 'bottom', font });
         labelBox(
