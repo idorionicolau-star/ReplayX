@@ -76,6 +76,9 @@ export function SettingsDialog() {
           <Row label="Escala de preços automática (ajusta-se aos dados à vista)">
             <Switch checked={s.autoFit} onChange={(v) => s.set({ autoFit: v })} />
           </Row>
+          <Row label="Selo de resultados das caixas de posição (acerto e R do backtest; toque no selo para ver a curva)">
+            <Switch checked={s.backtestChip} onChange={(v) => s.set({ backtestChip: v })} />
+          </Row>
           <Row label="Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)">
             <Switch checked={s.floatNearMouse} onChange={(v) => s.set({ floatNearMouse: v })} />
           </Row>

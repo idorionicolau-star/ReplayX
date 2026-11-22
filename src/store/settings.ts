@@ -63,6 +63,8 @@ export interface SettingsState {
   floatNearMouse: boolean;
   /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
   floatOnSelect: boolean;
+  /** Selo com o resultado (acerto e R) das caixas de posição do símbolo. */
+  backtestChip: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
   /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
@@ -125,6 +127,7 @@ export const useSettings = create<SettingsState>()(
       priceSnap: false,
       floatNearMouse: true,
       floatOnSelect: false,
+      backtestChip: true,
       loupe: true,
       loupePos: 'top-right',
       autoFit: true,
