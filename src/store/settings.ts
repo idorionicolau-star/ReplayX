@@ -61,6 +61,8 @@ export interface SettingsState {
   priceSnap: boolean;
   /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
   floatNearMouse: boolean;
+  /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
+  floatOnSelect: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
   /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
@@ -122,6 +124,7 @@ export const useSettings = create<SettingsState>()(
       angleSnap: false,
       priceSnap: false,
       floatNearMouse: true,
+      floatOnSelect: false,
       loupe: true,
       loupePos: 'top-right',
       autoFit: true,
