@@ -58,10 +58,7 @@ export interface SettingsState {
   favoriteIndicators: string[];
   /** Linhas encaixam em ângulos de 15° (também com Shift). */
   angleSnap: boolean;
-  /** Íman de preço automático: linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo na vertical (Alt faz o mesmo em qualquer ferramenta). */
-  /** Íman de preço automático: o Fibonacci e o retângulo prendem sozinhos ao pivô mais próximo (as outras ferramentas, com Alt ou com o botão no telemóvel). */
-  priceSnapAuto: boolean;
-  /** Sensibilidade dos pivôs do íman de preço (ZigZag). */
+  /** Sensibilidade dos pivôs do íman de preço (só age com Alt ou com o botão do telemóvel). */
   pivotSensitivity: PivotSensitivity;
   /** Fora do replay, o íman de preço pode prender aos pivôs à frente do cursor. */
   pivotFuture: boolean;
@@ -130,7 +127,6 @@ export const useSettings = create<SettingsState>()(
       replayBarPos: null,
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
-      priceSnapAuto: false,
       pivotSensitivity: 'normal',
       pivotFuture: true,
       floatNearMouse: true,
@@ -188,8 +184,10 @@ export const useSettings = create<SettingsState>()(
       // campos novos da aparência ficam com o valor por omissão
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState> & { priceSnap?: boolean; priceSnapLevel?: number };
-        // antes o íman de preço tinha ligado/desligado e depois níveis: qualquer nível ligado passa a automático
-        if (p.priceSnapAuto === undefined && (p.priceSnap || (p.priceSnapLevel ?? 0) > 0)) p.priceSnapAuto = true;
+        // o íman de preço já não tem modo automático nem níveis: só Alt ou o botão do telemóvel
+        delete p.priceSnap;
+        delete p.priceSnapLevel;
+        delete (p as { priceSnapAuto?: boolean }).priceSnapAuto;
         return { ...current, ...p, appearance: { ...DEFAULT_APPEARANCE, ...(p.appearance ?? {}) }, lotRules: { ...DEFAULT_LOT_RULES, ...(p.lotRules ?? {}) }, trading: { ...DEFAULT_TRADING, ...(p.trading ?? {}) } };
       },
     },

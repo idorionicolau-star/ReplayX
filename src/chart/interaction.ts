@@ -21,9 +21,6 @@ const PANE_TOOLS = new Set<ToolId>(['trendline', 'ray', 'extended', 'infoline', 
 /** Peso da distância horizontal no íman (a vertical conta por inteiro): o íman é mais vertical do que horizontal. */
 const HORIZ_WEIGHT = 0.35;
 
-/** Ferramentas em que o íman de preço funciona sozinho (desenham-se para o futuro); nas outras só com Alt. */
-const PRICE_TOOLS = new Set<ToolId>(['fib', 'fibext', 'rect']);
-
 export interface InteractionCallbacks {
   tool(): ToolId;
   setTool(t: ToolId): void;
@@ -31,7 +28,6 @@ export interface InteractionCallbacks {
   /** Encaixar linhas de 15 em 15° (também com Shift). */
   angleSnap(): boolean;
   /** Íman de preço automático (Alt liga-o enquanto está premido). */
-  priceSnapAuto(): boolean;
   /** Íman de preço armado pelo botão (ecrã de toque). */
   priceSnapArmed(): boolean;
   /** Apaga o armado depois de terminar o desenho. */
@@ -245,9 +241,9 @@ export class Interaction {
       }
     }
     // íman de preço: prende ao pivô (ponta de uma perna do ZigZag) mais próximo na vertical, em qualquer ponto do gráfico
-    // visível (também no espaço vazio à direita). Alt, em qualquer ferramenta; sozinho, no Fibonacci e no retângulo.
-    // com o íman desligado nada prende sozinho: só Alt, o botão do telemóvel e Ctrl (ações deliberadas). O automático só vale com o íman ligado.
-    if (this.mods.alt || this.cb.priceSnapArmed() || (this.cb.priceSnapAuto() && set !== 'off' && PRICE_TOOLS.has(tool))) {
+    // visível (também no espaço vazio à direita). Só quando o utilizador o pede: Alt premido (computador) ou o botão (telemóvel).
+    // É independente do íman normal: com o íman normal ligado ou desligado, o de preço nunca age sozinho.
+    if (this.mods.alt || this.cb.priceSnapArmed()) {
       // sem ver o futuro: só os pivôs com o que já tinha acontecido até à vela do cursor
       const pivots = this.c.snapPivots(this.cb.pivotSensitivity(), this.cb.pivotFuture() ? undefined : Math.round(l));
       this.c.pivotDots = pivots.map((p) => ({ time: this.c.bars[p.idx].time, price: p.price }));
