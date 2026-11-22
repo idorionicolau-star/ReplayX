@@ -86,7 +86,7 @@ export function SettingsDialog() {
           <Row label="Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)">
             <Switch checked={s.floatOnSelect} onChange={(v) => s.set({ floatOnSelect: v })} />
           </Row>
-          <Row label="Íman de preço automático no Fibonacci e no retângulo (prendem sozinhos aos topos e fundos do ZigZag; nas outras ferramentas, com Alt ou com o botão no telemóvel)">
+          <Row label="Íman de preço automático no Fibonacci e no retângulo (prendem sozinhos aos topos e fundos do ZigZag, só com o íman ligado; com o íman desligado e nas outras ferramentas, só com Alt ou com o botão no telemóvel)">
             <Switch checked={s.priceSnapAuto} onChange={(v) => s.set({ priceSnapAuto: v })} data-testid="price-snap-auto" />
           </Row>
           <Row label="Pivôs do íman de preço: sensibilidade">
