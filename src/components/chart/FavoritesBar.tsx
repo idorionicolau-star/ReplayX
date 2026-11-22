@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GripHorizontal, GripVertical, Magnet, PanelLeft, PanelTop, Star, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
+import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
 import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
 import { toolDef } from '@/chart/drawings/tools';
@@ -18,6 +19,7 @@ export function FavoritesBar() {
   const pos = useSettings((s) => s.favoritesBarPos);
   const magnet = useSettings((s) => s.magnet);
   const angleSnap = useSettings((s) => s.angleSnap);
+  const priceSnap = useSettings((s) => s.priceSnap);
   const vertical = useSettings((s) => s.favoritesBarVertical);
   const set = useSettings((s) => s.set);
   const tool = useDrawings((s) => s.tool);
@@ -133,6 +135,16 @@ export function FavoritesBar() {
         className={cn('flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', angleSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
         <AngleIcon size={16} />
+      </button>
+      <button
+        type="button"
+        title={priceSnap ? 'Íman de preço: ligado (linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo; Alt faz o mesmo em qualquer ferramenta)' : 'Íman de preço: desligado (segura Alt ao desenhar para o usar)'}
+        aria-label="Prender ao pavio na vertical"
+        onClick={() => set({ priceSnap: !priceSnap })}
+        className={cn('flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', priceSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        data-testid="fav-price-snap"
+      >
+        <PriceSnapIcon size={17} />
       </button>
       <button
         type="button"

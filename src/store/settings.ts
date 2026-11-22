@@ -57,6 +57,8 @@ export interface SettingsState {
   favoriteIndicators: string[];
   /** Linhas encaixam em ângulos de 15° (também com Shift). */
   angleSnap: boolean;
+  /** Íman de preço automático: linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo na vertical (Alt faz o mesmo em qualquer ferramenta). */
+  priceSnap: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
   /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
@@ -116,6 +118,7 @@ export const useSettings = create<SettingsState>()(
       replayBarPos: null,
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
+      priceSnap: false,
       loupe: true,
       loupePos: 'top-right',
       autoFit: true,
