@@ -15,6 +15,9 @@ export type TradeAction =
   | { type: 'modify-position'; id: string; sl?: number | null; tp?: number | null }
   | { type: 'modify-order'; id: string; price?: number; sl?: number | null; tp?: number | null };
 
+/** Peso da distância horizontal no íman (a vertical conta por inteiro): o íman é mais vertical do que horizontal. */
+const HORIZ_WEIGHT = 0.35;
+
 /** Ferramentas de preço: com o íman de preço automático ligado, prendem ao pavio mais próximo na vertical. */
 const PRICE_TOOLS = new Set<ToolId>(['hline', 'hray', 'crossline', 'fib', 'fibext', 'rect', 'pricerange', 'long', 'short', 'vpfixed']);
 
@@ -91,6 +94,8 @@ export class Interaction {
     el.addEventListener('dblclick', this.onDblClick, true);
     el.addEventListener('contextmenu', this.onContext, true);
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('keydown', this.onModKey);
+    window.addEventListener('keyup', this.onModKey);
   }
 
   dispose() {
@@ -108,6 +113,8 @@ export class Interaction {
     el.removeEventListener('dblclick', this.onDblClick, true);
     el.removeEventListener('contextmenu', this.onContext, true);
     window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keydown', this.onModKey);
+    window.removeEventListener('keyup', this.onModKey);
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);
@@ -172,7 +179,9 @@ export class Interaction {
         const cx = this.c.timeToX(cand.time);
         const cy = this.c.priceToY(cand.price);
         if (cx === null || cy === null) continue;
-        const dist = Math.hypot(cx - x, cy - y);
+        // o íman é sobretudo vertical: a distância na horizontal pesa pouco, por isso prende ao preço mais próximo
+        // mesmo com a vela um pouco ao lado
+        const dist = Math.hypot((cx - x) * HORIZ_WEIGHT, cy - y);
         if (dist < bestDist) {
           bestDist = dist;
           best = { ...cand, x: cx, y: cy };
@@ -279,6 +288,32 @@ export class Interaction {
   private updateLoupe(e: { clientX: number; clientY: number }) {
     if (this.touch && this.cb.loupe()) this.loupe.show(e.clientX, e.clientY);
   }
+
+  /** Último ponto do rato por cima do gráfico (para refrescar o íman quando se carrega em Ctrl/Alt sem mexer o rato). */
+  private lastHover: { x: number; y: number } | null = null;
+
+  /** Antes do 1.º ponto: mostra onde o íman prende (anel e linhas-guia) para localizar o ponto mesmo longe do cursor. */
+  private previewSnap(e: { shiftKey: boolean; ctrlKey: boolean; metaKey?: boolean; altKey?: boolean }, p: { x: number; y: number }) {
+    this.trackMods(e);
+    this.lastHover = { x: p.x, y: p.y };
+    const before = this.c.snapMark;
+    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnap();
+    if (active) this.toPoint(p.x, p.y);
+    else this.c.snapMark = null;
+    const after = this.c.snapMark;
+    if (before?.x !== after?.x || before?.y !== after?.y) this.c.redraw();
+  }
+
+  private onModKey = (e: KeyboardEvent) => {
+    if (e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta') return;
+    if (!this.lastHover || this.mode.kind !== 'idle') {
+      this.trackMods(e);
+      return;
+    }
+    const tool = this.cb.tool();
+    if (tool === 'cross' || tool === 'cursor') return;
+    this.previewSnap(e, this.lastHover);
+  };
 
   private trackMods(e: { shiftKey: boolean; ctrlKey: boolean; metaKey?: boolean; altKey?: boolean }) {
     this.mods = { shift: e.shiftKey, ctrl: e.ctrlKey || !!e.metaKey, alt: !!e.altKey };
@@ -949,6 +984,7 @@ export class Interaction {
     const tool = this.cb.tool();
     if (tool !== 'cross' && tool !== 'cursor') {
       this.setCursor('crosshair');
+      this.previewSnap(e, p);
       return;
     }
     const tr = this.hitTrade(p.x, p.y);
