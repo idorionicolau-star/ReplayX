@@ -35,7 +35,7 @@ import { barEnd, dataFeed } from '@/core/feed/datafeed';
 import { nowSec } from '@/core/feed/provider';
 import { getIndicator, instanceLabel, type IndicatorDef, type IndicatorInstance, type ParamValue } from '@/core/indicators/registry';
 import { pipSize } from '@/core/symbols';
-import { OverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
+import { OverlayPrimitive, PaneOverlayPrimitive, type ChartEvent, type OverlayHost, type TradingOverlay } from './overlay';
 import { BandFill } from './fill';
 import { SegmentLayer } from './layer';
 import type { Viewport } from './drawings/tools';
@@ -112,6 +112,8 @@ interface IndicatorView {
   fills: { fill: BandFill; a: string; b: string }[];
   /** Camada de linhas, etiquetas e cartão (indicadores que desenham por cima do gráfico). */
   layer?: SegmentLayer;
+  /** Desenhos do utilizador dentro do painel deste indicador (só indicadores com painel próprio). */
+  paneOverlay?: PaneOverlayPrimitive;
   lines: IPriceLine[];
   values: Record<string, number[]>;
   colors?: Record<string, (string | undefined)[]>;
@@ -150,6 +152,7 @@ export class ChartController {
   chart: IChartApi;
   main!: AnySeries;
   overlay: OverlayPrimitive;
+  private overlayHost!: OverlayHost;
   private gradient: GradientCandles;
   private gradBars: { key: string; bars: readonly { open: number; close: number }[] } = { key: '', bars: [] };
   private markersApi: ISeriesMarkersPluginApi<Time> | null = null;
@@ -219,7 +222,7 @@ export class ChartController {
     this.id = `chart${++chartSeq}`;
     this.theme = theme;
     this.chart = createChart(container, this.chartOptions(theme));
-    const host: OverlayHost = {
+    const host: OverlayHost = this.overlayHost = {
       viewport: () => this.viewport(),
       drawings: () => this.drawings,
       selectedId: () => this.selectedId,
@@ -239,6 +242,8 @@ export class ChartController {
       hint: () => this.hint,
       snapMark: () => this.snapMark,
       pivotDots: () => this.pivotDots,
+      markPane: () => this.markPane,
+      paneViewport: (uid) => this.paneViewport(uid),
       aimMark: () => this.aimMark,
       coarse: () => coarsePointer(),
       countdown: () => this.countdownLabel(),
@@ -534,32 +539,157 @@ export class ChartController {
   fmtPrice = (p: number) => fmtPrice(p, this.symbol?.precision ?? 2);
 
   private vpCache: Viewport | null = null;
+  private paneVpCache = new Map<string, Viewport>();
+
+  /** Viewport de um painel: o principal (`series` null) ou o de um indicador, com a escala de preço dessa série. */
+  private makeViewport(series: AnySeries | null, size: { width: number; height: number }): Viewport {
+    const toY = (p: number) => (series ? series.priceToCoordinate(p) : this.priceToY(p));
+    const toPrice = (y: number) => {
+      if (!series) return this.yToPrice(y);
+      const p = series.coordinateToPrice(y);
+      return p === null ? null : (p as number);
+    };
+    return {
+      width: size.width,
+      height: size.height,
+      timeToX: (t) => this.timeToX(t),
+      priceToY: toY,
+      fromXY: (x, y) => {
+        const l = this.xToLogical(x);
+        const price = toPrice(y);
+        if (l === null || price === null) return null;
+        const time = this.logicalToTime(l);
+        return time === null ? null : { time, price };
+      },
+      fmtPrice: (p) => (series ? (Math.abs(p) >= 1000 ? p.toFixed(0) : p.toFixed(2)) : this.fmtPrice(p)),
+      barsBetween: (a, b) => (this.timeToLogical(b) ?? 0) - (this.timeToLogical(a) ?? 0),
+      tfSec: this.tfSec,
+      bars: this.bars,
+      dark: this.theme.dark,
+      cursor: this.cursor,
+      sizing: (d) => this.positionSizing?.(d) ?? null,
+    };
+  }
+
+  /** Viewport do painel principal (o que desenha o overlay). */
   viewport(): Viewport | null {
     if (!this.times.length) return null;
-    if (!this.vpCache) {
-      this.vpCache = {
-        width: 0,
-        height: 0,
-        timeToX: (t) => this.timeToX(t),
-        priceToY: (p) => this.priceToY(p),
-        fromXY: (x, y) => {
-          const l = this.xToLogical(x);
-          const price = this.yToPrice(y);
-          if (l === null || price === null) return null;
-          const time = this.logicalToTime(l);
-          return time === null ? null : { time, price };
-        },
-        fmtPrice: (p) => this.fmtPrice(p),
-        barsBetween: (a, b) => (this.timeToLogical(b) ?? 0) - (this.timeToLogical(a) ?? 0),
-        tfSec: this.tfSec,
-        bars: this.bars,
-        dark: this.theme.dark,
-        cursor: this.cursor,
-        sizing: (d) => this.positionSizing?.(d) ?? null,
-      };
-    }
     const size = this.paneSize();
+    if (!this.vpCache) this.vpCache = this.makeViewport(null, size);
     return Object.assign(this.vpCache, { width: size.width, height: size.height, bars: this.bars, tfSec: this.tfSec, dark: this.theme.dark, cursor: this.cursor });
+  }
+
+  /** Viewport do painel do indicador `uid`. */
+  paneViewport(uid: string): Viewport | null {
+    const ctx = this.indicatorPane(uid);
+    if (!ctx || !this.times.length) return null;
+    const size = this.sizeOfPane(ctx.index);
+    let vp = this.paneVpCache.get(uid);
+    if (!vp || (vp as { __s?: unknown }).__s !== ctx.series) {
+      vp = this.makeViewport(ctx.series, size);
+      (vp as { __s?: unknown }).__s = ctx.series;
+      this.paneVpCache.set(uid, vp);
+    }
+    return Object.assign(vp, { width: size.width, height: size.height, bars: this.bars, tfSec: this.tfSec, dark: this.theme.dark, cursor: this.cursor });
+  }
+
+  // ---- painel ativo da interação (desenhar dentro de um indicador) ----
+
+  /** Painel de indicador onde o rato/dedo está agora (null = o principal). Só a interação o define. */
+  paneCtx: { uid: string; index: number } | null = null;
+  /** Painel onde estão o anel do íman, os pontos dos pivôs e a mira. */
+  markPane: string | null = null;
+
+  /** Painéis de indicadores (com escala própria) onde se pode desenhar. */
+  private indicatorPane(uid: string): { uid: string; index: number; series: AnySeries } | null {
+    const v = this.indicators.get(uid);
+    const s = v && !v.overlay ? v.series[0]?.s : undefined;
+    if (!v || !s) return null;
+    try {
+      return { uid, index: s.getPane().paneIndex(), series: s };
+    } catch {
+      return null;
+    }
+  }
+
+  private sizeOfPane(index: number): { width: number; height: number } {
+    try {
+      const s = this.chart.paneSize(index);
+      return { width: s.width, height: s.height };
+    } catch {
+      return { width: this.chart.timeScale().width(), height: 0 };
+    }
+  }
+
+  /** Escolhe o painel pelo ponto do ecrã. Devolve true se mudou de painel. */
+  setPaneAt(clientX: number, clientY: number): boolean {
+    let found: { uid: string; index: number } | null = null;
+    const panes = this.chart.panes();
+    for (let i = 1; i < panes.length; i++) {
+      const r = panes[i].getHTMLElement()?.getBoundingClientRect();
+      if (!r || clientY < r.top || clientY > r.bottom) continue;
+      for (const uid of this.indicatorOrder) {
+        const ip = this.indicatorPane(uid);
+        if (ip && ip.index === i) {
+          found = { uid, index: i };
+          break;
+        }
+      }
+      break;
+    }
+    const changed = (found?.uid ?? null) !== (this.paneCtx?.uid ?? null);
+    this.paneCtx = found;
+    return changed;
+  }
+
+  /** Como `priceToY`, no painel ativo da interação. */
+  ctxPriceToY(p: number): number | null {
+    const c = this.paneCtx && this.indicatorPane(this.paneCtx.uid);
+    return c ? c.series.priceToCoordinate(p) : this.priceToY(p);
+  }
+
+  ctxYToPrice(y: number): number | null {
+    const c = this.paneCtx && this.indicatorPane(this.paneCtx.uid);
+    if (!c) return this.yToPrice(y);
+    const p = c.series.coordinateToPrice(y);
+    return p === null ? null : (p as number);
+  }
+
+  ctxPaneSize(): { width: number; height: number } {
+    return this.paneCtx ? this.sizeOfPane(this.paneCtx.index) : this.paneSize();
+  }
+
+  ctxPaneElement(): HTMLElement | null {
+    return this.paneCtx ? (this.chart.panes()[this.paneCtx.index]?.getHTMLElement() ?? null) : this.paneElement();
+  }
+
+  ctxViewport(): Viewport | null {
+    return this.paneCtx ? this.paneViewport(this.paneCtx.uid) : this.viewport();
+  }
+
+  /** Distância do topo do painel ativo ao topo do gráfico (para posicionar a barra do desenho). */
+  ctxPaneOffsetTop(): number {
+    const el = this.ctxPaneElement();
+    const base = this.container.getBoundingClientRect().top;
+    return el ? el.getBoundingClientRect().top - base : 0;
+  }
+
+  /** Valores do indicador do painel ativo, por vela (para o íman prender às linhas do indicador). */
+  ctxPaneSeries(): { time: number; value: number }[][] | null {
+    const v = this.paneCtx && this.indicators.get(this.paneCtx.uid);
+    if (!v) return null;
+    return v.series
+      .filter((s) => s.visible !== false)
+      .map((s) => {
+        const arr = v.values[s.key] ?? [];
+        const out: { time: number; value: number }[] = [];
+        for (let i = 0; i < this.bars.length; i++) {
+          const src = i - s.offset;
+          const val = src >= 0 && src < arr.length ? arr[src] : NaN;
+          if (Number.isFinite(val)) out.push({ time: this.bars[i].time, value: val });
+        }
+        return out;
+      });
   }
 
   /** Etiqueta "mm:ss" até fechar a vela atual (só em tempo real; no replay o tempo está parado). */
@@ -617,6 +747,7 @@ export class ChartController {
 
   redraw() {
     this.overlay.update();
+    for (const v of this.indicators.values()) v.paneOverlay?.update();
   }
 
   // ------------------------------------------------------------------ carregar dados
@@ -1144,6 +1275,10 @@ export class ChartController {
       }
     }
     const first = view.series[0]?.s;
+    if (first && !view.overlay) {
+      view.paneOverlay = new PaneOverlayPrimitive(this.overlayHost, inst.uid);
+      first.attachPrimitive(view.paneOverlay);
+    }
     const levels = def?.levels ?? script?.hlines.map((h) => ({ value: h.value, color: h.color })) ?? [];
     if (first && !inst.hidden) {
       for (const lv of levels) {
@@ -1630,7 +1765,21 @@ export class ChartController {
   /** Pivôs (topos e fundos isolados) à vista: os pontos a que o íman de preço pode prender. */
   snapPivots(sensitivity: PivotSensitivity = 'normal', upTo?: number): Pivot[] {
     const r = this.chart.timeScale().getVisibleLogicalRange();
-    return r ? swingPivots(this.bars, r.from, r.to, sensitivity, upTo) : [];
+    if (!r) return [];
+    // num painel de indicador, os pivôs são os da linha do indicador (a primeira série)
+    const line = this.paneCtx ? this.ctxPaneSeries()?.[0] : null;
+    if (this.paneCtx) {
+      if (!line?.length) return [];
+      const byTime = new Map(line.map((p) => [p.time, p.value]));
+      let prev = line[0].value;
+      const pseudo = this.bars.map((b) => {
+        const v = byTime.get(b.time) ?? prev;
+        prev = v;
+        return { time: b.time, open: v, high: v, low: v, close: v, volume: 0 };
+      });
+      return swingPivots(pseudo, r.from, r.to, sensitivity, upTo);
+    }
+    return swingPivots(this.bars, r.from, r.to, sensitivity, upTo);
   }
 
   /** Apaga o anel do íman e os pontos dos pivôs. */

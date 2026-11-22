@@ -77,7 +77,9 @@ function AlertForm({ draft }: { draft: Draft }) {
   const symbolId = editing?.symbolId ?? draft.symbolId;
   const sym = resolveSymbol(symbolId);
   const chart = useWorkspace((s) => s.charts.find((c) => c.symbolId === symbolId) ?? s.charts[s.active]);
-  const drawings = useDrawings((s) => s.bySymbol[symbolId]) ?? EMPTY;
+  const allDrawings = useDrawings((s) => s.bySymbol[symbolId]) ?? EMPTY;
+  // os desenhos dentro de indicadores têm outra escala (a do indicador): não servem para alertas de preço
+  const drawings = useMemo(() => allDrawings.filter((d) => !d.pane), [allDrawings]);
   const tz = useSettings((s) => s.timezone);
   const step = Math.pow(10, -sym.precision);
 

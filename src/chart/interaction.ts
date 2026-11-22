@@ -15,6 +15,9 @@ export type TradeAction =
   | { type: 'modify-position'; id: string; sl?: number | null; tp?: number | null }
   | { type: 'modify-order'; id: string; price?: number; sl?: number | null; tp?: number | null };
 
+/** Ferramentas que funcionam dentro do painel de um indicador. */
+const PANE_TOOLS = new Set<ToolId>(['trendline', 'ray', 'extended', 'infoline', 'arrowline', 'hline', 'hray', 'vline', 'crossline', 'rect', 'text', 'note', 'arrowup', 'arrowdown']);
+
 /** Peso da distância horizontal no íman (a vertical conta por inteiro): o íman é mais vertical do que horizontal. */
 const HORIZ_WEIGHT = 0.35;
 
@@ -138,10 +141,20 @@ export class Interaction {
 
   // ---------------------------------------------------------------- utilitários
 
+  /** Painel (principal ou de um indicador) onde está o rato/dedo; só muda quando não há um desenho em curso ou a ser arrastado. */
+  private syncPane(e: { clientX: number; clientY: number }) {
+    if (this.mode.kind !== 'idle') return;
+    if (!this.c.setPaneAt(e.clientX, e.clientY)) return;
+    // mudou de painel: o anel/pontos/mira do outro painel saem
+    this.c.clearSnap();
+    this.c.aimMark = null;
+    this.c.redraw();
+  }
+
   private local(e: { clientX: number; clientY: number }): { x: number; y: number; inside: boolean } {
-    const pane = this.c.paneElement();
+    const pane = this.c.ctxPaneElement();
     const rect = (pane ?? this.c.container).getBoundingClientRect();
-    const size = this.c.paneSize();
+    const size = this.c.ctxPaneSize();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     return { x, y, inside: x >= 0 && y >= 0 && x <= size.width && y <= size.height };
@@ -150,8 +163,9 @@ export class Interaction {
   /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. Ctrl inverte o íman (como no TradingView). */
   private toPoint(x: number, y: number, snapTime = true, tool: ToolId = this.cb.tool()): PricePoint | null {
     const l = this.c.xToLogical(x);
-    let price = this.c.yToPrice(y);
+    let price = this.c.ctxYToPrice(y);
     this.c.clearSnap();
+    this.c.markPane = this.c.paneCtx?.uid ?? null;
     if (l === null || price === null) return null;
     const li = snapTime ? Math.round(l) : l;
     let time = this.c.logicalToTime(li);
@@ -170,14 +184,22 @@ export class Interaction {
       const x1 = this.c.bars[centre + 1] ? this.c.timeToX(this.c.bars[centre + 1].time) : null;
       const spacing = x0 !== null && x1 !== null ? Math.abs(x1 - x0) : 6;
       const reach = aggressive ? 400 : magnetBarReach(magnet, spacing);
-      for (let i = centre - reach; i <= centre + reach; i++) {
-        const bar = this.c.bars[i];
-        if (!bar) continue;
-        for (const v of [bar.open, bar.high, bar.low, bar.close]) cands.push({ time: bar.time, price: v });
+      // painel de indicador: o íman prende aos valores das linhas do indicador (não há OHLC)
+      const paneLines = this.c.paneCtx ? this.c.ctxPaneSeries() : null;
+      if (paneLines) {
+        const t0 = this.c.bars[Math.max(0, centre - reach)]?.time ?? 0;
+        const t1 = this.c.bars[Math.min(this.c.bars.length - 1, centre + reach)]?.time ?? Infinity;
+        for (const line of paneLines) for (const pt of line) if (pt.time >= t0 && pt.time <= t1) cands.push({ time: pt.time, price: pt.value });
+      } else {
+        for (let i = centre - reach; i <= centre + reach; i++) {
+          const bar = this.c.bars[i];
+          if (!bar) continue;
+          for (const v of [bar.open, bar.high, bar.low, bar.close]) cands.push({ time: bar.time, price: v });
+        }
       }
       if (aggressive) {
         for (const d of this.c.drawings) {
-          if (d.hidden || d.id === this.c.selectedId) continue;
+          if (d.hidden || d.id === this.c.selectedId || (d.pane ?? null) !== (this.c.paneCtx?.uid ?? null)) continue;
           for (const q of d.points) cands.push(q);
         }
       }
@@ -185,7 +207,7 @@ export class Interaction {
       let bestDist = Infinity;
       for (const cand of cands) {
         const cx = this.c.timeToX(cand.time);
-        const cy = this.c.priceToY(cand.price);
+        const cy = this.c.ctxPriceToY(cand.price);
         if (cx === null || cy === null) continue;
         // o íman é sobretudo vertical: a distância na horizontal pesa pouco, por isso prende ao preço mais próximo
         // mesmo com a vela um pouco ao lado
@@ -207,8 +229,9 @@ export class Interaction {
         const bar = this.c.bars[centre];
         if (bar) {
           let bd = Infinity;
-          for (const v of [bar.open, bar.high, bar.low, bar.close]) {
-            const cy = this.c.priceToY(v);
+          const here = paneLines ? paneLines.flatMap((ln) => ln.filter((pt) => pt.time === bar.time).map((pt) => pt.value)) : [bar.open, bar.high, bar.low, bar.close];
+          for (const v of here) {
+            const cy = this.c.ctxPriceToY(v);
             if (cy !== null && Math.abs(cy - y) < bd) {
               bd = Math.abs(cy - y);
               price = v;
@@ -216,7 +239,7 @@ export class Interaction {
           }
           time = bar.time;
           const bx = this.c.timeToX(bar.time);
-          const by = this.c.priceToY(price);
+          const by = this.c.ctxPriceToY(price);
           if (bx !== null && by !== null) this.c.snapMark = { x: bx, y: by };
         }
       }
@@ -229,12 +252,12 @@ export class Interaction {
       const pivots = this.c.snapPivots(this.cb.pivotSensitivity(), this.cb.pivotFuture() ? undefined : Math.round(l));
       this.c.pivotDots = pivots.map((p) => ({ time: this.c.bars[p.idx].time, price: p.price }));
       {
-        const wick = nearestPivot(pivots, y, (p) => this.c.priceToY(p), priceSnapReach(this.touch));
+        const wick = nearestPivot(pivots, y, (p) => this.c.ctxPriceToY(p), priceSnapReach(this.touch));
         if (wick !== null) {
           price = wick;
           time = this.c.logicalToTime(li) ?? time;
           const mx = this.c.timeToX(time);
-          const my = this.c.priceToY(price);
+          const my = this.c.ctxPriceToY(price);
           if (mx !== null && my !== null) this.c.snapMark = { x: mx, y: my };
         }
       }
@@ -245,26 +268,26 @@ export class Interaction {
   /** Ponto do 2.º extremo de uma linha, encaixado em múltiplos de 15° a partir de `anchor` (Shift ou botão). */
   private anglePoint(anchor: PricePoint, x: number, y: number): PricePoint | null {
     const ax = this.c.timeToX(anchor.time);
-    const ay = this.c.priceToY(anchor.price);
+    const ay = this.c.ctxPriceToY(anchor.price);
     if (ax === null || ay === null) return this.toPoint(x, y);
     const ang = Math.round(Math.atan2(y - ay, x - ax) / ANGLE_STEP) * ANGLE_STEP;
     if (Math.abs(Math.cos(ang)) < 1e-6) {
       // vertical: mesmo instante
-      const price = this.c.yToPrice(y);
+      const price = this.c.ctxYToPrice(y);
       return price === null ? null : { time: anchor.time, price };
     }
     const base = this.toPointRaw(x, y);
     if (!base) return null;
     const bx = this.c.timeToX(base.time);
     if (bx === null) return base;
-    const price = this.c.yToPrice(ay + Math.tan(ang) * (bx - ax));
+    const price = this.c.ctxYToPrice(ay + Math.tan(ang) * (bx - ax));
     return price === null ? null : { time: base.time, price };
   }
 
   /** Ponto sem íman (encaixe só no tempo). */
   private toPointRaw(x: number, y: number): PricePoint | null {
     const l = this.c.xToLogical(x);
-    const price = this.c.yToPrice(y);
+    const price = this.c.ctxYToPrice(y);
     if (l === null || price === null) return null;
     const time = this.c.logicalToTime(Math.round(l));
     return time === null ? null : { time, price };
@@ -277,9 +300,9 @@ export class Interaction {
   /** Graus da linha anchor→pt no ecrã (para cima = positivo). */
   private showAngle(anchor: PricePoint, pt: PricePoint, x: number, y: number) {
     const ax = this.c.timeToX(anchor.time);
-    const ay = this.c.priceToY(anchor.price);
+    const ay = this.c.ctxPriceToY(anchor.price);
     const bx = this.c.timeToX(pt.time);
-    const by = this.c.priceToY(pt.price);
+    const by = this.c.ctxPriceToY(pt.price);
     if (ax === null || ay === null || bx === null || by === null || (ax === bx && ay === by)) {
       this.c.hint = null;
       return;
@@ -353,9 +376,10 @@ export class Interaction {
   };
 
   private hitDrawing(x: number, y: number): { d: Drawing; handle: number | null } | null {
-    const vp = this.c.viewport();
+    const vp = this.c.ctxViewport();
     if (!vp) return null;
-    const sel = this.c.drawings.find((d) => d.id === this.c.selectedId);
+    const pane = this.c.paneCtx?.uid ?? null;
+    const sel = this.c.drawings.find((d) => d.id === this.c.selectedId && (d.pane ?? null) === pane);
     if (sel && !sel.hidden) {
       const def = toolDef(sel.type);
       const r = this.touch ? 22 : 8;
@@ -364,7 +388,7 @@ export class Interaction {
     }
     for (let i = this.c.drawings.length - 1; i >= 0; i--) {
       const d = this.c.drawings[i];
-      if (d.hidden) continue;
+      if (d.hidden || (d.pane ?? null) !== pane) continue;
       const def = toolDef(d.type);
       try {
         if (def?.hit(d, vp, { x, y })) return { d, handle: null };
@@ -376,7 +400,8 @@ export class Interaction {
   }
 
   private hitEvent(x: number, y: number) {
-    const ey = this.c.paneSize().height - EVENT_BOTTOM;
+    if (this.c.paneCtx) return null;
+    const ey = this.c.ctxPaneSize().height - EVENT_BOTTOM;
     if (Math.abs(y - ey) > 10) return null;
     for (const e of this.c.events) {
       const ex = this.c.timeToX(e.time);
@@ -386,6 +411,7 @@ export class Interaction {
   }
 
   private hitTrade(x: number, y: number): TradeRegion | null {
+    if (this.c.paneCtx) return null;
     const pad = this.touch ? 8 : 0;
     for (const r of this.c.overlay.regions) {
       if (x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad) return r;
@@ -419,7 +445,7 @@ export class Interaction {
     if (!t || this.touches.size > 1 || e.type === 'pointercancel') return;
     const p = this.local(e);
     if (Math.hypot(p.x - t.x, p.y - t.y) < 10 && performance.now() - t.t < 500) {
-      this.c.floatAnchor = { id: t.id, x: p.x, y: p.y, kind: 'click' };
+      this.c.floatAnchor = { id: t.id, x: p.x, y: p.y + this.c.ctxPaneOffsetTop(), kind: 'click' };
       this.cb.select(t.id);
     }
   };
@@ -473,8 +499,8 @@ export class Interaction {
     const factor = Math.pow(ratio, gain);
     const ts = this.c.chart.timeScale();
     const r = this.pinch.range;
-    const rect = (this.c.paneElement() ?? this.c.container).getBoundingClientRect();
-    const width = this.c.paneSize().width;
+    const rect = (this.c.ctxPaneElement() ?? this.c.container).getBoundingClientRect();
+    const width = this.c.ctxPaneSize().width;
     let range = r;
     if (r && width > 0 && Number.isFinite(factor) && factor > 0) {
       const oldW = r.to - r.from;
@@ -500,7 +526,7 @@ export class Interaction {
 
   /** Aviso curto no meio do gráfico quando o zoom chega ao limite. */
   private flashLimit(text: string) {
-    const size = this.c.paneSize();
+    const size = this.c.ctxPaneSize();
     this.c.hint = { x: size.width / 2 - 50, y: size.height / 2, text };
     this.c.redraw();
     setTimeout(() => {
@@ -537,6 +563,7 @@ export class Interaction {
     this.touch = e.pointerType === 'touch' || e.pointerType === 'pen';
     setHitTolerance(this.touch ? 16 : 6);
     this.trackMods(e);
+    this.syncPane(e);
     const p = this.local(e);
     if (!p.inside) return;
 
@@ -617,7 +644,7 @@ export class Interaction {
         else this.cb.onTrade({ type: 'modify-position', id: tr.target.id, [tr.target.field]: null });
         return;
       }
-      const price = this.c.yToPrice(p.y) ?? 0;
+      const price = this.c.ctxYToPrice(p.y) ?? 0;
       this.mode = { kind: 'trade', region: tr, startY: p.y, moved: false, price };
       this.beginDrag();
       this.updateLoupe(e);
@@ -657,7 +684,7 @@ export class Interaction {
   private aimDown(e: PointerEvent, p: { x: number; y: number }) {
     this.consume(e);
     if (!this.c.aimMark) {
-      const size = this.c.paneSize();
+      const size = this.c.ctxPaneSize();
       this.moveAim(size.width / 2, size.height / 2, e);
     }
     this.aimTouch = { downAt: { x: p.x, y: p.y }, last: { x: p.x, y: p.y }, moved: false };
@@ -670,13 +697,13 @@ export class Interaction {
 
   private showAimLoupe(e: { clientX: number; clientY: number }) {
     if (this.cb.loupe() && this.c.aimMark) {
-      const r = (this.c.paneElement() ?? this.c.container).getBoundingClientRect();
+      const r = (this.c.ctxPaneElement() ?? this.c.container).getBoundingClientRect();
       this.loupe.show(r.left + this.c.aimMark.x, r.top + this.c.aimMark.y);
     } else void e;
   }
 
   private moveAim(x: number, y: number, e: { clientX: number; clientY: number }) {
-    const size = this.c.paneSize();
+    const size = this.c.ctxPaneSize();
     const ax = Math.max(0, Math.min(size.width, x));
     const ay = Math.max(0, Math.min(size.height, y));
     this.c.aimMark = { x: ax, y: ay };
@@ -744,7 +771,7 @@ export class Interaction {
   /** Ao escolher uma ferramenta no dedo, a mira aparece logo no centro do gráfico. */
   showAim() {
     if (this.c.aimMark || this.mode.kind !== 'idle') return;
-    const size = this.c.paneSize();
+    const size = this.c.ctxPaneSize();
     this.moveAim(size.width / 2, size.height / 2, { clientX: 0, clientY: 0 });
     this.loupe.hide();
   }
@@ -775,10 +802,22 @@ export class Interaction {
     void _v;
     const style: DrawingStyle = { ...def.style, ...last };
     if (def.style.levels && !style.levels) style.levels = def.style.levels;
-    return { id: uid('d'), type: def.id, points: [pt], style, createdAt: Date.now() };
+    return { id: uid('d'), type: def.id, points: [pt], style, createdAt: Date.now(), ...(this.c.paneCtx ? { pane: this.c.paneCtx.uid } : {}) };
   }
 
   private startCreation(def: ToolDef, x: number, y: number, aimed = false) {
+    // dentro de um indicador só as ferramentas de linhas, caixas, texto e setas (as outras dependem do preço)
+    if (this.c.paneCtx && !PANE_TOOLS.has(def.id)) {
+      this.c.hint = { x, y, text: 'Esta ferramenta só funciona no painel principal' };
+      this.c.redraw();
+      setTimeout(() => {
+        if (this.c.hint?.text.startsWith('Esta ferramenta')) {
+          this.c.hint = null;
+          this.c.redraw();
+        }
+      }, 1600);
+      return;
+    }
     const pt = this.toPoint(x, y);
     if (!pt) return;
     if (def.points === 0) {
@@ -790,7 +829,7 @@ export class Interaction {
     }
     if (def.points === 1) {
       let d = this.newDrawing(def, pt);
-      const vp = this.c.viewport();
+      const vp = this.c.ctxViewport();
       if (def.init && vp) d = def.init({ ...d, data: d.data ?? { stop: 0, target: 0, riskPct: 1, account: this.cb.accountSize() } }, vp);
       this.finish(d);
       return;
@@ -837,8 +876,8 @@ export class Interaction {
     }
     const last = d.points[d.points.length - 1];
     const ax = last ? this.c.timeToX(last.time) : null;
-    const ay = last ? this.c.priceToY(last.price) : null;
-    this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay, kind: 'new' } : null;
+    const ay = last ? this.c.ctxPriceToY(last.price) : null;
+    this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay + this.c.ctxPaneOffsetTop(), kind: 'new' } : null;
     this.cb.disarmPriceSnap();
     this.cb.addDrawing(d);
     this.cb.select(d.id);
@@ -890,7 +929,7 @@ export class Interaction {
         this.cb.checkpoint();
       }
       const def = toolDef(m.orig.type);
-      const vp = this.c.viewport();
+      const vp = this.c.ctxViewport();
       if (!def || !vp) return;
       let patch: Partial<Drawing>;
       if (m.handle !== null) {
@@ -905,7 +944,7 @@ export class Interaction {
         const l0 = this.c.timeToLogical(m.start.time) ?? 0;
         const lNow = this.c.xToLogical(p.x) ?? l0;
         const dl = Math.round(lNow - l0);
-        const price = this.c.yToPrice(p.y) ?? m.start.price;
+        const price = this.c.ctxYToPrice(p.y) ?? m.start.price;
         const dp = price - m.start.price;
         const shift = (q: PricePoint): PricePoint => {
           const lq = this.c.timeToLogical(q.time) ?? 0;
@@ -918,7 +957,7 @@ export class Interaction {
     } else if (m.kind === 'pick') {
       this.c.setPickAtX(p.x, true);
       // perto das margens o gráfico desloca-se sozinho, para chegar mais longe
-      const w = this.c.paneSize().width;
+      const w = this.c.ctxPaneSize().width;
       this.edgeDir = p.x < 48 ? -1 : p.x > w - 48 ? 1 : 0;
       this.edgeX = p.x;
       if (this.edgeDir !== 0 && !this.edgeTimer) {
@@ -930,7 +969,7 @@ export class Interaction {
       }
     } else if (m.kind === 'trade') {
       if (Math.abs(p.y - m.startY) > DRAG_THRESHOLD) m.moved = true;
-      const price = this.c.yToPrice(p.y);
+      const price = this.c.ctxYToPrice(p.y);
       if (price === null || !this.c.trading) return;
       m.price = price;
       this.c.trading.dragging = { id: m.region.target.id, field: m.region.target.field, price };
@@ -970,7 +1009,7 @@ export class Interaction {
       if (m.moved) this.cb.commit();
       else if (this.clickSelect === m.id) {
         // só um clique num desenho antigo: a barra pode abrir junto ao clique
-        this.c.floatAnchor = { id: m.id, x: p.x, y: p.y, kind: 'click' };
+        this.c.floatAnchor = { id: m.id, x: p.x, y: p.y + this.c.ctxPaneOffsetTop(), kind: 'click' };
         this.cb.select(m.id);
       }
       this.clickSelect = null;
@@ -1001,6 +1040,7 @@ export class Interaction {
       if (this.mode.kind === 'create' && e.pointerType !== 'touch') this.onDragMove(e);
       return;
     }
+    this.syncPane(e);
     const p = this.local(e);
     if (this.cb.replaySelecting() && e.pointerType === 'mouse') {
       this.c.replayPickX = p.inside ? p.x : null;
@@ -1015,7 +1055,7 @@ export class Interaction {
     if (!p.inside) return;
     // evento económico debaixo do rato: mostra o que é
     const ev = this.hitEvent(p.x, p.y);
-    const evHint = ev ? { x: Math.min(p.x, this.c.paneSize().width - 260), y: p.y - 18, text: ev.label } : null;
+    const evHint = ev ? { x: Math.min(p.x, this.c.ctxPaneSize().width - 260), y: p.y - 18, text: ev.label } : null;
     if (evHint || this.c.hint?.text.startsWith('⚡')) {
       this.c.hint = evHint;
       this.c.redraw();
@@ -1077,7 +1117,8 @@ export class Interaction {
     const hit = p.inside ? this.hitDrawing(p.x, p.y) : null;
     if (hit) this.cb.select(hit.d.id);
     const pt = p.inside ? this.toPoint(p.x, p.y, true) : null;
-    this.cb.onContextMenu({ clientX: e.clientX, clientY: e.clientY, price: pt?.price ?? null, time: pt?.time ?? null, drawingId: hit?.d.id ?? null });
+    // num painel de indicador o preço é o do indicador: não serve para alertas nem para o menu do preço
+    this.cb.onContextMenu({ clientX: e.clientX, clientY: e.clientY, price: this.c.paneCtx ? null : pt?.price ?? null, time: pt?.time ?? null, drawingId: hit?.d.id ?? null });
   };
 
   private onKey = (e: KeyboardEvent) => {
