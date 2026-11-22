@@ -9,6 +9,7 @@ import { ObjectTree } from '@/components/panels/ObjectTree';
 import { AlertsPanel } from '@/components/panels/AlertsPanel';
 import { Resizer } from './Resizer';
 import { cn } from '@/components/ui/cn';
+import { useCompact } from '@/lib/compact';
 
 export const RIGHT_TABS: { id: RightTab; label: string; icon: typeof ListOrdered }[] = [
   { id: 'watchlist', label: 'Lista de observação', icon: ListOrdered },
@@ -42,6 +43,7 @@ export function RightIconBar() {
 }
 
 export function RightPanel() {
+  const compact = useCompact();
   const tab = useWorkspace((s) => s.rightTab);
   const width = useWorkspace((s) => s.rightWidth);
   const setWidth = useWorkspace((s) => s.setRightWidth);
@@ -50,10 +52,15 @@ export function RightPanel() {
   const info = RIGHT_TABS.find((t) => t.id === tab)!;
   return (
     <>
-      <Resizer direction="horizontal" onResize={(d) => setWidth(width - d)} className="hidden sm:block" />
+      {!compact && <Resizer direction="horizontal" onResize={(d) => setWidth(width - d)} className="hidden sm:block" />}
       <section
-        className="fixed inset-x-0 bottom-12 z-40 flex h-[62vh] flex-col rounded-t-xl border-t border-line bg-panel shadow-pop sm:static sm:z-auto sm:h-auto sm:rounded-none sm:border-t-0 sm:shadow-none"
-        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 640 ? width : undefined }}
+        className={cn(
+          'flex flex-col bg-panel',
+          compact
+            ? 'fixed top-9 right-0 bottom-0 z-40 w-[min(360px,60vw)] border-l border-line shadow-pop'
+            : 'fixed inset-x-0 bottom-12 z-40 h-[62vh] rounded-t-xl border-t border-line shadow-pop sm:static sm:z-auto sm:h-auto sm:rounded-none sm:border-t-0 sm:shadow-none',
+        )}
+        style={{ width: !compact && typeof window !== 'undefined' && window.innerWidth >= 640 ? width : undefined }}
       >
         <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
           <span className="text-[13px] font-semibold">{info.label}</span>

@@ -55,8 +55,10 @@ import { canAddIndicator, openUpgrade, usePlan } from '@/lib/billing';
 import { getIndicator } from '@/core/indicators/registry';
 import { useAuth } from '@/lib/auth';
 import { useGuestTimer, formatGuestTime } from '@/lib/guestTimer';
+import { useCompact } from '@/lib/compact';
+import { CompactBar } from './CompactBar';
 
-const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
+export const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
   { id: 'candles', label: 'Velas', icon: CandlestickChart },
   { id: 'hollow', label: 'Velas ocas', icon: CandlestickChart },
   { id: 'heikin', label: 'Heikin Ashi', icon: CandlestickChart },
@@ -79,7 +81,7 @@ function Divider() {
   return <span className="mx-1 h-5 w-px shrink-0 bg-line" />;
 }
 
-function TimeframeMenu() {
+export function TimeframeMenu() {
   const active = useWorkspace((s) => s.active);
   const tf = useWorkspace((s) => s.charts[s.active]?.tf ?? '1h');
   const favorites = useWorkspace((s) => s.favoriteTfs);
@@ -234,6 +236,12 @@ function LayoutMenu() {
 }
 
 export function TopBar() {
+  const compact = useCompact();
+  if (compact) return <CompactBar />;
+  return <FullTopBar />;
+}
+
+function FullTopBar() {
   const active = useWorkspace((s) => s.active);
   const cfg = useWorkspace((s) => s.charts[s.active]);
   const theme = useSettings((s) => s.theme);
@@ -348,7 +356,7 @@ export function TopBar() {
 }
 
 /** Badge do tempo de demonstração (20 min) para utilizadores convidados */
-function GuestCountdownBadge() {
+export function GuestCountdownBadge() {
   const user = useAuth((s) => s.user);
   const { remainingMs, setDialogOpen } = useGuestTimer();
   if (!user?.guest) return null;

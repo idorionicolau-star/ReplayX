@@ -29,13 +29,15 @@ import { cn } from '@/components/ui/cn';
 import { toast } from '@/components/ui/Toast';
 import { SavedElements } from '@/components/chart/SavedElements';
 
+import { COMPACT_QUERY } from '@/lib/compact';
+
 type Icon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
 export const TOOL_ICONS: Record<ToolId, Icon> = ToolIconSet;
 
 /** No telemóvel a barra cobre o gráfico: fecha-se ao escolher uma ferramenta (para desenhar logo), não ao mudar opções. */
 function closeMobileTools() {
-  if (typeof window !== 'undefined' && window.innerWidth < 640) useUi.getState().set({ mobileTools: false });
+  if (typeof window !== 'undefined' && (window.innerWidth < 640 || window.matchMedia(COMPACT_QUERY).matches)) useUi.getState().set({ mobileTools: false });
 }
 
 export function toggleFavoriteTool(t: ToolId) {
