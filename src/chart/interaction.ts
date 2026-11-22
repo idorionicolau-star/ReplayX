@@ -807,6 +807,10 @@ export class Interaction {
         return;
       }
     }
+    const last = d.points[d.points.length - 1];
+    const ax = last ? this.c.timeToX(last.time) : null;
+    const ay = last ? this.c.priceToY(last.price) : null;
+    this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay } : null;
     this.cb.addDrawing(d);
     this.cb.select(d.id);
     // no dedo a ferramenta volta sempre ao cursor depois de criar (senão o toque seguinte, para arrastar ou

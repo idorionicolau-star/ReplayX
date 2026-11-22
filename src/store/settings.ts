@@ -59,6 +59,8 @@ export interface SettingsState {
   angleSnap: boolean;
   /** Íman de preço automático: linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo na vertical (Alt faz o mesmo em qualquer ferramenta). */
   priceSnap: boolean;
+  /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
+  floatNearMouse: boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe: boolean;
   /** Onde fica a lupa: num canto fixo ou junto ao dedo. */
@@ -119,6 +121,7 @@ export const useSettings = create<SettingsState>()(
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       priceSnap: false,
+      floatNearMouse: true,
       loupe: true,
       loupePos: 'top-right',
       autoFit: true,

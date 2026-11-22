@@ -188,6 +188,8 @@ export class ChartController {
   positionSizing: ((d: Drawing) => PositionSizing | null) | null = null;
   alerts: { price: number; label: string }[] = [];
   hint: { x: number; y: number; text: string } | null = null;
+  /** Onde acabou o último desenho (px no gráfico): a barra do desenho abre aí, junto ao rato. */
+  floatAnchor: { id: string; x: number; y: number } | null = null;
   /** Ponto onde o íman prendeu (círculo no ecrã). */
   snapMark: { x: number; y: number } | null = null;
   /** Cursor de pontaria no ecrã tátil (posiciona-se primeiro, toca-se nele para marcar o ponto). */
