@@ -28,6 +28,7 @@ import {
 } from 'lightweight-charts';
 import type { Bar, ChartType, SymbolInfo } from '@/core/types';
 import { GradientCandles } from './gradientCandles';
+import { swingPivots, type Pivot } from '@/core/priceSnap';
 import { heikinAshi, lowerBound, mergeBars, upperBound } from '@/core/bars';
 import { alignTime, parseTf, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
@@ -1621,6 +1622,12 @@ export class ChartController {
     }
     const bar = this.bars[lowerBound(this.bars, bt)];
     this.chart.setCrosshairPosition(price ?? bar?.close ?? 0, bt as UTCTimestamp, this.main);
+  }
+
+  /** Pivôs (topos e fundos isolados) à vista: os pontos a que o íman de preço pode prender. */
+  snapPivots(): Pivot[] {
+    const r = this.chart.timeScale().getVisibleLogicalRange();
+    return r ? swingPivots(this.bars, r.from, r.to) : [];
   }
 
   /** Último preço (no cursor, se em replay). */

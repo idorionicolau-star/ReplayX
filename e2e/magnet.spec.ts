@@ -87,72 +87,82 @@ test('íman: a ponta do desenho fica exatamente onde o anel laranja prendeu (mes
   expect(Math.abs(r.py! - r.mark!.y)).toBeLessThan(0.6);
 });
 
-test.describe('íman de preço (Alt / automático)', () => {
-  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>, dy = 7) {
+test.describe('íman de preço (só topos e fundos isolados)', () => {
+  type Mode = 'near-pivot' | 'far-from-all' | 'plain-wick' | 'free';
+  /** Põe uma linha horizontal com o cursor num sítio escolhido e devolve se o preço ficou num pivô. */
+  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>, mode: Mode, off = 8) {
     await page.addInitScript((st) => localStorage.setItem('rx-settings', JSON.stringify({ state: st, version: 3 })), { magnet: 'off', ...settings });
     await enterAsGuest(page);
     await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
     await waitBars(page, 300);
     await page.click('[data-testid=fav-tool-hline]');
-    const t = await page.evaluate((off) => {
-      const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
-      const i = c.bars.length - 40;
-      const hi = c.bars[i].high;
-      // cursor 7 px abaixo do máximo e muito à direita da vela (espaço vazio)
-      // dy > 0: px abaixo do máximo de uma vela; dy < 0: px acima do pavio mais alto à vista (sem nenhum pavio por perto)
-      const r = c.chart.timeScale().getVisibleLogicalRange();
-      const topY = Math.min(...c.bars.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1).map((b: { high: number }) => c.priceToY(b.high)));
-      return { hi, x: c.timeToX(c.bars[c.bars.length - 1].time) + 60, y: off >= 0 ? c.priceToY(hi) + off : topY + off };
-    }, dy);
+    const t = await page.evaluate(
+      ({ mode, off }) => {
+        const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
+        const H = c.paneSize().height;
+        const r = c.chart.timeScale().getVisibleLogicalRange();
+        const vis = c.bars.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1);
+        const pivots: { price: number }[] = c.snapPivots();
+        const pivotYs: number[] = pivots.map((p) => c.priceToY(p.price));
+        const x = c.timeToX(c.bars[c.bars.length - 1].time) + 60;
+        let y: number;
+        let plainPrice = 0;
+        if (mode === 'near-pivot') y = pivotYs[0] + off;
+        else if (mode === 'far-from-all') {
+          // acima do pavio mais alto à vista: nenhum pivô por perto
+          y = Math.min(...vis.map((b: { high: number }) => c.priceToY(b.high))) - off;
+        } else if (mode === 'plain-wick') {
+          // um máximo que NÃO é pivô: o cursor fica exatamente nele
+          const pv = new Set(pivots.map((p) => p.price));
+          const b = vis.find((b: { high: number }) => !pv.has(b.high) && c.priceToY(b.high) > 30 && c.priceToY(b.high) < H - 30);
+          plainPrice = b.high;
+          y = c.priceToY(b.high);
+        } else y = pivotYs[0] + off;
+        return { x, y: Math.max(12, Math.min(H - 12, y)), plainPrice };
+      },
+      { mode, off },
+    );
     const canvas = (await page.locator('canvas').first().boundingBox())!;
     if (alt) await page.keyboard.down('Alt');
     await page.mouse.move(canvas.x + t.x, canvas.y + t.y);
     await page.mouse.click(canvas.x + t.x, canvas.y + t.y);
     await page.waitForTimeout(250);
     if (alt) await page.keyboard.up('Alt');
-    const drawn = await page.evaluate((cursorY) => {
+    return page.evaluate((plainPrice) => {
       const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
       const price = c.drawings[c.drawings.length - 1].points[0].price as number;
-      const r = c.chart.timeScale().getVisibleLogicalRange();
-      const vis = c.bars.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1);
-      const wicks: number[] = vis.flatMap((b: { high: number; low: number }) => [b.high, b.low]);
-      const isWick = wicks.some((w) => Math.abs(w - price) < 1e-9);
-      // é o pavio mais próximo do cursor na vertical (nenhum outro fica mais perto)
-      const dist = (p: number) => Math.abs(c.priceToY(p) - cursorY);
-      const nearest = wicks.every((w) => dist(price) <= dist(w) + 1e-6);
-      return { price, isWick, nearest };
-    }, t.y);
-    return { hi: t.hi, ...drawn };
+      const isPivot = (c.snapPivots() as { price: number }[]).some((p) => Math.abs(p.price - price) < 1e-9);
+      return { price, isPivot, onPlainWick: plainPrice !== 0 && Math.abs(price - plainPrice) < 1e-9 };
+    }, t.plainPrice);
   }
-  test('sem Alt e sem automático: a linha fica onde clicas', async ({ page }) => {
-    const r = await dropHline(page, false, {});
-    expect(r.isWick).toBe(false);
+  test('sem Alt e sem automático: a linha fica onde clicas (não prende)', async ({ page }) => {
+    const r = await dropHline(page, false, {}, 'free', 11);
+    expect(r.isPivot).toBe(false);
   });
-  test('com Alt: a linha horizontal prende ao pavio, mesmo no espaço vazio à direita', async ({ page }) => {
-    const r = await dropHline(page, true, {});
-    expect(r.isWick).toBe(true);
-    expect(r.nearest).toBe(true);
+  test('com Alt: prende ao topo/fundo isolado mais próximo, mesmo no espaço vazio à direita', async ({ page }) => {
+    const r = await dropHline(page, true, {}, 'near-pivot', 10);
+    expect(r.isPivot).toBe(true);
   });
-  test('nível 1 (curto): prende perto do pavio', async ({ page }) => {
-    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 7);
-    expect(near.isWick).toBe(true);
+  test('automático (nível 2): prende sem tecla numa ferramenta de preço', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapLevel: 2 }, 'near-pivot', 10);
+    expect(r.isPivot).toBe(true);
   });
-  test('nível 1 (curto) não prende a 30 px do pavio mais próximo', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapLevel: 1 }, -30);
-    expect(far.isWick).toBe(false);
+  test('não prende a pavios normais: com o cursor em cima de um pavio que não é pivô, vai ao pivô', async ({ page }) => {
+    const r = await dropHline(page, true, { priceSnapLevel: 3 }, 'plain-wick');
+    expect(r.isPivot).toBe(true);
+    expect(r.onPlainWick).toBe(false);
   });
-  test('nível 2 (médio) prende a 30 px do pavio mais próximo', async ({ page }) => {
-    const mid = await dropHline(page, false, { priceSnapLevel: 2 }, -30);
-    expect(mid.isWick).toBe(true);
+  test('nível 1 (curto): prende junto ao pivô', async ({ page }) => {
+    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 'near-pivot', 7);
+    expect(near.isPivot).toBe(true);
   });
-  test('nível 3 (longo) prende mesmo muito longe do pavio', async ({ page }) => {
-    const long = await dropHline(page, false, { priceSnapLevel: 3 }, 150);
-    expect(long.isWick).toBe(true);
+  test('nível 1 (curto) não prende longe de todos os pivôs', async ({ page }) => {
+    const far = await dropHline(page, false, { priceSnapLevel: 1 }, 'far-from-all', 30);
+    expect(far.isPivot).toBe(false);
   });
-  test('automático ligado: prende sem tecla (ferramenta de preço)', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapLevel: 2 });
-    expect(r.isWick).toBe(true);
-    expect(r.nearest).toBe(true);
+  test('nível 3 (longo) prende mesmo muito longe', async ({ page }) => {
+    const far = await dropHline(page, false, { priceSnapLevel: 3 }, 'far-from-all', 30);
+    expect(far.isPivot).toBe(true);
   });
 });
 

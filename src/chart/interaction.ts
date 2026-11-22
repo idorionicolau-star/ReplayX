@@ -6,7 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
-import { nearestWick, priceSnapReach, type PriceSnapLevel } from '@/core/priceSnap';
+import { nearestPivot, priceSnapReach, type PriceSnapLevel } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
@@ -213,14 +213,14 @@ export class Interaction {
         }
       }
     }
-    // íman de preço: prende ao pavio (máximo/mínimo) mais próximo na vertical, em qualquer vela visível
+    // íman de preço: prende ao pivô (topo ou fundo isolado) mais próximo na vertical, em qualquer ponto do gráfico visível
     // (também no espaço vazio à direita). Alt, em qualquer ferramenta; automático, nas ferramentas de preço.
     const snapLevel = this.cb.priceSnapLevel();
     if (this.mods.alt || (snapLevel > 0 && PRICE_TOOLS.has(tool))) {
       const range = this.c.chart.timeScale().getVisibleLogicalRange();
       const raw = this.c.yToPrice(y);
       if (range && raw !== null) {
-        const wick = nearestWick(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
+        const wick = nearestPivot(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
         if (wick !== null) {
           price = wick;
           time = this.c.logicalToTime(li) ?? time;
