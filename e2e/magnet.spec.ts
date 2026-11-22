@@ -88,19 +88,22 @@ test('íman: a ponta do desenho fica exatamente onde o anel laranja prendeu (mes
 });
 
 test.describe('íman de preço (Alt / automático)', () => {
-  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>) {
+  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>, dy = 7) {
     await page.addInitScript((st) => localStorage.setItem('rx-settings', JSON.stringify({ state: st, version: 3 })), { magnet: 'off', ...settings });
     await enterAsGuest(page);
     await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
     await waitBars(page, 300);
     await page.click('[data-testid=fav-tool-hline]');
-    const t = await page.evaluate(() => {
+    const t = await page.evaluate((off) => {
       const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
       const i = c.bars.length - 40;
       const hi = c.bars[i].high;
       // cursor 7 px abaixo do máximo e muito à direita da vela (espaço vazio)
-      return { hi, x: c.timeToX(c.bars[c.bars.length - 1].time) + 60, y: c.priceToY(hi) + 7 };
-    });
+      // dy > 0: px abaixo do máximo de uma vela; dy < 0: px acima do pavio mais alto à vista (sem nenhum pavio por perto)
+      const r = c.chart.timeScale().getVisibleLogicalRange();
+      const topY = Math.min(...c.bars.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1).map((b: { high: number }) => c.priceToY(b.high)));
+      return { hi, x: c.timeToX(c.bars[c.bars.length - 1].time) + 60, y: off >= 0 ? c.priceToY(hi) + off : topY + off };
+    }, dy);
     const canvas = (await page.locator('canvas').first().boundingBox())!;
     if (alt) await page.keyboard.down('Alt');
     await page.mouse.move(canvas.x + t.x, canvas.y + t.y);
@@ -130,8 +133,24 @@ test.describe('íman de preço (Alt / automático)', () => {
     expect(r.isWick).toBe(true);
     expect(r.nearest).toBe(true);
   });
+  test('nível 1 (curto): prende perto do pavio', async ({ page }) => {
+    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 7);
+    expect(near.isWick).toBe(true);
+  });
+  test('nível 1 (curto) não prende a 30 px do pavio mais próximo', async ({ page }) => {
+    const far = await dropHline(page, false, { priceSnapLevel: 1 }, -30);
+    expect(far.isWick).toBe(false);
+  });
+  test('nível 2 (médio) prende a 30 px do pavio mais próximo', async ({ page }) => {
+    const mid = await dropHline(page, false, { priceSnapLevel: 2 }, -30);
+    expect(mid.isWick).toBe(true);
+  });
+  test('nível 3 (longo) prende mesmo muito longe do pavio', async ({ page }) => {
+    const long = await dropHline(page, false, { priceSnapLevel: 3 }, 150);
+    expect(long.isWick).toBe(true);
+  });
   test('automático ligado: prende sem tecla (ferramenta de preço)', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnap: true });
+    const r = await dropHline(page, false, { priceSnapLevel: 2 });
     expect(r.isWick).toBe(true);
     expect(r.nearest).toBe(true);
   });

@@ -6,7 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
-import { nearestWick } from '@/core/priceSnap';
+import { nearestWick, priceSnapReach, type PriceSnapLevel } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
@@ -28,7 +28,7 @@ export interface InteractionCallbacks {
   /** Encaixar linhas de 15 em 15° (também com Shift). */
   angleSnap(): boolean;
   /** Íman de preço automático (Alt liga-o enquanto está premido). */
-  priceSnap(): boolean;
+  priceSnapLevel(): PriceSnapLevel;
   /** Lupa ao desenhar com o dedo. */
   loupe(): boolean;
   /** Onde fica a lupa. */
@@ -215,11 +215,12 @@ export class Interaction {
     }
     // íman de preço: prende ao pavio (máximo/mínimo) mais próximo na vertical, em qualquer vela visível
     // (também no espaço vazio à direita). Alt, em qualquer ferramenta; automático, nas ferramentas de preço.
-    if (this.mods.alt || (this.cb.priceSnap() && PRICE_TOOLS.has(tool))) {
+    const snapLevel = this.cb.priceSnapLevel();
+    if (this.mods.alt || (snapLevel > 0 && PRICE_TOOLS.has(tool))) {
       const range = this.c.chart.timeScale().getVisibleLogicalRange();
       const raw = this.c.yToPrice(y);
       if (range && raw !== null) {
-        const wick = nearestWick(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), this.touch ? 60 : 40);
+        const wick = nearestWick(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
         if (wick !== null) {
           price = wick;
           time = this.c.logicalToTime(li) ?? time;
@@ -297,7 +298,7 @@ export class Interaction {
     this.trackMods(e);
     this.lastHover = { x: p.x, y: p.y };
     const before = this.c.snapMark;
-    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnap();
+    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapLevel() > 0;
     if (active) this.toPoint(p.x, p.y);
     else this.c.snapMark = null;
     const after = this.c.snapMark;
