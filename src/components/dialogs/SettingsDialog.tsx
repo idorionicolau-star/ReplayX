@@ -17,7 +17,7 @@ import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { shade } from '@/chart/drawings/auto';
-import { PIVOT_SENSITIVITY, PRICE_SNAP_LEVELS, type PivotSensitivity, type PriceSnapLevel } from '@/core/priceSnap';
+import { PIVOT_SENSITIVITY, type PivotSensitivity } from '@/core/priceSnap';
 
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
@@ -86,15 +86,8 @@ export function SettingsDialog() {
           <Row label="Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)">
             <Switch checked={s.floatOnSelect} onChange={(v) => s.set({ floatOnSelect: v })} />
           </Row>
-          <Row label="Íman de preço: nível (prende aos topos e fundos do ZigZag; sozinho no Fibonacci e no retângulo, nas outras ferramentas com Alt no nível escolhido ou no 2)">
-            <Select className="w-64" value={s.priceSnapLevel} onChange={(e) => s.set({ priceSnapLevel: Number(e.target.value) as PriceSnapLevel })} data-testid="price-snap-level">
-              <option value={0}>Desligado (só com Alt)</option>
-              {PRICE_SNAP_LEVELS.map((l) => (
-                <option key={l.level} value={l.level}>
-                  {l.label}
-                </option>
-              ))}
-            </Select>
+          <Row label="Íman de preço automático no Fibonacci e no retângulo (prendem sozinhos aos topos e fundos do ZigZag; nas outras ferramentas, com Alt ou com o botão no telemóvel)">
+            <Switch checked={s.priceSnapAuto} onChange={(v) => s.set({ priceSnapAuto: v })} data-testid="price-snap-auto" />
           </Row>
           <Row label="Pivôs do íman de preço: sensibilidade">
             <Select className="w-64" value={s.pivotSensitivity} onChange={(e) => s.set({ pivotSensitivity: e.target.value as PivotSensitivity })} data-testid="pivot-sensitivity">

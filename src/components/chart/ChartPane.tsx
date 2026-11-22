@@ -1,6 +1,6 @@
 'use client';
 import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
-import { ChartNav, FitButton, PriceAxisPlus } from './ChartOverlays';
+import { ChartNav, FitButton, PriceAxisPlus, PriceSnapButton } from './ChartOverlays';
 import { parseTf } from '@/core/timeframes';
 import { positionSizing } from '@/trading/position';
 import { toolDef } from '@/chart/drawings/tools';
@@ -96,7 +96,9 @@ export function ChartPane({ index }: { index: number }) {
       setTool: (t) => useDrawings.getState().setTool(t),
       magnet: () => useSettings.getState().magnet,
       angleSnap: () => useSettings.getState().angleSnap,
-      priceSnapLevel: () => useSettings.getState().priceSnapLevel,
+      priceSnapAuto: () => useSettings.getState().priceSnapAuto,
+      priceSnapArmed: () => useUi.getState().priceSnapArmed,
+      disarmPriceSnap: () => useUi.getState().set({ priceSnapArmed: false }),
       pivotSensitivity: () => useSettings.getState().pivotSensitivity,
       pivotFuture: () => useSettings.getState().pivotFuture,
       loupe: () => useSettings.getState().loupe,
@@ -302,6 +304,12 @@ export function ChartPane({ index }: { index: number }) {
     };
   }, [ctrl, symbol, timezone]);
 
+  // armar/desarmar o íman de preço (botão no ecrã de toque): mostra/esconde logo os pontos dos pivôs
+  const snapArmed = useUi((s) => s.priceSnapArmed);
+  useEffect(() => {
+    interRef.current?.refreshSnap();
+  }, [snapArmed]);
+
   // ---------- linha de corte do replay (no dedo: arrastar e confirmar) ----------
   const pickActive = selecting && isActive;
   useEffect(() => {
@@ -342,6 +350,7 @@ export function ChartPane({ index }: { index: number }) {
       {ctrl && isActive && <BacktestChip symbolId={cfg.symbolId} ctrl={ctrl} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <FitButton ctrl={ctrl} />}
+      {ctrl && isActive && <PriceSnapButton />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
       {status.state === 'loading' && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">

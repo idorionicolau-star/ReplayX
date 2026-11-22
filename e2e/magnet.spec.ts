@@ -151,32 +151,24 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
     const r = await dropHline(page, true, {}, 'near-pivot', 10);
     expect(r.isPivot).toBe(true);
   });
-  test('automático (nível 2): prende sem tecla no Fibonacci', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapLevel: 2 }, 'near-pivot', 10, 'fib');
+  test('automático: prende sem tecla no Fibonacci e mostra os pontos dos pivôs', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapAuto: true }, 'near-pivot', 10, 'fib');
     expect(r.isPivot).toBe(true);
-    expect(r.dots).toBeGreaterThan(1); // mostra os pontos dos pivôs enquanto está ativo
+    expect(r.dots).toBeGreaterThan(1);
   });
   test('automático não age na linha horizontal (só Fibonacci e retângulo); lá só com Alt', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapLevel: 3 }, 'near-pivot', 10);
+    const r = await dropHline(page, false, { priceSnapAuto: true }, 'near-pivot', 10);
     expect(r.isPivot).toBe(false);
     expect(r.dots).toBe(0);
   });
   test('não prende a pavios normais: com o cursor em cima de um pavio que não é pivô, vai ao pivô', async ({ page }) => {
-    const r = await dropHline(page, true, { priceSnapLevel: 3 }, 'plain-wick');
+    const r = await dropHline(page, true, {}, 'plain-wick');
     expect(r.isPivot).toBe(true);
     expect(r.onPlainWick).toBe(false);
   });
-  test('nível 1 (curto): prende junto ao pivô', async ({ page }) => {
-    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 'near-pivot', 7, 'fib');
-    expect(near.isPivot).toBe(true);
-  });
-  test('nível 1 (curto) não prende longe de todos os pivôs', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapLevel: 1 }, 'far-from-all', 30, 'fib');
+  test('alcance fixo: não prende quando o cursor está a 60 px do pivô mais próximo', async ({ page }) => {
+    const far = await dropHline(page, false, { priceSnapAuto: true }, 'far-from-all', 60, 'fib');
     expect(far.isPivot).toBe(false);
-  });
-  test('nível 3 (longo) prende mesmo muito longe', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapLevel: 3 }, 'far-from-all', 30, 'fib');
-    expect(far.isPivot).toBe(true);
   });
 });
 

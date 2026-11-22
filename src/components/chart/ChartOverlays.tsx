@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { MouseEventParams, Time } from 'lightweight-charts';
 import { ChevronLeft, ChevronRight, Maximize2, Minus, Plus, RotateCcw } from 'lucide-react';
 import type { ChartController } from '@/chart/controller';
@@ -7,6 +7,8 @@ import { useUi } from '@/store/ui';
 import { useReplay } from '@/replay/engine';
 import { cn } from '@/components/ui/cn';
 import { useSettings } from '@/store/settings';
+import { useDrawings } from '@/store/drawings';
+import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
 
 const btn = 'flex h-7 w-7 items-center justify-center rounded-md border border-line bg-elev/95 text-text shadow-sm hover:bg-hover';
 
@@ -121,6 +123,47 @@ export function FitButton({ ctrl }: { ctrl: ChartController }) {
       data-testid="fit-view"
     >
       <Maximize2 size={14} /> Ajustar
+    </button>
+  );
+}
+
+/**
+ * Íman de preço no ecrã de toque (faz de Alt): só aparece com uma ferramenta de desenho ativa. Um toque arma-o: o
+ * desenho em curso prende ao pivô mais próximo (com os pontos dos pivôs à vista) e o botão apaga-se ao terminar.
+ */
+export function PriceSnapButton() {
+  const coarse = useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia('(pointer: coarse)');
+      mq.addEventListener('change', cb);
+      return () => mq.removeEventListener('change', cb);
+    },
+    () => window.matchMedia('(pointer: coarse)').matches,
+    () => false,
+  );
+  const tool = useDrawings((s) => s.tool);
+  const armed = useUi((s) => s.priceSnapArmed);
+  const drawing = tool !== 'cross' && tool !== 'cursor';
+  // sem ferramenta ativa não há desenho a que prender: desarma
+  useEffect(() => {
+    if (!drawing && armed) useUi.getState().set({ priceSnapArmed: false });
+  }, [drawing, armed]);
+  if (!coarse || !drawing) return null;
+  return (
+    <button
+      type="button"
+      aria-pressed={armed}
+      aria-label="Prender ao topo ou fundo mais próximo"
+      title={armed ? 'Íman de preço armado: o desenho prende ao topo/fundo mais próximo (toque para desligar)' : 'Íman de preço: toque para o ligar neste desenho'}
+      onClick={() => useUi.getState().set({ priceSnapArmed: !armed })}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={cn(
+        'absolute bottom-[34px] right-16 z-20 flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-pop active:bg-hover',
+        armed ? 'border-accent bg-accent text-on-accent' : 'border-line bg-elev/95 text-text',
+      )}
+      data-testid="price-snap-button"
+    >
+      <PriceSnapIcon size={15} /> {armed ? 'Íman ligado' : 'Íman'}
     </button>
   );
 }
