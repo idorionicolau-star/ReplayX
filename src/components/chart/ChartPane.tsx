@@ -96,7 +96,6 @@ export function ChartPane({ index }: { index: number }) {
       setTool: (t) => useDrawings.getState().setTool(t),
       magnet: () => useSettings.getState().magnet,
       angleSnap: () => useSettings.getState().angleSnap,
-      priceSnapAuto: () => useSettings.getState().priceSnapAuto,
       priceSnapArmed: () => useUi.getState().priceSnapArmed,
       disarmPriceSnap: () => useUi.getState().set({ priceSnapArmed: false }),
       pivotSensitivity: () => useSettings.getState().pivotSensitivity,

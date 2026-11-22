@@ -151,24 +151,24 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
     const r = await dropHline(page, true, {}, 'near-pivot', 10);
     expect(r.isPivot).toBe(true);
   });
-  test('automático: prende sem tecla no Fibonacci e mostra os pontos dos pivôs', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'near-pivot', 10, 'fib');
+  test('íman normal ligado: o íman de preço NÃO liga sozinho (sem pontos de pivôs, sem ir ao pivô) no Fibonacci', async ({ page }) => {
+    const r = await dropHline(page, false, { magnet: 'medium' }, 'near-pivot', 10, 'fib');
+    expect(r.dots).toBe(0);
+  });
+  for (const lvl of ['weak', 'strong']) {
+    test(`íman normal no nível ${lvl}: o íman de preço também não liga sozinho (linha horizontal)`, async ({ page }) => {
+      const r = await dropHline(page, false, { magnet: lvl }, 'near-pivot', 10, 'hline');
+      expect(r.dots).toBe(0);
+    });
+  }
+  test('íman normal ligado + Alt premido: o íman de preço age (pontos dos pivôs e prende ao pivô)', async ({ page }) => {
+    const r = await dropHline(page, true, { magnet: 'medium' }, 'near-pivot', 10, 'fib');
     expect(r.isPivot).toBe(true);
     expect(r.dots).toBeGreaterThan(1);
   });
-  test('íman desligado: o automático não prende nada, sem anel nem pontos (só Alt/Ctrl/botão)', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'off' }, 'near-pivot', 10, 'fib');
-    expect(r.isPivot).toBe(false);
-    expect(r.dots).toBe(0);
-  });
-  test('íman desligado: nem com o automático e outro ponto qualquer prende (o ponto fica onde está o cursor)', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'off' }, 'plain-wick', 0, 'fib');
+  test('íman desligado e sem Alt: nada prende, sem anel nem pontos', async ({ page }) => {
+    const r = await dropHline(page, false, { magnet: 'off' }, 'plain-wick', 0, 'fib');
     expect(r.onPlainWick).toBe(true); // ficou exatamente no pavio onde estava o cursor, sem ir ao pivô
-    expect(r.dots).toBe(0);
-  });
-  test('automático não age na linha horizontal (só Fibonacci e retângulo); lá só com Alt', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'near-pivot', 10);
-    expect(r.isPivot).toBe(false);
     expect(r.dots).toBe(0);
   });
   test('não prende a pavios normais: com o cursor em cima de um pavio que não é pivô, vai ao pivô', async ({ page }) => {
@@ -177,7 +177,7 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
     expect(r.onPlainWick).toBe(false);
   });
   test('alcance fixo: não prende quando o cursor está a 60 px do pivô mais próximo', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'far-from-all', 60, 'fib');
+    const far = await dropHline(page, true, {}, 'far-from-all', 60, 'fib');
     expect(far.isPivot).toBe(false);
   });
 });
