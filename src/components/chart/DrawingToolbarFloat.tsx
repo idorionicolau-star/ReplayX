@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ArrowUpDown, Bell, Copy, Ellipsis, Eye, Lock, LockOpen, Settings2, Trash2, Send, Minus, Type } from 'lucide-react';
 import { TemplateMenu } from './TemplateMenu';
 import { AngleMenu } from './AngleMenu';
@@ -31,6 +31,31 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   const [widthOpen, setWidthOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const nearMouse = useSettings((s) => s.floatNearMouse && !s.stayInDrawingMode);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ id: string; left: number; top: number } | null>(null);
+  const anchor = d && ctrl.floatAnchor?.id === d.id ? ctrl.floatAnchor : null;
+  // recém-terminado: a barra abre junto ao rato (no último clique), dentro do gráfico e sem tapar o ponto
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const host = box?.parentElement;
+    if (!box || !host || !anchor || !nearMouse) {
+      setPos(null);
+      return;
+    }
+    const w = box.offsetWidth;
+    const h = box.offsetHeight;
+    const W = host.clientWidth;
+    const H = host.clientHeight;
+    const gap = window.matchMedia('(pointer: coarse)').matches ? 34 : 14;
+    let left = anchor.x + gap;
+    if (left + w > W - 8) left = anchor.x - w - gap;
+    left = Math.max(8, Math.min(W - w - 8, left));
+    let top = anchor.y - h - gap;
+    if (top < 8) top = anchor.y + gap;
+    top = Math.max(8, Math.min(H - h - 8, top));
+    setPos({ id: anchor.id, left, top });
+  }, [anchor, nearMouse, d?.id]);
   if (!d) return null;
   const def = toolDef(d.type);
   const st = useDrawings.getState();
@@ -49,7 +74,7 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   const hasFill = d.style.fill !== undefined && d.type !== 'fib' && d.type !== 'fibext' && !isPosition;
 
   return (
-    <div data-testid="drawing-float" className="absolute top-12 left-1/2 z-20 flex max-w-[calc(100%-16px)] overflow-x-auto -translate-x-1/2 items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop" onPointerDown={(e) => e.stopPropagation()}>
+    <div ref={boxRef} data-testid="drawing-float" data-near-mouse={pos && pos.id === d.id ? 'true' : undefined} className={cn('absolute z-20 flex max-w-[calc(100%-16px)] overflow-x-auto items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop', !(pos && pos.id === d.id) && 'top-12 left-1/2 -translate-x-1/2')} style={pos && pos.id === d.id ? { left: pos.left, top: pos.top } : undefined} onPointerDown={(e) => e.stopPropagation()}>
       <TemplateMenu symbolId={symbolId} d={d} compact />
       {!isPosition && <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
       {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
