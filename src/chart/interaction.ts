@@ -6,7 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
-import { nearestPivot, priceSnapReach, type PriceSnapLevel } from '@/core/priceSnap';
+import { nearestPivot, priceSnapReach, type PivotSensitivity, type PriceSnapLevel } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
@@ -18,8 +18,8 @@ export type TradeAction =
 /** Peso da distância horizontal no íman (a vertical conta por inteiro): o íman é mais vertical do que horizontal. */
 const HORIZ_WEIGHT = 0.35;
 
-/** Ferramentas de preço: com o íman de preço automático ligado, prendem ao pavio mais próximo na vertical. */
-const PRICE_TOOLS = new Set<ToolId>(['hline', 'hray', 'crossline', 'fib', 'fibext', 'rect', 'pricerange', 'long', 'short', 'vpfixed']);
+/** Ferramentas em que o íman de preço funciona sozinho (desenham-se para o futuro); nas outras só com Alt. */
+const PRICE_TOOLS = new Set<ToolId>(['fib', 'fibext', 'rect']);
 
 export interface InteractionCallbacks {
   tool(): ToolId;
@@ -29,6 +29,10 @@ export interface InteractionCallbacks {
   angleSnap(): boolean;
   /** Íman de preço automático (Alt liga-o enquanto está premido). */
   priceSnapLevel(): PriceSnapLevel;
+  /** Sensibilidade dos pivôs do íman de preço. */
+  pivotSensitivity(): PivotSensitivity;
+  /** Fora do replay, o íman de preço pode usar os pivôs à frente do cursor. */
+  pivotFuture(): boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe(): boolean;
   /** Onde fica a lupa. */
@@ -143,7 +147,7 @@ export class Interaction {
   private toPoint(x: number, y: number, snapTime = true, tool: ToolId = this.cb.tool()): PricePoint | null {
     const l = this.c.xToLogical(x);
     let price = this.c.yToPrice(y);
-    this.c.snapMark = null;
+    this.c.clearSnap();
     if (l === null || price === null) return null;
     const li = snapTime ? Math.round(l) : l;
     let time = this.c.logicalToTime(li);
@@ -213,14 +217,15 @@ export class Interaction {
         }
       }
     }
-    // íman de preço: prende ao pivô (topo ou fundo isolado) mais próximo na vertical, em qualquer ponto do gráfico visível
-    // (também no espaço vazio à direita). Alt, em qualquer ferramenta; automático, nas ferramentas de preço.
+    // íman de preço: prende ao pivô (ponta de uma perna do ZigZag) mais próximo na vertical, em qualquer ponto do gráfico
+    // visível (também no espaço vazio à direita). Alt, em qualquer ferramenta; sozinho, no Fibonacci e no retângulo.
     const snapLevel = this.cb.priceSnapLevel();
     if (this.mods.alt || (snapLevel > 0 && PRICE_TOOLS.has(tool))) {
-      const range = this.c.chart.timeScale().getVisibleLogicalRange();
-      const raw = this.c.yToPrice(y);
-      if (range && raw !== null) {
-        const wick = nearestPivot(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
+      // sem ver o futuro: só os pivôs com o que já tinha acontecido até à vela do cursor
+      const pivots = this.c.snapPivots(this.cb.pivotSensitivity(), this.cb.pivotFuture() ? undefined : Math.round(l));
+      this.c.pivotDots = pivots.map((p) => ({ time: this.c.bars[p.idx].time, price: p.price }));
+      {
+        const wick = nearestPivot(pivots, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
         if (wick !== null) {
           price = wick;
           time = this.c.logicalToTime(li) ?? time;
@@ -300,9 +305,10 @@ export class Interaction {
     const before = this.c.snapMark;
     const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapLevel() > 0;
     if (active) this.toPoint(p.x, p.y);
-    else this.c.snapMark = null;
+    else this.c.clearSnap();
     const after = this.c.snapMark;
-    if (before?.x !== after?.x || before?.y !== after?.y) this.c.redraw();
+    // com o íman de preço ativo os pontos dos pivôs acompanham o gráfico: redesenha sempre
+    if (this.c.pivotDots || before?.x !== after?.x || before?.y !== after?.y) this.c.redraw();
   }
 
   private onModKey = (e: KeyboardEvent) => {
@@ -740,7 +746,7 @@ export class Interaction {
   private endDrag() {
     this.loupe.hide();
     this.c.hint = null;
-    this.c.snapMark = null;
+    this.c.clearSnap();
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);

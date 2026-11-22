@@ -57,6 +57,8 @@ export interface OverlayHost {
   hint(): { x: number; y: number; text: string } | null;
   /** Círculo no ponto onde o íman prendeu. */
   snapMark(): { x: number; y: number } | null;
+  /** Pivôs a que o íman de preço pode prender (pontos discretos). */
+  pivotDots(): { time: number; price: number }[] | null;
   /** Cursor de pontaria (dedo). */
   aimMark(): { x: number; y: number } | null;
   /** Ecrã tátil: pegas maiores. */
@@ -211,6 +213,24 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         ctx.restore();
       }
 
+      const dots = host.pivotDots();
+      if (dots && dots.length) {
+        // pontos discretos nos pivôs: onde o íman de preço pode prender
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,152,0,0.85)';
+        ctx.strokeStyle = host.dark() ? 'rgba(19,23,34,0.9)' : 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1;
+        for (const d of dots) {
+          const x = view.timeToX(d.time);
+          const y = view.priceToY(d.price);
+          if (x === null || y === null) continue;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
       const snap = host.snapMark();
       if (snap) {
         // linhas-guia (cruz) no ponto onde o íman prende, para o localizar mesmo com o cursor longe

@@ -87,15 +87,15 @@ test('íman: a ponta do desenho fica exatamente onde o anel laranja prendeu (mes
   expect(Math.abs(r.py! - r.mark!.y)).toBeLessThan(0.6);
 });
 
-test.describe('íman de preço (só topos e fundos isolados)', () => {
+test.describe('íman de preço (pivôs do ZigZag)', () => {
   type Mode = 'near-pivot' | 'far-from-all' | 'plain-wick' | 'free';
   /** Põe uma linha horizontal com o cursor num sítio escolhido e devolve se o preço ficou num pivô. */
-  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>, mode: Mode, off = 8) {
+  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>, mode: Mode, off = 8, tool: 'hline' | 'fib' = 'hline') {
     await page.addInitScript((st) => localStorage.setItem('rx-settings', JSON.stringify({ state: st, version: 3 })), { magnet: 'off', ...settings });
     await enterAsGuest(page);
     await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
     await waitBars(page, 300);
-    await page.click('[data-testid=fav-tool-hline]');
+    await page.click(`[data-testid=fav-tool-${tool}]`);
     const t = await page.evaluate(
       ({ mode, off }) => {
         const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
@@ -127,13 +127,21 @@ test.describe('íman de preço (só topos e fundos isolados)', () => {
     await page.mouse.move(canvas.x + t.x, canvas.y + t.y);
     await page.mouse.click(canvas.x + t.x, canvas.y + t.y);
     await page.waitForTimeout(250);
+    const dots = await page.evaluate(() => ([...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0].pivotDots ?? []).length);
+    if (tool === 'fib') {
+      // 2.º ponto do Fibonacci: noutro sítio, para fechar o desenho
+      await page.mouse.move(canvas.x + t.x - 200, canvas.y + 200);
+      await page.mouse.click(canvas.x + t.x - 200, canvas.y + 200);
+      await page.waitForTimeout(250);
+    }
     if (alt) await page.keyboard.up('Alt');
-    return page.evaluate((plainPrice) => {
+    const res = await page.evaluate((plainPrice) => {
       const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
       const price = c.drawings[c.drawings.length - 1].points[0].price as number;
       const isPivot = (c.snapPivots() as { price: number }[]).some((p) => Math.abs(p.price - price) < 1e-9);
       return { price, isPivot, onPlainWick: plainPrice !== 0 && Math.abs(price - plainPrice) < 1e-9 };
     }, t.plainPrice);
+    return { ...res, dots };
   }
   test('sem Alt e sem automático: a linha fica onde clicas (não prende)', async ({ page }) => {
     const r = await dropHline(page, false, {}, 'free', 11);
@@ -143,9 +151,15 @@ test.describe('íman de preço (só topos e fundos isolados)', () => {
     const r = await dropHline(page, true, {}, 'near-pivot', 10);
     expect(r.isPivot).toBe(true);
   });
-  test('automático (nível 2): prende sem tecla numa ferramenta de preço', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapLevel: 2 }, 'near-pivot', 10);
+  test('automático (nível 2): prende sem tecla no Fibonacci', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapLevel: 2 }, 'near-pivot', 10, 'fib');
     expect(r.isPivot).toBe(true);
+    expect(r.dots).toBeGreaterThan(1); // mostra os pontos dos pivôs enquanto está ativo
+  });
+  test('automático não age na linha horizontal (só Fibonacci e retângulo); lá só com Alt', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapLevel: 3 }, 'near-pivot', 10);
+    expect(r.isPivot).toBe(false);
+    expect(r.dots).toBe(0);
   });
   test('não prende a pavios normais: com o cursor em cima de um pavio que não é pivô, vai ao pivô', async ({ page }) => {
     const r = await dropHline(page, true, { priceSnapLevel: 3 }, 'plain-wick');
@@ -153,15 +167,15 @@ test.describe('íman de preço (só topos e fundos isolados)', () => {
     expect(r.onPlainWick).toBe(false);
   });
   test('nível 1 (curto): prende junto ao pivô', async ({ page }) => {
-    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 'near-pivot', 7);
+    const near = await dropHline(page, false, { priceSnapLevel: 1 }, 'near-pivot', 7, 'fib');
     expect(near.isPivot).toBe(true);
   });
   test('nível 1 (curto) não prende longe de todos os pivôs', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapLevel: 1 }, 'far-from-all', 30);
+    const far = await dropHline(page, false, { priceSnapLevel: 1 }, 'far-from-all', 30, 'fib');
     expect(far.isPivot).toBe(false);
   });
   test('nível 3 (longo) prende mesmo muito longe', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapLevel: 3 }, 'far-from-all', 30);
+    const far = await dropHline(page, false, { priceSnapLevel: 3 }, 'far-from-all', 30, 'fib');
     expect(far.isPivot).toBe(true);
   });
 });

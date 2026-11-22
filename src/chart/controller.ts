@@ -28,7 +28,7 @@ import {
 } from 'lightweight-charts';
 import type { Bar, ChartType, SymbolInfo } from '@/core/types';
 import { GradientCandles } from './gradientCandles';
-import { swingPivots, type Pivot } from '@/core/priceSnap';
+import { swingPivots, type Pivot, type PivotSensitivity } from '@/core/priceSnap';
 import { heikinAshi, lowerBound, mergeBars, upperBound } from '@/core/bars';
 import { alignTime, parseTf, tfSeconds, tfShort } from '@/core/timeframes';
 import { barEnd, dataFeed } from '@/core/feed/datafeed';
@@ -193,6 +193,8 @@ export class ChartController {
   floatAnchor: { id: string; x: number; y: number; kind: 'new' | 'click' } | null = null;
   /** Ponto onde o íman prendeu (círculo no ecrã). */
   snapMark: { x: number; y: number } | null = null;
+  /** Pivôs a que o íman de preço pode prender (pontos discretos enquanto está ativo). */
+  pivotDots: { time: number; price: number }[] | null = null;
   /** Cursor de pontaria no ecrã tátil (posiciona-se primeiro, toca-se nele para marcar o ponto). */
   aimMark: { x: number; y: number } | null = null;
   clearAim() {
@@ -236,6 +238,7 @@ export class ChartController {
       background: () => this.look.background,
       hint: () => this.hint,
       snapMark: () => this.snapMark,
+      pivotDots: () => this.pivotDots,
       aimMark: () => this.aimMark,
       coarse: () => coarsePointer(),
       countdown: () => this.countdownLabel(),
@@ -1625,9 +1628,15 @@ export class ChartController {
   }
 
   /** Pivôs (topos e fundos isolados) à vista: os pontos a que o íman de preço pode prender. */
-  snapPivots(): Pivot[] {
+  snapPivots(sensitivity: PivotSensitivity = 'normal', upTo?: number): Pivot[] {
     const r = this.chart.timeScale().getVisibleLogicalRange();
-    return r ? swingPivots(this.bars, r.from, r.to) : [];
+    return r ? swingPivots(this.bars, r.from, r.to, sensitivity, upTo) : [];
+  }
+
+  /** Apaga o anel do íman e os pontos dos pivôs. */
+  clearSnap() {
+    this.snapMark = null;
+    this.pivotDots = null;
   }
 
   /** Último preço (no cursor, se em replay). */

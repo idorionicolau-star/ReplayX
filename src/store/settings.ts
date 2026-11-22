@@ -4,7 +4,7 @@ import { DEFAULT_LOT_RULES, type LotRules } from '@/core/trading/lots';
 import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
-import type { PriceSnapLevel } from '@/core/priceSnap';
+import type { PivotSensitivity, PriceSnapLevel } from '@/core/priceSnap';
 
 export type Theme = 'dark' | 'light';
 export type { Magnet } from '@/core/magnet';
@@ -60,6 +60,10 @@ export interface SettingsState {
   angleSnap: boolean;
   /** Íman de preço automático: linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo na vertical (Alt faz o mesmo em qualquer ferramenta). */
   priceSnapLevel: PriceSnapLevel;
+  /** Sensibilidade dos pivôs do íman de preço (ZigZag). */
+  pivotSensitivity: PivotSensitivity;
+  /** Fora do replay, o íman de preço pode prender aos pivôs à frente do cursor. */
+  pivotFuture: boolean;
   /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
   floatNearMouse: boolean;
   /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
@@ -126,6 +130,8 @@ export const useSettings = create<SettingsState>()(
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
       priceSnapLevel: 0,
+      pivotSensitivity: 'normal',
+      pivotFuture: true,
       floatNearMouse: true,
       floatOnSelect: false,
       backtestChip: true,

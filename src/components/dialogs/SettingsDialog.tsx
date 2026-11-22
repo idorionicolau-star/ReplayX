@@ -17,7 +17,7 @@ import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { shade } from '@/chart/drawings/auto';
-import { PRICE_SNAP_LEVELS, type PriceSnapLevel } from '@/core/priceSnap';
+import { PIVOT_SENSITIVITY, PRICE_SNAP_LEVELS, type PivotSensitivity, type PriceSnapLevel } from '@/core/priceSnap';
 
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
@@ -86,7 +86,7 @@ export function SettingsDialog() {
           <Row label="Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)">
             <Switch checked={s.floatOnSelect} onChange={(v) => s.set({ floatOnSelect: v })} />
           </Row>
-          <Row label="Íman de preço automático: nível (linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo; Alt faz o mesmo em qualquer ferramenta, no nível escolhido ou no 2)">
+          <Row label="Íman de preço: nível (prende aos topos e fundos do ZigZag; sozinho no Fibonacci e no retângulo, nas outras ferramentas com Alt no nível escolhido ou no 2)">
             <Select className="w-64" value={s.priceSnapLevel} onChange={(e) => s.set({ priceSnapLevel: Number(e.target.value) as PriceSnapLevel })} data-testid="price-snap-level">
               <option value={0}>Desligado (só com Alt)</option>
               {PRICE_SNAP_LEVELS.map((l) => (
@@ -95,6 +95,18 @@ export function SettingsDialog() {
                 </option>
               ))}
             </Select>
+          </Row>
+          <Row label="Pivôs do íman de preço: sensibilidade">
+            <Select className="w-64" value={s.pivotSensitivity} onChange={(e) => s.set({ pivotSensitivity: e.target.value as PivotSensitivity })} data-testid="pivot-sensitivity">
+              {(Object.keys(PIVOT_SENSITIVITY) as PivotSensitivity[]).map((k) => (
+                <option key={k} value={k}>
+                  {PIVOT_SENSITIVITY[k].label}
+                </option>
+              ))}
+            </Select>
+          </Row>
+          <Row label="Fora do replay, usar também os pivôs à frente do cursor (desligado: só o que já tinha acontecido até ao ponto onde desenhas)">
+            <Switch checked={s.pivotFuture} onChange={(v) => s.set({ pivotFuture: v })} />
           </Row>
           <Row label="Ir para uma data no gráfico">
             <Button
