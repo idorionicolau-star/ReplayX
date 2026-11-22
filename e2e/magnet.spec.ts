@@ -152,12 +152,22 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
     expect(r.isPivot).toBe(true);
   });
   test('automático: prende sem tecla no Fibonacci e mostra os pontos dos pivôs', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true }, 'near-pivot', 10, 'fib');
+    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'near-pivot', 10, 'fib');
     expect(r.isPivot).toBe(true);
     expect(r.dots).toBeGreaterThan(1);
   });
+  test('íman desligado: o automático não prende nada, sem anel nem pontos (só Alt/Ctrl/botão)', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'off' }, 'near-pivot', 10, 'fib');
+    expect(r.isPivot).toBe(false);
+    expect(r.dots).toBe(0);
+  });
+  test('íman desligado: nem com o automático e outro ponto qualquer prende (o ponto fica onde está o cursor)', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'off' }, 'plain-wick', 0, 'fib');
+    expect(r.onPlainWick).toBe(true); // ficou exatamente no pavio onde estava o cursor, sem ir ao pivô
+    expect(r.dots).toBe(0);
+  });
   test('automático não age na linha horizontal (só Fibonacci e retângulo); lá só com Alt', async ({ page }) => {
-    const r = await dropHline(page, false, { priceSnapAuto: true }, 'near-pivot', 10);
+    const r = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'near-pivot', 10);
     expect(r.isPivot).toBe(false);
     expect(r.dots).toBe(0);
   });
@@ -167,7 +177,7 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
     expect(r.onPlainWick).toBe(false);
   });
   test('alcance fixo: não prende quando o cursor está a 60 px do pivô mais próximo', async ({ page }) => {
-    const far = await dropHline(page, false, { priceSnapAuto: true }, 'far-from-all', 60, 'fib');
+    const far = await dropHline(page, false, { priceSnapAuto: true, magnet: 'medium' }, 'far-from-all', 60, 'fib');
     expect(far.isPivot).toBe(false);
   });
 });

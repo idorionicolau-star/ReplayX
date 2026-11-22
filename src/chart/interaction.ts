@@ -223,7 +223,8 @@ export class Interaction {
     }
     // íman de preço: prende ao pivô (ponta de uma perna do ZigZag) mais próximo na vertical, em qualquer ponto do gráfico
     // visível (também no espaço vazio à direita). Alt, em qualquer ferramenta; sozinho, no Fibonacci e no retângulo.
-    if (this.mods.alt || this.cb.priceSnapArmed() || (this.cb.priceSnapAuto() && PRICE_TOOLS.has(tool))) {
+    // com o íman desligado nada prende sozinho: só Alt, o botão do telemóvel e Ctrl (ações deliberadas). O automático só vale com o íman ligado.
+    if (this.mods.alt || this.cb.priceSnapArmed() || (this.cb.priceSnapAuto() && set !== 'off' && PRICE_TOOLS.has(tool))) {
       // sem ver o futuro: só os pivôs com o que já tinha acontecido até à vela do cursor
       const pivots = this.c.snapPivots(this.cb.pivotSensitivity(), this.cb.pivotFuture() ? undefined : Math.round(l));
       this.c.pivotDots = pivots.map((p) => ({ time: this.c.bars[p.idx].time, price: p.price }));
@@ -306,7 +307,7 @@ export class Interaction {
     this.trackMods(e);
     this.lastHover = { x: p.x, y: p.y };
     const before = this.c.snapMark;
-    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapArmed() || this.cb.priceSnapAuto();
+    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapArmed();
     if (active) this.toPoint(p.x, p.y);
     else this.c.clearSnap();
     const after = this.c.snapMark;
