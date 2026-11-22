@@ -26,6 +26,7 @@ import { fmtDateTime, fmtMoney } from '@/lib/format';
 import { compactExecMarkers } from '@/chart/execMarkers';
 import { Legend } from './Legend';
 import { DrawingToolbarFloat } from './DrawingToolbarFloat';
+import { BacktestChip } from './BacktestChip';
 import { ReplayPickBanner } from './ReplayPickBanner';
 import { useScriptIndicators } from './useScriptIndicators';
 import { Spinner } from '@/components/ui/Spinner';
@@ -336,6 +337,7 @@ export function ChartPane({ index }: { index: number }) {
       <Legend index={index} symbol={symbol} tf={cfg.tf} info={legend} panes={panes} ctrl={ctrl} status={status} />
       {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} ctrl={ctrl} />}
+      {ctrl && isActive && <BacktestChip symbolId={cfg.symbolId} ctrl={ctrl} />}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <FitButton ctrl={ctrl} />}
       {ctrl && <PriceAxisPlus ctrl={ctrl} chart={index} />}
