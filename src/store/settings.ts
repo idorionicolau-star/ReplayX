@@ -4,7 +4,7 @@ import { DEFAULT_LOT_RULES, type LotRules } from '@/core/trading/lots';
 import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
-import type { PivotSensitivity, PriceSnapLevel } from '@/core/priceSnap';
+import type { PivotSensitivity } from '@/core/priceSnap';
 
 export type Theme = 'dark' | 'light';
 export type { Magnet } from '@/core/magnet';
@@ -59,7 +59,8 @@ export interface SettingsState {
   /** Linhas encaixam em ângulos de 15° (também com Shift). */
   angleSnap: boolean;
   /** Íman de preço automático: linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo na vertical (Alt faz o mesmo em qualquer ferramenta). */
-  priceSnapLevel: PriceSnapLevel;
+  /** Íman de preço automático: o Fibonacci e o retângulo prendem sozinhos ao pivô mais próximo (as outras ferramentas, com Alt ou com o botão no telemóvel). */
+  priceSnapAuto: boolean;
   /** Sensibilidade dos pivôs do íman de preço (ZigZag). */
   pivotSensitivity: PivotSensitivity;
   /** Fora do replay, o íman de preço pode prender aos pivôs à frente do cursor. */
@@ -129,7 +130,7 @@ export const useSettings = create<SettingsState>()(
       replayBarPos: null,
       favoriteIndicators: ['ema', 'rsi', 'macd', 'bb'],
       angleSnap: false,
-      priceSnapLevel: 0,
+      priceSnapAuto: false,
       pivotSensitivity: 'normal',
       pivotFuture: true,
       floatNearMouse: true,
@@ -186,9 +187,9 @@ export const useSettings = create<SettingsState>()(
       },
       // campos novos da aparência ficam com o valor por omissão
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<SettingsState> & { priceSnap?: boolean };
-        // antes o íman de preço era ligado/desligado: ligado passa ao nível médio
-        if (p.priceSnapLevel === undefined && p.priceSnap) p.priceSnapLevel = 2;
+        const p = (persisted ?? {}) as Partial<SettingsState> & { priceSnap?: boolean; priceSnapLevel?: number };
+        // antes o íman de preço tinha ligado/desligado e depois níveis: qualquer nível ligado passa a automático
+        if (p.priceSnapAuto === undefined && (p.priceSnap || (p.priceSnapLevel ?? 0) > 0)) p.priceSnapAuto = true;
         return { ...current, ...p, appearance: { ...DEFAULT_APPEARANCE, ...(p.appearance ?? {}) }, lotRules: { ...DEFAULT_LOT_RULES, ...(p.lotRules ?? {}) }, trading: { ...DEFAULT_TRADING, ...(p.trading ?? {}) } };
       },
     },

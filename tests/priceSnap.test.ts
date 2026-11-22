@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestPivot, nextPriceSnap, pivotWindow, priceSnapReach, swingPivots } from '@/core/priceSnap';
+import { nearestPivot, pivotWindow, priceSnapReach, swingPivots } from '@/core/priceSnap';
 import type { Bar } from '@/core/types';
 
 // 1 preço = 1 px, de cima para baixo (y = 200 - preço)
@@ -74,20 +74,14 @@ describe('íman de preço: pivôs (o mais alto/baixo em N velas de cada lado)', 
   });
 });
 
-describe('3 níveis do íman de preço', () => {
-  it('o botão roda: desligado → 1 → 2 → 3 → desligado', () => {
-    expect([0, 1, 2, 3].map((l) => nextPriceSnap(l as 0 | 1 | 2 | 3))).toEqual([1, 2, 3, 0]);
+describe('alcance do íman de preço (nível médio fixo)', () => {
+  it('40 px com o rato e 60 px com o dedo', () => {
+    expect(priceSnapReach(false)).toBe(40);
+    expect(priceSnapReach(true)).toBe(60);
   });
-  it('cada nível alcança mais que o anterior; o dedo tem mais folga; o 3 não tem limite', () => {
-    expect(priceSnapReach(1, false)).toBeLessThan(priceSnapReach(2, false));
-    expect(priceSnapReach(2, false)).toBeLessThan(priceSnapReach(3, false));
-    expect(priceSnapReach(2, true)).toBeGreaterThan(priceSnapReach(2, false));
-    expect(priceSnapReach(3, false)).toBe(Infinity);
-    expect(priceSnapReach(2, false)).toBe(40);
-  });
-  it('o nível 3 prende mesmo muito longe; o 1 não', () => {
+  it('não prende além do alcance', () => {
     const pv = swingPivots(legs([100, 120, 105]), 0, 10);
-    expect(nearestPivot(pv, toY(300), toY, priceSnapReach(3, false))).toBe(120.5);
-    expect(nearestPivot(pv, toY(300), toY, priceSnapReach(1, false))).toBeNull();
+    expect(nearestPivot(pv, toY(300), toY, priceSnapReach(false))).toBeNull();
+    expect(nearestPivot(pv, toY(130), toY, priceSnapReach(false))).toBe(120.5);
   });
 });

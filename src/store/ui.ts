@@ -22,6 +22,8 @@ interface UiState {
   mobileTools: boolean;
   /** Menu ☰ do telemóvel em paisagem. */
   menu: boolean;
+  /** Íman de preço armado pelo botão (ecrã de toque): vale para o desenho em curso e apaga-se ao terminá-lo. */
+  priceSnapArmed: boolean;
   /** Mostrar as barras de baixo (períodos e painéis) no telemóvel em paisagem. */
   compactBottom: boolean;
   /** Criar alerta (preço, desenho ou indicador) ou editar um existente (`editId`). */
@@ -42,6 +44,7 @@ export const useUi = create<UiState>((set) => ({
   tfInput: null,
   mobileTools: false,
   menu: false,
+  priceSnapArmed: false,
   compactBottom: false,
   alertDraft: null,
   set: (patch) => set(patch),

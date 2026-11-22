@@ -6,7 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
-import { nearestPivot, priceSnapReach, type PivotSensitivity, type PriceSnapLevel } from '@/core/priceSnap';
+import { nearestPivot, priceSnapReach, type PivotSensitivity } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
@@ -28,7 +28,11 @@ export interface InteractionCallbacks {
   /** Encaixar linhas de 15 em 15° (também com Shift). */
   angleSnap(): boolean;
   /** Íman de preço automático (Alt liga-o enquanto está premido). */
-  priceSnapLevel(): PriceSnapLevel;
+  priceSnapAuto(): boolean;
+  /** Íman de preço armado pelo botão (ecrã de toque). */
+  priceSnapArmed(): boolean;
+  /** Apaga o armado depois de terminar o desenho. */
+  disarmPriceSnap(): void;
   /** Sensibilidade dos pivôs do íman de preço. */
   pivotSensitivity(): PivotSensitivity;
   /** Fora do replay, o íman de preço pode usar os pivôs à frente do cursor. */
@@ -219,13 +223,12 @@ export class Interaction {
     }
     // íman de preço: prende ao pivô (ponta de uma perna do ZigZag) mais próximo na vertical, em qualquer ponto do gráfico
     // visível (também no espaço vazio à direita). Alt, em qualquer ferramenta; sozinho, no Fibonacci e no retângulo.
-    const snapLevel = this.cb.priceSnapLevel();
-    if (this.mods.alt || (snapLevel > 0 && PRICE_TOOLS.has(tool))) {
+    if (this.mods.alt || this.cb.priceSnapArmed() || (this.cb.priceSnapAuto() && PRICE_TOOLS.has(tool))) {
       // sem ver o futuro: só os pivôs com o que já tinha acontecido até à vela do cursor
       const pivots = this.c.snapPivots(this.cb.pivotSensitivity(), this.cb.pivotFuture() ? undefined : Math.round(l));
       this.c.pivotDots = pivots.map((p) => ({ time: this.c.bars[p.idx].time, price: p.price }));
       {
-        const wick = nearestPivot(pivots, y, (p) => this.c.priceToY(p), priceSnapReach(snapLevel || 2, this.touch));
+        const wick = nearestPivot(pivots, y, (p) => this.c.priceToY(p), priceSnapReach(this.touch));
         if (wick !== null) {
           price = wick;
           time = this.c.logicalToTime(li) ?? time;
@@ -303,7 +306,7 @@ export class Interaction {
     this.trackMods(e);
     this.lastHover = { x: p.x, y: p.y };
     const before = this.c.snapMark;
-    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapLevel() > 0;
+    const active = this.cb.magnet() !== 'off' || this.mods.ctrl || this.mods.alt || this.cb.priceSnapArmed() || this.cb.priceSnapAuto();
     if (active) this.toPoint(p.x, p.y);
     else this.c.clearSnap();
     const after = this.c.snapMark;
@@ -727,6 +730,16 @@ export class Interaction {
     if (this.mode.kind === 'idle') this.setScroll(true);
   };
 
+  /** Refaz o encaixe e os pontos dos pivôs no sítio onde está a mira (ou o rato), por exemplo ao armar o íman de preço. */
+  refreshSnap() {
+    if (this.c.aimMark) {
+      this.moveAim(this.c.aimMark.x, this.c.aimMark.y, { clientX: 0, clientY: 0 });
+      this.loupe.hide();
+    } else if (this.lastHover && this.mode.kind === 'idle') {
+      this.previewSnap({ shiftKey: false, ctrlKey: false, altKey: false }, this.lastHover);
+    }
+  }
+
   /** Ao escolher uma ferramenta no dedo, a mira aparece logo no centro do gráfico. */
   showAim() {
     if (this.c.aimMark || this.mode.kind !== 'idle') return;
@@ -825,6 +838,7 @@ export class Interaction {
     const ax = last ? this.c.timeToX(last.time) : null;
     const ay = last ? this.c.priceToY(last.price) : null;
     this.c.floatAnchor = ax !== null && ay !== null ? { id: d.id, x: ax, y: ay, kind: 'new' } : null;
+    this.cb.disarmPriceSnap();
     this.cb.addDrawing(d);
     this.cb.select(d.id);
     // no dedo a ferramenta volta sempre ao cursor depois de criar (senão o toque seguinte, para arrastar ou
