@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GripHorizontal, GripVertical, Magnet, PanelLeft, PanelTop, Star, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
+import { nextPriceSnap, priceSnapTitle } from '@/core/priceSnap';
 import { AngleIcon } from '@/components/ui/AngleIcon';
 import { useDrawings } from '@/store/drawings';
 import { toolDef } from '@/chart/drawings/tools';
@@ -19,7 +20,7 @@ export function FavoritesBar() {
   const pos = useSettings((s) => s.favoritesBarPos);
   const magnet = useSettings((s) => s.magnet);
   const angleSnap = useSettings((s) => s.angleSnap);
-  const priceSnap = useSettings((s) => s.priceSnap);
+  const priceSnap = useSettings((s) => s.priceSnapLevel);
   const vertical = useSettings((s) => s.favoritesBarVertical);
   const set = useSettings((s) => s.set);
   const tool = useDrawings((s) => s.tool);
@@ -138,13 +139,14 @@ export function FavoritesBar() {
       </button>
       <button
         type="button"
-        title={priceSnap ? 'Íman de preço: ligado (linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo; Alt faz o mesmo em qualquer ferramenta)' : 'Íman de preço: desligado (segura Alt ao desenhar para o usar)'}
+        title={`${priceSnapTitle(priceSnap)} (toque para mudar)`}
         aria-label="Prender ao pavio na vertical"
-        onClick={() => set({ priceSnap: !priceSnap })}
-        className={cn('flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', priceSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        onClick={() => set({ priceSnapLevel: nextPriceSnap(priceSnap) })}
+        className={cn('relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', priceSnap > 0 ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
         data-testid="fav-price-snap"
       >
         <PriceSnapIcon size={17} />
+        {priceSnap > 0 && <span className="absolute right-0.5 bottom-0 text-[9px] leading-none font-semibold">{priceSnap}</span>}
       </button>
       <button
         type="button"

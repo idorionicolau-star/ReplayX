@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestWick } from '@/core/priceSnap';
+import { nearestWick, nextPriceSnap, priceSnapReach } from '@/core/priceSnap';
 import type { Bar } from '@/core/types';
 
 const bar = (high: number, low: number): Bar => ({ time: 0, open: low + 1, high, low, close: high - 1, volume: 0 });
@@ -22,5 +22,23 @@ describe('íman de preço (só pavios)', () => {
   });
   it('só olha para as velas visíveis', () => {
     expect(nearestWick(bars, 0, 0, toY(150), toY, 80)).toBe(120);
+  });
+});
+
+describe('3 níveis do íman de preço', () => {
+  it('o botão roda: desligado → 1 → 2 → 3 → desligado', () => {
+    expect([0, 1, 2, 3].map((l) => nextPriceSnap(l as 0 | 1 | 2 | 3))).toEqual([1, 2, 3, 0]);
+  });
+  it('cada nível alcança mais que o anterior; o dedo tem mais folga; o 3 não tem limite', () => {
+    expect(priceSnapReach(1, false)).toBeLessThan(priceSnapReach(2, false));
+    expect(priceSnapReach(2, false)).toBeLessThan(priceSnapReach(3, false));
+    expect(priceSnapReach(2, true)).toBeGreaterThan(priceSnapReach(2, false));
+    expect(priceSnapReach(3, false)).toBe(Infinity);
+    expect(priceSnapReach(2, false)).toBe(40);
+  });
+  it('o nível 3 prende mesmo muito longe; o 1 não', () => {
+    const bars = [bar(150, 100)];
+    expect(nearestWick(bars, 0, 0, toY(300), toY, priceSnapReach(3, false))).toBe(150);
+    expect(nearestWick(bars, 0, 0, toY(300), toY, priceSnapReach(1, false))).toBeNull();
   });
 });

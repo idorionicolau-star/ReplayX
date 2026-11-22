@@ -15,6 +15,7 @@ import {
   PanelTop,
 } from 'lucide-react';
 import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
+import { nextPriceSnap, priceSnapTitle } from '@/core/priceSnap';
 import { AngleIcon } from '@/components/ui/AngleIcon';
 import { MAGNET_LEVELS, magnetTitle } from '@/core/magnet';
 import { useDrawings } from '@/store/drawings';
@@ -147,7 +148,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const stay = useSettings((s) => s.stayInDrawingMode);
   const favs = useSettings((s) => s.favoriteTools);
   const angleSnap = useSettings((s) => s.angleSnap);
-  const priceSnap = useSettings((s) => s.priceSnap);
+  const priceSnap = useSettings((s) => s.priceSnapLevel);
   const loupe = useSettings((s) => s.loupe);
   const favBar = useSettings((s) => s.favoritesBar);
   const setSettings = useSettings((s) => s.set);
@@ -236,13 +237,14 @@ export function DrawingToolbar({ className }: { className?: string }) {
       </button>
       <button
         type="button"
-        title={priceSnap ? 'Íman de preço: ligado (prende ao pavio mais próximo na vertical)' : 'Íman de preço (também com Alt)'}
+        title={`${priceSnapTitle(priceSnap)} (clique para mudar; também com Alt)`}
         aria-label="Prender ao pavio na vertical"
-        onClick={() => setSettings({ priceSnap: !priceSnap })}
-        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', priceSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        onClick={() => setSettings({ priceSnapLevel: nextPriceSnap(priceSnap) })}
+        className={cn('relative flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', priceSnap > 0 ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
         data-testid="price-snap"
       >
         <PriceSnapIcon size={21} className="pointer-coarse:size-[25px]" />
+        {priceSnap > 0 && <span className="absolute right-1 bottom-0.5 text-[10px] leading-none font-semibold">{priceSnap}</span>}
       </button>
       <button
         type="button"
