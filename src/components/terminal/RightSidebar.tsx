@@ -57,7 +57,7 @@ export function RightPanel() {
         className={cn(
           'flex flex-col bg-panel',
           compact
-            ? 'fixed top-9 right-0 bottom-0 z-40 w-[min(360px,60vw)] border-l border-line shadow-pop'
+            ? 'fixed top-11 right-0 bottom-0 z-40 w-[min(360px,60vw)] border-l border-line shadow-pop'
             : 'fixed inset-x-0 bottom-12 z-40 h-[62vh] rounded-t-xl border-t border-line shadow-pop sm:static sm:z-auto sm:h-auto sm:rounded-none sm:border-t-0 sm:shadow-none',
         )}
         style={{ width: !compact && typeof window !== 'undefined' && window.innerWidth >= 640 ? width : undefined }}

@@ -23,16 +23,16 @@ import { useSymbolWheel, useTfWheel } from './useWheels';
  * Carregar no símbolo ou no intervalo e arrastar para cima/baixo abre a roda (com vibração); um toque abre a pesquisa/lista.
  */
 /** Mini-roda: cilindro que gira (item atual ao centro, vizinhos inclinados e esbatidos); acompanha o dedo e assenta com animação. */
-function WheelFace({ items, pos, dragging, width, render }: { items: WheelItem[]; pos: number; dragging: boolean; width: number; render: (it: WheelItem, centre: boolean) => React.ReactNode }) {
+function WheelFace({ items, pos, dragging, width, height = 56, row = 19, render }: { items: WheelItem[]; pos: number; dragging: boolean; width: number; height?: number; row?: number; render: (it: WheelItem, centre: boolean) => React.ReactNode }) {
   return (
     <Drum
       items={items}
       pos={pos}
-      row={19}
+      row={row}
       reach={1}
       step={40}
       smooth={!dragging}
-      style={{ position: 'relative', height: 56, minWidth: width }}
+      style={{ position: 'relative', height, minWidth: width }}
       render={(it, rel) => {
         const centre = Math.abs(rel) < 0.5;
         return (
@@ -45,30 +45,25 @@ function WheelFace({ items, pos, dragging, width, render }: { items: WheelItem[]
   );
 }
 
-export function MobileStrip() {
+/** Símbolo e intervalo como duas rodas: um toque abre a pesquisa/lista; carregar e arrastar para cima/baixo gira (com vibração). */
+export function WheelPair({ height = 56, row = 19 }: { height?: number; row?: number }) {
   const active = useWorkspace((s) => s.active);
   const cfg = useWorkspace((s) => s.charts[s.active]);
-  const replayActive = useReplay((s) => s.active);
-  const undo = useDrawings((s) => s.undo);
-  const autoFit = useSettings((s) => s.autoFit);
-  const setSettings = useSettings((s) => s.set);
   const symWheel = useSymbolWheel(active);
   const tfWheel = useTfWheel(active);
   const tfRef = useRef<HTMLButtonElement>(null);
   const [tfOpen, setTfOpen] = useState(false);
   if (!cfg) return null;
   const sym = resolveSymbol(cfg.symbolId);
-  
-
   return (
-    <div className="flex h-[62px] shrink-0 items-center gap-1 border-t border-line bg-panel px-1.5 no-select sm:hidden" data-testid="mobile-strip">
+    <>
       {symWheel.overlay}
       {tfWheel.overlay}
       <button type="button" {...symWheel.bind} onClick={() => useUi.getState().openSymbolSearch('', active)} className="min-w-0 max-w-[46%] shrink-0 rounded-xl px-2 active:bg-hover" data-testid="mobile-symbol" title="Toque para procurar; carregue e arraste para cima/baixo para girar a lista">
-        <WheelFace items={symWheel.items} pos={symWheel.pos} dragging={symWheel.dragging} width={120} render={(it, c) => (c ? <><AssetIcon symbol={resolveSymbol(it.id)} size={16} /><span className="truncate">{it.label}</span></> : <span className="truncate">{it.label}</span>)} />
+        <WheelFace items={symWheel.items} pos={symWheel.pos} dragging={symWheel.dragging} width={120} height={height} row={row} render={(it, c) => (c ? <><AssetIcon symbol={resolveSymbol(it.id)} size={16} /><span className="truncate">{it.label}</span></> : <span className="truncate">{it.label}</span>)} />
       </button>
       <button ref={tfRef} type="button" {...tfWheel.bind} onClick={() => setTfOpen((o) => !o)} className="shrink-0 rounded-xl px-2 text-accent active:bg-hover" data-testid="mobile-tf" title="Toque para escolher; carregue e arraste para cima/baixo para girar os intervalos">
-        <WheelFace items={tfWheel.items} pos={tfWheel.pos} dragging={tfWheel.dragging} width={52} render={(it) => it.hint ?? it.label} />
+        <WheelFace items={tfWheel.items} pos={tfWheel.pos} dragging={tfWheel.dragging} width={52} height={height} row={row} render={(it) => it.hint ?? it.label} />
       </button>
       <Popover anchor={tfRef} open={tfOpen} onClose={() => setTfOpen(false)} placement="top-start" className="p-2">
         <div className="grid w-[260px] grid-cols-4 gap-1">
@@ -88,6 +83,22 @@ export function MobileStrip() {
           ))}
         </div>
       </Popover>
+    </>
+  );
+}
+
+export function MobileStrip() {
+  const active = useWorkspace((s) => s.active);
+  const cfg = useWorkspace((s) => s.charts[s.active]);
+  const replayActive = useReplay((s) => s.active);
+  const undo = useDrawings((s) => s.undo);
+  const autoFit = useSettings((s) => s.autoFit);
+  const setSettings = useSettings((s) => s.set);
+  if (!cfg) return null;
+
+  return (
+    <div className="flex h-[62px] shrink-0 items-center gap-1 border-t border-line bg-panel px-1.5 no-select sm:hidden" data-testid="mobile-strip">
+      <WheelPair />
       <span className="flex-1" />
       <button type="button" aria-label="Indicadores" onClick={() => useUi.getState().set({ indicators: true })} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
         <FunctionSquare size={19} />
