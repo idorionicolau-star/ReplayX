@@ -40,6 +40,8 @@ import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { Toaster } from '@/components/ui/Toast';
 import { cn } from '@/components/ui/cn';
 import type { ToolId } from '@/chart/drawings/types';
+import { useCompact } from '@/lib/compact';
+import { CompactMenu } from './CompactMenu';
 
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
@@ -160,7 +162,15 @@ export function Terminal() {
     () => window.matchMedia('(max-width: 639px)').matches,
     () => false,
   );
-  const hideBottom = useSettings((s) => s.hideBottomBars) && narrow;
+  const compact = useCompact();
+  const compactBottom = useUi((s) => s.compactBottom);
+  const hideSetting = useSettings((s) => s.hideBottomBars);
+  const hideBottom = compact ? !compactBottom : hideSetting && narrow;
+
+  // telemóvel em paisagem: começa com o gráfico livre (os painéis abrem pelo menu ☰)
+  useEffect(() => {
+    if (compact) useWorkspace.getState().setRightTab(null);
+  }, [compact]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -207,10 +217,10 @@ export function Terminal() {
     <div className="flex h-full flex-col bg-bg text-text">
       <TopBar />
       <div className="relative flex min-h-0 flex-1">
-        <DrawingToolbar className="hidden sm:flex" />
+        {!compact && <DrawingToolbar className="hidden sm:flex" />}
         {/* a barra de ferramentas fica aberta enquanto se escolhem opções; fecha com ☰ ou ao escolher uma ferramenta */}
         {mobileTools && (
-          <div className="absolute inset-y-0 left-0 z-40 flex sm:hidden" data-testid="mobile-tools">
+          <div className={cn('absolute inset-y-0 left-0 z-40 flex', !compact && 'sm:hidden')} data-testid="mobile-tools">
             <DrawingToolbar className="flex shadow-pop" />
           </div>
         )}
@@ -220,16 +230,17 @@ export function Terminal() {
             <FavoritesBar />
             <ReplayBar />
             <TfQuickInput />
-            <HideBottomButton hidden={hideBottom} />
+            {!compact && <HideBottomButton hidden={hideBottom} />}
           </div>
           {!hideBottom && <ChartBottomBar />}
           {!hideBottom && <BottomPanel />}
         </div>
         <RightPanel />
-        <RightIconBar />
+        {!compact && <RightIconBar />}
       </div>
-      <MobileStrip />
-      <MobileNav />
+      {!compact && <MobileStrip />}
+      {!compact && <MobileNav />}
+      <CompactMenu />
       <SymbolSearch />
       <IndicatorsDialog />
       <IndicatorSettings />

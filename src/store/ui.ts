@@ -20,6 +20,10 @@ interface UiState {
   contextMenu: ContextMenuState | null;
   tfInput: string | null;
   mobileTools: boolean;
+  /** Menu ☰ do telemóvel em paisagem. */
+  menu: boolean;
+  /** Mostrar as barras de baixo (períodos e painéis) no telemóvel em paisagem. */
+  compactBottom: boolean;
   /** Criar alerta (preço, desenho ou indicador) ou editar um existente (`editId`). */
   alertDraft: { symbolId: string; price?: number; drawingId?: string; indicatorUid?: string; editId?: string } | null;
   set: (patch: Partial<UiState>) => void;
@@ -37,6 +41,8 @@ export const useUi = create<UiState>((set) => ({
   contextMenu: null,
   tfInput: null,
   mobileTools: false,
+  menu: false,
+  compactBottom: false,
   alertDraft: null,
   set: (patch) => set(patch),
   openSymbolSearch: (initial = '', chart, mode = 'set') =>
