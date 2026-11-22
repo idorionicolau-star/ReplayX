@@ -136,3 +136,22 @@ test.describe('íman de preço (Alt / automático)', () => {
     expect(r.nearest).toBe(true);
   });
 });
+
+test('íman: antes do 1.º clique, Ctrl mostra já onde prende (e a marca sai ao largar a tecla, sem mexer o rato)', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { magnet: 'off' }, version: 3 })));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=fav-tool-hline]');
+  const canvas = (await page.locator('canvas').first().boundingBox())!;
+  const mark = () => page.evaluate(() => !![...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0].snapMark);
+  await page.mouse.move(canvas.x + 300, canvas.y + 200);
+  await page.waitForTimeout(150);
+  expect(await mark()).toBe(false); // íman desligado: nada
+  await page.keyboard.down('Control');
+  await page.waitForTimeout(200);
+  expect(await mark()).toBe(true); // Ctrl: já mostra o ponto onde prende, sem mexer o rato
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(200);
+  expect(await mark()).toBe(false);
+});

@@ -248,8 +248,13 @@ test('faixa de baixo: roda de símbolo e intervalo com arrasto; toque abre a pes
   // toque simples abre a pesquisa
   await page.waitForTimeout(600);
   await page.getByTestId('mobile-symbol').tap();
-  await expect(page.getByPlaceholder(/Símbolo, nome ou mercado/)).toBeVisible();
-  await page.keyboard.press('Escape');
+  const search = page.getByPlaceholder(/Símbolo, nome ou mercado/);
+  await expect(search).toBeVisible();
+  // com a máquina carregada o Escape pode chegar antes de a caixa o ouvir: repete até fechar
+  await expect(async () => {
+    await page.keyboard.press('Escape');
+    await expect(search).toBeHidden({ timeout: 1500 });
+  }).toPass({ timeout: 15000 });
   await page.waitForTimeout(500);
   // toque no intervalo abre a grelha de intervalos
   await page.getByTestId('mobile-tf').tap();

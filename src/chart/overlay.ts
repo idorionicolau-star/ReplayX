@@ -213,6 +213,18 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
 
       const snap = host.snapMark();
       if (snap) {
+        // linhas-guia (cruz) no ponto onde o íman prende, para o localizar mesmo com o cursor longe
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,152,0,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(Math.round(snap.x) + 0.5, 0);
+        ctx.lineTo(Math.round(snap.x) + 0.5, mediaSize.height);
+        ctx.moveTo(0, Math.round(snap.y) + 0.5);
+        ctx.lineTo(mediaSize.width, Math.round(snap.y) + 0.5);
+        ctx.stroke();
+        ctx.restore();
         ctx.save();
         ctx.beginPath();
         // só o anel, sem fundo: o ponto onde o íman prendeu vê-se por dentro
