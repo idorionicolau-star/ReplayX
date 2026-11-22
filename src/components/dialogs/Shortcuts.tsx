@@ -19,6 +19,7 @@ const ROWS: [string, string][] = [
   ['Ctrl + C / Ctrl + V', 'Copiar / colar o desenho selecionado'],
   ['Shift (a desenhar)', 'Alinhar a linha de 15 em 15°'],
   ['Ctrl (a desenhar, premido)', 'Inverte o íman: com o íman desligado liga-o, com ele ligado desliga-o'],
+  ['Alt (a desenhar, premido)', 'Íman de preço: prende ao pavio mais próximo na vertical, mesmo sem velas ao lado'],
   ['Delete', 'Apagar desenho selecionado'],
   ['Esc', 'Cancelar desenho / sair da seleção'],
   ['Alt + R', 'Repor vista do gráfico'],

@@ -95,6 +95,7 @@ export function ChartPane({ index }: { index: number }) {
       setTool: (t) => useDrawings.getState().setTool(t),
       magnet: () => useSettings.getState().magnet,
       angleSnap: () => useSettings.getState().angleSnap,
+      priceSnap: () => useSettings.getState().priceSnap,
       loupe: () => useSettings.getState().loupe,
       loupePos: () => useSettings.getState().loupePos,
       stayInDrawing: () => useSettings.getState().stayInDrawingMode,

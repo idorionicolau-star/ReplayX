@@ -76,6 +76,9 @@ export function SettingsDialog() {
           <Row label="Escala de preços automática (ajusta-se aos dados à vista)">
             <Switch checked={s.autoFit} onChange={(v) => s.set({ autoFit: v })} />
           </Row>
+          <Row label="Íman de preço automático (linhas horizontais, Fibonacci e caixas prendem ao pavio mais próximo; Alt faz o mesmo em qualquer ferramenta)">
+            <Switch checked={s.priceSnap} onChange={(v) => s.set({ priceSnap: v })} />
+          </Row>
           <Row label="Ir para uma data no gráfico">
             <Button
               size="sm"

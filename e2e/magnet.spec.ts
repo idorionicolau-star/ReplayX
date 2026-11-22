@@ -86,3 +86,53 @@ test('íman: a ponta do desenho fica exatamente onde o anel laranja prendeu (mes
   expect(Math.abs(r.px! - r.mark!.x)).toBeLessThan(0.6);
   expect(Math.abs(r.py! - r.mark!.y)).toBeLessThan(0.6);
 });
+
+test.describe('íman de preço (Alt / automático)', () => {
+  async function dropHline(page: import('@playwright/test').Page, alt: boolean, settings: Record<string, unknown>) {
+    await page.addInitScript((st) => localStorage.setItem('rx-settings', JSON.stringify({ state: st, version: 3 })), { magnet: 'off', ...settings });
+    await enterAsGuest(page);
+    await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+    await waitBars(page, 300);
+    await page.click('[data-testid=fav-tool-hline]');
+    const t = await page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
+      const i = c.bars.length - 40;
+      const hi = c.bars[i].high;
+      // cursor 7 px abaixo do máximo e muito à direita da vela (espaço vazio)
+      return { hi, x: c.timeToX(c.bars[c.bars.length - 1].time) + 60, y: c.priceToY(hi) + 7 };
+    });
+    const canvas = (await page.locator('canvas').first().boundingBox())!;
+    if (alt) await page.keyboard.down('Alt');
+    await page.mouse.move(canvas.x + t.x, canvas.y + t.y);
+    await page.mouse.click(canvas.x + t.x, canvas.y + t.y);
+    await page.waitForTimeout(250);
+    if (alt) await page.keyboard.up('Alt');
+    const drawn = await page.evaluate((cursorY) => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, any> }).__rxCharts.values()][0];
+      const price = c.drawings[c.drawings.length - 1].points[0].price as number;
+      const r = c.chart.timeScale().getVisibleLogicalRange();
+      const vis = c.bars.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1);
+      const wicks: number[] = vis.flatMap((b: { high: number; low: number }) => [b.high, b.low]);
+      const isWick = wicks.some((w) => Math.abs(w - price) < 1e-9);
+      // é o pavio mais próximo do cursor na vertical (nenhum outro fica mais perto)
+      const dist = (p: number) => Math.abs(c.priceToY(p) - cursorY);
+      const nearest = wicks.every((w) => dist(price) <= dist(w) + 1e-6);
+      return { price, isWick, nearest };
+    }, t.y);
+    return { hi: t.hi, ...drawn };
+  }
+  test('sem Alt e sem automático: a linha fica onde clicas', async ({ page }) => {
+    const r = await dropHline(page, false, {});
+    expect(r.isWick).toBe(false);
+  });
+  test('com Alt: a linha horizontal prende ao pavio, mesmo no espaço vazio à direita', async ({ page }) => {
+    const r = await dropHline(page, true, {});
+    expect(r.isWick).toBe(true);
+    expect(r.nearest).toBe(true);
+  });
+  test('automático ligado: prende sem tecla (ferramenta de preço)', async ({ page }) => {
+    const r = await dropHline(page, false, { priceSnap: true });
+    expect(r.isWick).toBe(true);
+    expect(r.nearest).toBe(true);
+  });
+});

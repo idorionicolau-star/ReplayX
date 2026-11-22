@@ -14,6 +14,7 @@ import {
   ZoomIn,
   PanelTop,
 } from 'lucide-react';
+import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
 import { AngleIcon } from '@/components/ui/AngleIcon';
 import { MAGNET_LEVELS, magnetTitle } from '@/core/magnet';
 import { useDrawings } from '@/store/drawings';
@@ -146,6 +147,7 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const stay = useSettings((s) => s.stayInDrawingMode);
   const favs = useSettings((s) => s.favoriteTools);
   const angleSnap = useSettings((s) => s.angleSnap);
+  const priceSnap = useSettings((s) => s.priceSnap);
   const loupe = useSettings((s) => s.loupe);
   const favBar = useSettings((s) => s.favoritesBar);
   const setSettings = useSettings((s) => s.set);
@@ -231,6 +233,16 @@ export function DrawingToolbar({ className }: { className?: string }) {
         data-testid="angle-snap"
       >
         <AngleIcon size={21} className="pointer-coarse:size-[25px]" />
+      </button>
+      <button
+        type="button"
+        title={priceSnap ? 'Íman de preço: ligado (prende ao pavio mais próximo na vertical)' : 'Íman de preço (também com Alt)'}
+        aria-label="Prender ao pavio na vertical"
+        onClick={() => setSettings({ priceSnap: !priceSnap })}
+        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', priceSnap ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        data-testid="price-snap"
+      >
+        <PriceSnapIcon size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <button
         type="button"

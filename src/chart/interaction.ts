@@ -6,6 +6,7 @@ import { Loupe, type LoupePlace } from './loupe';
 import { EVENT_BOTTOM, type TradeRegion } from './overlay';
 import { focus } from './bus';
 import { uid } from '@/lib/uid';
+import { nearestWick } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
 
 export type TradeAction =
@@ -14,12 +15,17 @@ export type TradeAction =
   | { type: 'modify-position'; id: string; sl?: number | null; tp?: number | null }
   | { type: 'modify-order'; id: string; price?: number; sl?: number | null; tp?: number | null };
 
+/** Ferramentas de preço: com o íman de preço automático ligado, prendem ao pavio mais próximo na vertical. */
+const PRICE_TOOLS = new Set<ToolId>(['hline', 'hray', 'crossline', 'fib', 'fibext', 'rect', 'pricerange', 'long', 'short', 'vpfixed']);
+
 export interface InteractionCallbacks {
   tool(): ToolId;
   setTool(t: ToolId): void;
   magnet(): Magnet;
   /** Encaixar linhas de 15 em 15° (também com Shift). */
   angleSnap(): boolean;
+  /** Íman de preço automático (Alt liga-o enquanto está premido). */
+  priceSnap(): boolean;
   /** Lupa ao desenhar com o dedo. */
   loupe(): boolean;
   /** Onde fica a lupa. */
@@ -63,7 +69,7 @@ export class Interaction {
   private disposed = false;
   /** O último toque foi com o dedo (tolerâncias maiores, lupa). */
   private touch = false;
-  private mods = { shift: false, ctrl: false };
+  private mods = { shift: false, ctrl: false, alt: false };
   private readonly loupe: Loupe;
 
   constructor(
@@ -127,7 +133,7 @@ export class Interaction {
   }
 
   /** Ponto (tempo, preço) com encaixe nas barras e íman opcional. Ctrl inverte o íman (como no TradingView). */
-  private toPoint(x: number, y: number, snapTime = true): PricePoint | null {
+  private toPoint(x: number, y: number, snapTime = true, tool: ToolId = this.cb.tool()): PricePoint | null {
     const l = this.c.xToLogical(x);
     let price = this.c.yToPrice(y);
     this.c.snapMark = null;
@@ -198,6 +204,22 @@ export class Interaction {
         }
       }
     }
+    // íman de preço: prende ao pavio (máximo/mínimo) mais próximo na vertical, em qualquer vela visível
+    // (também no espaço vazio à direita). Alt, em qualquer ferramenta; automático, nas ferramentas de preço.
+    if (this.mods.alt || (this.cb.priceSnap() && PRICE_TOOLS.has(tool))) {
+      const range = this.c.chart.timeScale().getVisibleLogicalRange();
+      const raw = this.c.yToPrice(y);
+      if (range && raw !== null) {
+        const wick = nearestWick(this.c.bars, range.from, range.to, y, (p) => this.c.priceToY(p), this.touch ? 60 : 40);
+        if (wick !== null) {
+          price = wick;
+          time = this.c.logicalToTime(li) ?? time;
+          const mx = this.c.timeToX(time);
+          const my = this.c.priceToY(price);
+          if (mx !== null && my !== null) this.c.snapMark = { x: mx, y: my };
+        }
+      }
+    }
     return { time, price };
   }
 
@@ -249,7 +271,7 @@ export class Interaction {
 
   /** Ponto para o extremo que está a ser posicionado numa linha (com encaixe de ângulo se ativo). */
   private linePoint(type: ToolId, anchor: PricePoint | undefined, x: number, y: number, screen: { x: number; y: number }): PricePoint | null {
-    const pt = anchor && LINE_TOOLS.has(type) && this.snapAngle() ? this.anglePoint(anchor, x, y) : this.toPoint(x, y);
+    const pt = anchor && LINE_TOOLS.has(type) && this.snapAngle() ? this.anglePoint(anchor, x, y) : this.toPoint(x, y, true, type);
     if (pt && anchor && LINE_TOOLS.has(type)) this.showAngle(anchor, pt, screen.x, screen.y);
     return pt;
   }
@@ -258,8 +280,8 @@ export class Interaction {
     if (this.touch && this.cb.loupe()) this.loupe.show(e.clientX, e.clientY);
   }
 
-  private trackMods(e: { shiftKey: boolean; ctrlKey: boolean; metaKey?: boolean }) {
-    this.mods = { shift: e.shiftKey, ctrl: e.ctrlKey || !!e.metaKey };
+  private trackMods(e: { shiftKey: boolean; ctrlKey: boolean; metaKey?: boolean; altKey?: boolean }) {
+    this.mods = { shift: e.shiftKey, ctrl: e.ctrlKey || !!e.metaKey, alt: !!e.altKey };
   }
 
   private setScroll(enabled: boolean) {
@@ -793,7 +815,7 @@ export class Interaction {
       const def0 = toolDef(m.orig.type);
       // extremo de uma linha simples: o outro extremo é a âncora do ângulo
       const anchor = m.handle !== null && m.handle < 2 && !def0?.drag && m.orig.points.length >= 2 && LINE_TOOLS.has(m.orig.type) ? m.orig.points[1 - m.handle] : undefined;
-      const pt = anchor ? this.linePoint(m.orig.type, anchor, p.x, p.y, p) : this.toPoint(p.x, p.y, m.handle !== null);
+      const pt = anchor ? this.linePoint(m.orig.type, anchor, p.x, p.y, p) : this.toPoint(p.x, p.y, m.handle !== null, m.orig.type);
       if (!pt) return;
       if (!m.moved) {
         m.moved = true;
