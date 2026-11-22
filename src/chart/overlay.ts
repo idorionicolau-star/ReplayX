@@ -59,6 +59,10 @@ export interface OverlayHost {
   snapMark(): { x: number; y: number } | null;
   /** Pivôs a que o íman de preço pode prender (pontos discretos). */
   pivotDots(): { time: number; price: number }[] | null;
+  /** Painel onde estão o anel do íman, os pontos dos pivôs e a mira (uid do indicador; null = principal). */
+  markPane(): string | null;
+  /** Viewport (escala de preço) de um painel de indicador. */
+  paneViewport(uid: string): Viewport | null;
   /** Cursor de pontaria (dedo). */
   aimMark(): { x: number; y: number } | null;
   /** Ecrã tátil: pegas maiores. */
@@ -101,6 +105,113 @@ export const EVENT_BOTTOM = 12;
 
 const FONT = '11px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif';
 
+/** Desenhos (com o pré-visual e as pegas do selecionado) de um painel: `uid` null = painel principal, senão o uid do indicador. */
+function drawDrawings(ctx: CanvasRenderingContext2D, host: OverlayHost, view: Viewport, uid: string | null) {
+  const inPane = (d: Drawing) => (d.pane ?? null) === uid;
+  const selected = host.selectedId();
+  const hovered = host.hoveredId();
+  for (const d of host.drawings()) {
+    if (d.hidden || !inPane(d)) continue;
+    const def = toolDef(d.type);
+    if (!def) continue;
+    ctx.save();
+    try {
+      def.render(ctx, resolveAuto(d, host.dark(), host.background()), view, d.id === selected || d.id === hovered);
+    } catch {
+      /* desenho inválido: ignora */
+    }
+    ctx.restore();
+  }
+  const pv = host.preview();
+  if (pv && inPane(pv)) {
+    const def = toolDef(pv.type);
+    ctx.save();
+    try {
+      def?.render(ctx, resolveAuto(pv, host.dark(), host.background()), view, true);
+    } catch {
+      /* ignora */
+    }
+    ctx.restore();
+  }
+  const sel = host.drawings().find((d) => d.id === selected) ?? (pv ?? null);
+  if (sel && inPane(sel)) {
+    const def = toolDef(sel.type);
+    const hs = def?.handles(sel, view) ?? [];
+    ctx.save();
+    for (const h of hs) {
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, host.coarse() ? 7.5 : 5, 0, Math.PI * 2);
+      // fundo quase transparente: vê-se o ponto exato por baixo da pega
+      ctx.fillStyle = host.dark() ? 'rgba(19,23,34,0.15)' : 'rgba(255,255,255,0.15)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = autoColor(host.dark());
+      ctx.setLineDash([]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+}
+
+/** Pontos dos pivôs, anel e linhas-guia do íman e cursor de pontaria, só no painel onde está o rato/dedo. */
+function drawMarks(ctx: CanvasRenderingContext2D, host: OverlayHost, view: Viewport, uid: string | null, mediaSize: { width: number; height: number }) {
+  if (host.markPane() !== uid) return;
+  const aim = host.aimMark();
+  if (aim) {
+    ctx.save();
+    ctx.strokeStyle = autoColor(host.dark());
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(aim.x, aim.y, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const dots = host.pivotDots();
+  if (dots && dots.length) {
+    // pontos discretos nos pivôs: onde o íman de preço pode prender
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,152,0,0.85)';
+    ctx.strokeStyle = host.dark() ? 'rgba(19,23,34,0.9)' : 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1;
+    for (const d of dots) {
+      const x = view.timeToX(d.time);
+      const y = view.priceToY(d.price);
+      if (x === null || y === null) continue;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  const snap = host.snapMark();
+  if (snap) {
+    // linhas-guia (cruz) no ponto onde o íman prende, para o localizar mesmo com o cursor longe
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,152,0,0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(Math.round(snap.x) + 0.5, 0);
+    ctx.lineTo(Math.round(snap.x) + 0.5, mediaSize.height);
+    ctx.moveTo(0, Math.round(snap.y) + 0.5);
+    ctx.lineTo(mediaSize.width, Math.round(snap.y) + 0.5);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    // só o anel, sem fundo: o ponto onde o íman prendeu vê-se por dentro
+    ctx.arc(snap.x, snap.y, 8, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+}
+
 class OverlayRenderer implements IPrimitivePaneRenderer {
   constructor(private readonly owner: OverlayPrimitive) {}
 
@@ -115,49 +226,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       ctx.rect(0, 0, mediaSize.width, mediaSize.height);
       ctx.clip();
 
-      const selected = host.selectedId();
-      const hovered = host.hoveredId();
-      for (const d of host.drawings()) {
-        if (d.hidden) continue;
-        const def = toolDef(d.type);
-        if (!def) continue;
-        ctx.save();
-        try {
-          def.render(ctx, resolveAuto(d, host.dark(), host.background()), view, d.id === selected || d.id === hovered);
-        } catch {
-          /* desenho inválido: ignora */
-        }
-        ctx.restore();
-      }
-      const pv = host.preview();
-      if (pv) {
-        const def = toolDef(pv.type);
-        ctx.save();
-        try {
-          def?.render(ctx, resolveAuto(pv, host.dark(), host.background()), view, true);
-        } catch {
-          /* ignora */
-        }
-        ctx.restore();
-      }
-      const sel = host.drawings().find((d) => d.id === selected) ?? (pv ?? null);
-      if (sel) {
-        const def = toolDef(sel.type);
-        const hs = def?.handles(sel, view) ?? [];
-        ctx.save();
-        for (const h of hs) {
-          ctx.beginPath();
-          ctx.arc(h.x, h.y, host.coarse() ? 7.5 : 5, 0, Math.PI * 2);
-          // fundo quase transparente: vê-se o ponto exato por baixo da pega
-          ctx.fillStyle = host.dark() ? 'rgba(19,23,34,0.15)' : 'rgba(255,255,255,0.15)';
-          ctx.fill();
-          ctx.lineWidth = 1.5;
-          ctx.strokeStyle = autoColor(host.dark());
-          ctx.setLineDash([]);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
+      drawDrawings(ctx, host, view, null);
 
       for (const a of host.alerts()) {
         const y = view.priceToY(a.price);
@@ -202,58 +271,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
         ctx.restore();
       }
 
-      const aim = host.aimMark();
-      if (aim) {
-        ctx.save();
-        ctx.strokeStyle = autoColor(host.dark());
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(aim.x, aim.y, 9, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      const dots = host.pivotDots();
-      if (dots && dots.length) {
-        // pontos discretos nos pivôs: onde o íman de preço pode prender
-        ctx.save();
-        ctx.fillStyle = 'rgba(255,152,0,0.85)';
-        ctx.strokeStyle = host.dark() ? 'rgba(19,23,34,0.9)' : 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 1;
-        for (const d of dots) {
-          const x = view.timeToX(d.time);
-          const y = view.priceToY(d.price);
-          if (x === null || y === null) continue;
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-      const snap = host.snapMark();
-      if (snap) {
-        // linhas-guia (cruz) no ponto onde o íman prende, para o localizar mesmo com o cursor longe
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,152,0,0.55)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(Math.round(snap.x) + 0.5, 0);
-        ctx.lineTo(Math.round(snap.x) + 0.5, mediaSize.height);
-        ctx.moveTo(0, Math.round(snap.y) + 0.5);
-        ctx.lineTo(mediaSize.width, Math.round(snap.y) + 0.5);
-        ctx.stroke();
-        ctx.restore();
-        ctx.save();
-        ctx.beginPath();
-        // só o anel, sem fundo: o ponto onde o íman prendeu vê-se por dentro
-        ctx.arc(snap.x, snap.y, 8, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-      }
+      drawMarks(ctx, host, view, null, mediaSize);
 
       const hint = host.hint();
       if (hint) {
@@ -418,12 +436,12 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
       if (y !== null) out.push(new AxisLabel(y, vp.fmtPrice(price), bg));
     };
     for (const d of this.host.drawings()) {
-      if (d.hidden) continue;
+      if (d.hidden || d.pane) continue;
       if ((d.type === 'hline' || d.type === 'hray') && d.style.showLabel !== false) add(d.points[0].price, shownColor(d.style.color, this.host.dark(), this.host.background()));
     }
     const selId = this.host.selectedId();
     const sel = this.host.drawings().find((d) => d.id === selId) ?? this.host.preview();
-    if (sel) toolDef(sel.type)?.axis?.(sel).prices.forEach((p) => add(p, '#363a45'));
+    if (sel && !sel.pane) toolDef(sel.type)?.axis?.(sel).prices.forEach((p) => add(p, '#363a45'));
     const t = this.host.trading();
     if (t) {
       for (const p of t.positions) {
@@ -467,5 +485,51 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
   fmtTime: ((t: number) => string) | null = null;
   private owner_fmtTime(t: number) {
     return this.fmtTime?.(t);
+  }
+}
+
+/** Desenhos dentro do painel de um indicador (escala de preço própria): vai ligado a uma das séries desse painel. */
+export class PaneOverlayPrimitive implements ISeriesPrimitive<Time> {
+  private requestUpdate: (() => void) | null = null;
+
+  constructor(
+    private readonly host: OverlayHost,
+    readonly uid: string,
+  ) {}
+
+  attached(param: SeriesAttachedParameter<Time>) {
+    this.requestUpdate = param.requestUpdate;
+  }
+
+  detached() {
+    this.requestUpdate = null;
+  }
+
+  update() {
+    this.requestUpdate?.();
+  }
+
+  paneViews(): IPrimitivePaneView[] {
+    return [
+      {
+        zOrder: () => 'top',
+        renderer: (): IPrimitivePaneRenderer => ({
+          draw: (target: CanvasRenderingTarget2D) => {
+            const vp = this.host.paneViewport(this.uid);
+            if (!vp) return;
+            target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
+              const view: Viewport = { ...vp, width: mediaSize.width, height: mediaSize.height };
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(0, 0, mediaSize.width, mediaSize.height);
+              ctx.clip();
+              drawDrawings(ctx, this.host, view, this.uid);
+              drawMarks(ctx, this.host, view, this.uid, mediaSize);
+              ctx.restore();
+            });
+          },
+        }),
+      },
+    ];
   }
 }

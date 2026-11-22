@@ -107,7 +107,7 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
         </>
       )}
       {isPosition && d.data && <PositionControls symbolId={symbolId} d={d} />}
-      {(LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
+      {!d.pane && (LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
         <IconButton size="sm" label="Adicionar alerta neste desenho" onClick={() => useUi.getState().set({ alertDraft: { symbolId, drawingId: d.id } })}>
           <Bell size={15} />
         </IconButton>

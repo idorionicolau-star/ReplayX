@@ -55,7 +55,7 @@ export function ChartContextMenu() {
         {d ? (
           <>
             <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))} />
-            {(LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
+            {!d.pane && (LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
               <MenuItem icon={<Bell size={15} />} label="Adicionar alerta neste desenho" onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, drawingId: d.id } }))} />
             )}
             <MenuItem icon={<CopyPlus size={15} />} label="Clonar" onClick={cloneDrawing} />

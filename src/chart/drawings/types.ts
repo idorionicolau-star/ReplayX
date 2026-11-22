@@ -97,6 +97,8 @@ export interface Drawing {
   points: PricePoint[];
   style: DrawingStyle;
   data?: PositionData;
+  /** Painel do indicador onde o desenho vive (uid do indicador); sem valor, é no painel principal. */
+  pane?: string;
   locked?: boolean;
   hidden?: boolean;
   createdAt: number;
