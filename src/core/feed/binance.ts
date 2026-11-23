@@ -153,6 +153,14 @@ export const binanceProvider: Provider = {
     return () => s.close();
   },
 
+  async quoteOnce(symbol) {
+    const r = await rest<{ lastPrice?: string; openPrice?: string }>(`/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol.ticker)}&type=MINI`);
+    const price = Number(r.lastPrice);
+    if (!Number.isFinite(price)) throw new ProviderError('Sem cotação', 'binance');
+    const open = Number(r.openPrice);
+    return { price, time: Math.floor(Date.now() / 1000), changePct: open > 0 ? ((price - open) / open) * 100 : undefined };
+  },
+
   subscribeQuote(symbol, onQuote: (q: Quote) => void) {
     const s = new Stream(`${symbol.ticker.toLowerCase()}@miniTicker`, (msg) => {
       const m = msg as { c?: string; o?: string; E?: number };

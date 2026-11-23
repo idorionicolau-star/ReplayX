@@ -263,6 +263,7 @@ export class ChartController {
     // se a escala de preços ficou manual (arrastar o eixo ou o gráfico na vertical), a escala automática desliga-se
     container.addEventListener('pointerup', this.onManualCheck);
     container.addEventListener('pointercancel', this.onManualCheck);
+    document.addEventListener('visibilitychange', this.onVisibility);
     // o contador da vela anda de segundo a segundo
     this.countdownTimer = setInterval(() => {
       if (this.theme.appearance.countdown && this.cursor === null && this.bars.length) this.overlay.update();
@@ -830,6 +831,7 @@ export class ChartController {
       this.chart.timeScale().scrollToRealTime();
       this.setStatus(res.bars.length ? { state: 'ready' } : { state: 'error', message: 'Sem dados para este símbolo/timeframe.' });
       this.liveUnsub = dataFeed().subscribe(sym, tf, (bar) => this.onLiveBar(bar, gen));
+      this.livePaused = false;
     } catch (e) {
       if (gen !== this.gen) return;
       this.setStatus({ state: 'error', message: (e as Error).message || 'Falha ao carregar dados' });
@@ -839,6 +841,54 @@ export class ChartController {
   private stopLive() {
     this.liveUnsub?.();
     this.liveUnsub = null;
+  }
+
+  // ---- segundo plano: o tempo real pára e, ao voltar, só se pedem as velas que faltam ----
+
+  /** O tempo real está parado porque a app ficou em segundo plano. */
+  livePaused = false;
+  /** Segundos em segundo plano antes de parar o tempo real (30 s). */
+  pauseAfterMs = 30_000;
+  private pauseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private onVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      if (this.pauseTimer || this.livePaused) return;
+      this.pauseTimer = setTimeout(() => {
+        this.pauseTimer = null;
+        void this.pauseLive();
+      }, this.pauseAfterMs);
+    } else {
+      if (this.pauseTimer) clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
+      if (this.livePaused) void this.resumeLive();
+    }
+  };
+
+  private pauseLive() {
+    if (this.destroyed || this.cursor !== null || !this.liveUnsub) return;
+    this.livePaused = true;
+    this.stopLive();
+  }
+
+  private async resumeLive() {
+    this.livePaused = false;
+    if (this.destroyed || this.cursor !== null || !this.symbol || this.liveUnsub) return;
+    const gen = this.gen;
+    const sym = this.symbol;
+    const tf = this.tf;
+    const last = this.bars[this.bars.length - 1];
+    try {
+      // só as velas que ficaram em falta desde a última (o resto já está em memória)
+      if (last) {
+        const missed = await dataFeed().range(sym, tf, last.time, nowSec() + tfSeconds(tf));
+        if (gen === this.gen && !this.destroyed) for (const b of missed) this.onLiveBar(b, gen);
+      }
+    } catch {
+      /* sem rede: retoma o tempo real na mesma */
+    }
+    if (gen !== this.gen || this.destroyed || this.cursor !== null || this.liveUnsub) return;
+    this.liveUnsub = dataFeed().subscribe(sym, tf, (bar) => this.onLiveBar(bar, gen));
   }
 
   /** Volta ao modo em tempo real. */
@@ -1812,6 +1862,8 @@ export class ChartController {
     this.container.removeEventListener('pointerup', this.onPaneDrag);
     this.container.removeEventListener('pointerup', this.onManualCheck);
     this.container.removeEventListener('pointercancel', this.onManualCheck);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    if (this.pauseTimer) clearTimeout(this.pauseTimer);
     if (this.paneRaf) cancelAnimationFrame(this.paneRaf);
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     try {

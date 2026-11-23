@@ -62,6 +62,8 @@ export interface SettingsState {
   pivotSensitivity: PivotSensitivity;
   /** Fora do replay, o íman de preço pode prender aos pivôs à frente do cursor. */
   pivotFuture: boolean;
+  /** Lista de observação: segundos entre atualizações (pedido único), ou 0 = tempo real (subscrição contínua, gasta mais dados). */
+  watchRefresh: 0 | 5 | 15 | 60;
   /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
   floatNearMouse: boolean;
   /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
@@ -129,6 +131,7 @@ export const useSettings = create<SettingsState>()(
       angleSnap: false,
       pivotSensitivity: 'normal',
       pivotFuture: true,
+      watchRefresh: 5,
       floatNearMouse: true,
       floatOnSelect: false,
       backtestChip: true,

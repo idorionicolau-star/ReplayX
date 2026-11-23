@@ -534,6 +534,24 @@ export function ticksToBars(times: (number | string)[], prices: (number | string
   return args.from === undefined ? bars.slice(-args.limit) : bars;
 }
 
+const dayOpenCache = new Map<string, { open: number; at: number }>();
+
+/** Abertura do dia (vela diária atual); pedida uma vez por hora por símbolo. */
+async function dayOpenFor(symbol: SymbolInfo): Promise<number | undefined> {
+  const c = dayOpenCache.get(symbol.ticker);
+  if (c && Date.now() - c.at < 3600_000) return c.open;
+  try {
+    const b = await fetchCandles(symbol, parseTf('1D'), { to: nowSec() + 86400, limit: 1 });
+    if (b.length) {
+      dayOpenCache.set(symbol.ticker, { open: b[b.length - 1].open, at: Date.now() });
+      return b[b.length - 1].open;
+    }
+  } catch {
+    /* sem abertura: a variação fica sem valor */
+  }
+  return c?.open;
+}
+
 export const derivProvider: Provider = {
   id: 'deriv',
   maxPerRequest: 4000,
@@ -562,6 +580,17 @@ export const derivProvider: Provider = {
       } else return; // tick antigo
       onBar({ ...cur });
     });
+  },
+
+  /** Cotação pontual: o último tick (um pedido de ~0,5 KB) e a variação desde a abertura do dia (guardada 1 h). */
+  async quoteOnce(symbol) {
+    const msg = await derivClient().send({ ticks_history: symbol.ticker, count: 1, end: 'latest', style: 'ticks' }, 15000);
+    const h = msg.history as { times?: (number | string)[]; prices?: (number | string)[] } | undefined;
+    const price = Number(h?.prices?.[h.prices.length - 1]);
+    const time = Number(h?.times?.[h.times.length - 1]);
+    if (!Number.isFinite(price)) throw new ProviderError('Sem cotação', 'deriv');
+    const open = await dayOpenFor(symbol);
+    return { price, time: Number.isFinite(time) ? time : nowSec(), changePct: open ? ((price - open) / open) * 100 : undefined };
   },
 
   subscribeQuote(symbol, onQuote: (q: Quote) => void) {
