@@ -18,6 +18,7 @@ import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appe
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { shade } from '@/chart/drawings/auto';
 import { clearBarCache } from '@/core/feed/barCache';
+import { useSaverReason, type DataSaverSetting } from '@/lib/dataSaver';
 import { fmtBytes, meterTotal, resetDataMeter, useDataMeter } from '@/lib/dataMeter';
 import { PIVOT_SENSITIVITY, type PivotSensitivity } from '@/core/priceSnap';
 
@@ -82,6 +83,7 @@ export function SettingsDialog() {
           <Row label="Selo de resultados das caixas de posição (acerto e R do backtest; toque no selo para ver a curva)">
             <Switch checked={s.backtestChip} onChange={(v) => s.set({ backtestChip: v })} />
           </Row>
+          <DataSaverRow />
           <Row label="Lista de observação: atualização dos preços (mais lenta gasta bem menos dados)">
             <Select className="w-56" value={s.watchRefresh} onChange={(e) => s.set({ watchRefresh: Number(e.target.value) as 0 | 5 | 15 | 60 })} data-testid="watch-refresh">
               <option value={0}>Tempo real (gasta mais dados)</option>
@@ -269,6 +271,22 @@ export function SettingsDialog() {
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Interruptor da poupança de dados, com o estado atual (e porquê, se for automático). */
+function DataSaverRow() {
+  const s = useSettings();
+  const reason = useSaverReason();
+  const why = reason === 'manual' ? 'ligada' : reason === 'browser' ? 'ligada (o navegador pede poupança de dados)' : reason === 'slow' ? 'ligada (ligação lenta)' : 'desligada';
+  return (
+    <Row label={`Poupança de dados — agora ${why}. Quando ligada: lista de observação a cada 15 s ou mais, histórico automático dos indicadores até 5 000 velas sem perguntar, e o tempo real pára 10 s depois de a app ir para segundo plano`}>
+      <Select className="w-44" value={s.dataSaver} onChange={(e) => s.set({ dataSaver: e.target.value as DataSaverSetting })} data-testid="data-saver">
+        <option value="auto">Automática</option>
+        <option value="on">Ligada</option>
+        <option value="off">Desligada</option>
+      </Select>
+    </Row>
   );
 }
 

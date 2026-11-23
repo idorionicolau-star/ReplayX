@@ -5,6 +5,7 @@ import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import type { PivotSensitivity } from '@/core/priceSnap';
+import type { DataSaverSetting } from '@/lib/dataSaver';
 
 export type Theme = 'dark' | 'light';
 export type { Magnet } from '@/core/magnet';
@@ -66,6 +67,8 @@ export interface SettingsState {
   watchRefresh: 0 | 5 | 15 | 60;
   /** Histórico que os indicadores carregam sozinhos além de 5000 velas: perguntar, carregar sempre ou ficar pelas 5000. */
   autoHistory: 'ask' | 'always' | 'limit';
+  /** Poupança de dados: automática (ligada se o navegador a pede ou a ligação é lenta), ligada ou desligada. */
+  dataSaver: DataSaverSetting;
   /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
   floatNearMouse: boolean;
   /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
@@ -135,6 +138,7 @@ export const useSettings = create<SettingsState>()(
       pivotFuture: true,
       watchRefresh: 5,
       autoHistory: 'ask',
+      dataSaver: 'auto',
       floatNearMouse: true,
       floatOnSelect: false,
       backtestChip: true,

@@ -1,4 +1,5 @@
 'use client';
+import { isDataSaver, pauseDelayMs } from '@/lib/dataSaver';
 import { currenciesOf, loadEconEvents } from '@/lib/econEvents';
 import { ChartNav, FitButton, PriceAxisPlus, PriceSnapButton } from './ChartOverlays';
 import { parseTf } from '@/core/timeframes';
@@ -83,7 +84,9 @@ export function ChartPane({ index }: { index: number }) {
         onPanes: setPanes,
         onBars: () => setBarsVersion((v) => v + 1),
         onManualScale: () => useSettings.getState().set({ autoFit: false }),
-        getHistoryPolicy: () => useSettings.getState().autoHistory,
+        // com a poupança de dados o histórico automático pára nas 5 000 velas, sem perguntar
+        getHistoryPolicy: () => (isDataSaver() ? 'limit' : useSettings.getState().autoHistory),
+        getPauseAfterMs: () => pauseDelayMs(isDataSaver()),
         onHistoryAsk: setHistoryAsk,
         getCursor: () => {
           const r = useReplay.getState();

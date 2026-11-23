@@ -53,3 +53,17 @@ test('lista de observação: a atualização é escolhida nas Definições (por 
   await sel.selectOption('60');
   await expect.poll(st).toBe(60);
 });
+
+test('poupança de dados ligada: o tempo real pára 10 s depois de ir para segundo plano (e não antes)', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { dataSaver: 'on' }, version: 3 })));
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await hide(page, true);
+  await page.waitForTimeout(6000);
+  expect(await page.evaluate(`${ctl}.livePaused`)).toBe(false); // 6 s: ainda não
+  await expect.poll(() => page.evaluate(`${ctl}.livePaused`), { timeout: 10_000 }).toBe(true); // passou dos 10 s
+  await hide(page, false);
+  await expect.poll(() => page.evaluate(`${ctl}.livePaused`)).toBe(false);
+});

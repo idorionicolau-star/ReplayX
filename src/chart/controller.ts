@@ -103,6 +103,8 @@ export interface ChartCallbacks {
   onManualScale?(): void;
   /** Como carregar o passado que os indicadores pedem: perguntar antes de passar de 5000 velas, carregar sempre, ou parar nas 5000. */
   getHistoryPolicy?(): 'ask' | 'always' | 'limit';
+  /** Segundos em segundo plano antes de parar o tempo real. */
+  getPauseAfterMs?(): number;
   /** Os indicadores querem mais histórico do que o limite sem perguntar (null = já respondido). */
   onHistoryAsk?(ask: HistoryAsk | null): void;
 }
@@ -869,8 +871,8 @@ export class ChartController {
 
   /** O tempo real está parado porque a app ficou em segundo plano. */
   livePaused = false;
-  /** Segundos em segundo plano antes de parar o tempo real (30 s). */
-  pauseAfterMs = 30_000;
+  /** Tempo em segundo plano antes de parar o tempo real; sem valor, vale o da aplicação (30 s, ou 10 s com a poupança de dados). */
+  pauseAfterMs: number | undefined = undefined;
   private pauseTimer: ReturnType<typeof setTimeout> | null = null;
 
   private onVisibility = () => {
@@ -879,7 +881,7 @@ export class ChartController {
       this.pauseTimer = setTimeout(() => {
         this.pauseTimer = null;
         void this.pauseLive();
-      }, this.pauseAfterMs);
+      }, this.pauseAfterMs ?? this.cb.getPauseAfterMs?.() ?? 30_000);
     } else {
       if (this.pauseTimer) clearTimeout(this.pauseTimer);
       this.pauseTimer = null;

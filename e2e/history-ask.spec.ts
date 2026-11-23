@@ -59,3 +59,23 @@ test('"Carregar sempre": não pergunta e continua a carregar', async ({ page }) 
   await expect.poll(() => barsNow(page), { timeout: 40_000 }).toBeGreaterThan(3200);
   await expect(page.getByTestId('history-ask')).toHaveCount(0);
 });
+
+test('poupança de dados ligada: não pergunta e pára nas velas do limite, mesmo com "carregar sempre"', async ({ page }) => {
+  test.setTimeout(90_000);
+  await addTopo(page, { autoHistory: 'always', dataSaver: 'on' });
+  await page.waitForTimeout(6000);
+  await expect(page.getByTestId('history-ask')).toHaveCount(0);
+  expect(await barsNow(page)).toBeLessThanOrEqual(1600 + 1500);
+});
+
+test('poupança de dados: a opção escolhe-se nas Definições e mostra o estado', async ({ page }) => {
+  await enterAsGuest(page);
+  await page.getByRole('button', { name: 'Definições' }).first().click();
+  await page.getByRole('dialog').getByText('Geral', { exact: true }).click();
+  const sel = page.getByTestId('data-saver');
+  await expect(sel).toHaveValue('auto');
+  await sel.selectOption('on');
+  await expect(page.getByText(/Poupança de dados — agora ligada\./)).toBeVisible();
+  await sel.selectOption('off');
+  await expect(page.getByText(/Poupança de dados — agora desligada\./)).toBeVisible();
+});
