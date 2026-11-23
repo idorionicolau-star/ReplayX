@@ -110,6 +110,8 @@ test('Binance: carrega velas de BTCUSDT pela API REST', async ({ page }) => {
   await page.fill('[data-testid=symbol-search-input]', 'BTCUSDT');
   await page.click('[data-testid="symbol-row-BINANCE:BTCUSDT"]');
   await expect.poll(async () => (await chartInfo(page)).symbol).toBe('BINANCE:BTCUSDT');
+  // as velas do símbolo anterior ficam à vista até as do novo chegarem: espera pelas do BTC
+  await expect.poll(async () => (await chartInfo(page)).last?.close ?? 0, { timeout: 15_000 }).toBeLessThan(100000);
   await waitBars(page, 100);
   const info = await chartInfo(page);
   expect(info.last.close).toBeGreaterThan(58000);
