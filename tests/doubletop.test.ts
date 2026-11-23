@@ -161,13 +161,13 @@ describe('topo e fundo duplo', () => {
     const def = getIndicator('doubletop')!;
     const bars = deepValley();
     const p: ReturnType<typeof defaultParams> = { ...defaultParams(def), minR: 0, maxTargetAtr: 0 };
-    expect(p.minSignals).toBe(200);
+    expect(p.minSignals).toBe(60);
     const more = def.compute(bars, p, { historyDone: false });
     expect(more.wantHistory).toBe(true);
-    expect(more.draw!.panel!.lines.some((l) => /a carregar mais passado… 1\/200 sinais/.test(l.text))).toBe(true);
+    expect(more.draw!.panel!.lines.some((l) => /a carregar mais passado… 1\/60 sinais/.test(l.text))).toBe(true);
     const done = def.compute(bars, p, { historyDone: true });
     expect(done.wantHistory).toBe(false);
-    expect(done.draw!.panel!.lines.some((l) => /o histórico acabou: 1 de 200 sinais/.test(l.text))).toBe(true);
+    expect(done.draw!.panel!.lines.some((l) => /o histórico acabou: 1 de 60 sinais/.test(l.text))).toBe(true);
     // objetivo cumprido ou desligado: não pede nada
     expect(def.compute(bars, { ...p, minSignals: 1 }, { historyDone: false }).wantHistory).toBe(false);
     expect(def.compute(bars, { ...p, minSignals: 0 }, { historyDone: false }).wantHistory).toBe(false);
