@@ -17,6 +17,7 @@ import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { shade } from '@/chart/drawings/auto';
+import { clearBarCache } from '@/core/feed/barCache';
 import { fmtBytes, meterTotal, resetDataMeter, useDataMeter } from '@/lib/dataMeter';
 import { PIVOT_SENSITIVITY, type PivotSensitivity } from '@/core/priceSnap';
 
@@ -237,14 +238,15 @@ export function SettingsDialog() {
           <DataUsage />
           <LegalFooter className="rounded-lg bg-sunken p-3" />
           <p className="text-xs leading-relaxed text-muted">
-            Fontes: <b>Deriv</b> (índices sintéticos, forex, metais e índices — WebSocket público), <b>Binance</b> (cripto) e <b>Yahoo Finance</b> (ações, índices e futuros). Os dados ficam em memória
-            enquanto a página está aberta.
+            Fontes: <b>Deriv</b> (índices sintéticos, forex, metais e índices — WebSocket público), <b>Binance</b> (cripto) e <b>Yahoo Finance</b> (ações, índices e futuros). As velas descarregadas ficam guardadas neste dispositivo
+            (só o que já fechou), para não as descarregar outra vez; “Limpar cache de dados” apaga-as.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               onClick={() => {
                 dataFeed().clear();
+                void clearBarCache();
                 toast('Cache de dados limpa', { kind: 'success', body: 'Os gráficos vão voltar a descarregar os dados.' });
               }}
             >

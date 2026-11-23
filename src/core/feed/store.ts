@@ -2,6 +2,8 @@ import type { Bar, SymbolInfo } from '../types';
 import { alignTime, tfSeconds, type Timeframe } from '../timeframes';
 import { lowerBound, mergeBars, sanitize } from '../bars';
 import { nowSec, type Provider } from './provider';
+import { MAX_CACHE_BARS, MAX_CACHE_KEYS, currentBarDb, packBars, unpackBars } from './barCache';
+import { tfToString } from '../timeframes';
 
 type Range = [number, number];
 
@@ -17,6 +19,9 @@ export class BarStore {
   startTime: number | null = null;
   version = 0;
   private queue: Promise<unknown> = Promise.resolve();
+  /** Chave das velas guardadas no dispositivo (null = não se guarda: segundos, demonstração). */
+  private readonly cacheKey: string | null;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     readonly provider: Provider,
@@ -25,6 +30,58 @@ export class BarStore {
   ) {
     const earliest = provider.earliest?.(symbol, tf);
     if (earliest !== undefined) this.startTime = alignTime(earliest, tf);
+    this.cacheKey = provider.id === 'demo' || tf.unit === 's' ? null : `${provider.id}|${symbol.ticker}|${tfToString(tf)}`;
+    // as velas guardadas da última vez entram antes de qualquer pedido (a fila espera por elas)
+    if (this.cacheKey && currentBarDb()) this.queue = this.hydrate();
+  }
+
+  /** Velas de sessões anteriores: o que já foi descarregado não se descarrega outra vez. */
+  private async hydrate(): Promise<void> {
+    try {
+      const saved = await currentBarDb()!.get(this.cacheKey!);
+      if (!saved || this.bars.length) return;
+      const bars = unpackBars(saved.bars);
+      if (!bars.length) return;
+      this.bars = bars;
+      this.ranges = saved.ranges.map((r) => [r[0], r[1]] as Range);
+      if (saved.startTime !== null && (this.startTime === null || saved.startTime > this.startTime)) this.startTime = saved.startTime;
+      this.version++;
+    } catch {
+      /* cache ilegível: começa do zero */
+    }
+  }
+
+  /** Guarda as velas fechadas no dispositivo (junta pedidos seguidos). */
+  private persistSoon() {
+    if (!this.cacheKey || this.persistTimer || !currentBarDb()) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      void this.persistNow();
+    }, 3000);
+  }
+
+  async persistNow(): Promise<void> {
+    const db = currentBarDb();
+    if (!this.cacheKey || !db) return;
+    try {
+      // só o que está fechado (a vela a formar-se muda a cada tick) e, no máximo, as últimas MAX_CACHE_BARS
+      const cap = this.coverCap();
+      let bars = this.bars.filter((b) => b.time < cap);
+      if (bars.length > MAX_CACHE_BARS) bars = bars.slice(-MAX_CACHE_BARS);
+      if (!bars.length) return;
+      const first = bars[0].time;
+      const ranges: Range[] = [];
+      for (const r of this.ranges) {
+        const a = Math.max(r[0], first);
+        const b = Math.min(r[1], cap);
+        if (b > a) ranges.push([a, b]);
+      }
+      if (!ranges.length) return;
+      await db.set(this.cacheKey, { bars: packBars(bars), ranges, startTime: this.startTime, savedAt: Date.now() });
+      await db.prune(MAX_CACHE_KEYS);
+    } catch {
+      /* sem espaço ou sem armazenamento: segue sem guardar */
+    }
   }
 
   get tfSec(): number {
@@ -58,6 +115,7 @@ export class BarStore {
     }
     if (!placed) out.push(merged);
     this.ranges = out;
+    this.persistSoon();
   }
 
   isCovered(from: number, to: number): boolean {
@@ -89,6 +147,7 @@ export class BarStore {
     if (!bars.length) return;
     this.bars = mergeBars(this.bars, sanitize(bars));
     this.version++;
+    this.persistSoon();
   }
 
   /** Atualização em tempo real (substitui ou acrescenta). */
@@ -135,7 +194,22 @@ export class BarStore {
     return this.serial(async () => {
       let end = to;
       let have = 0;
-      const tail = this.ranges.find((r) => r[0] < to && r[1] >= Math.min(to, this.coverCap()));
+      let tail = this.ranges.find((r) => r[0] < to && r[1] >= Math.min(to, this.coverCap()));
+      // velas guardadas de antes (ou de antes de uma pausa): se só falta o troço recente, pede só esse, em vez de refazer tudo
+      if (!tail) {
+        const cap = Math.min(to, this.coverCap());
+        const newest = [...this.ranges].reverse().find((r) => r[0] < cap);
+        if (newest && newest[1] < cap && (cap - newest[1]) / this.tfSec <= count) {
+          const chunk = this.provider.maxPerRequest * this.tfSec;
+          for (let s = newest[1]; s < cap; s += chunk) {
+            const e = Math.min(cap, s + chunk);
+            const fresh = await this.provider.fetch(this.symbol, this.tf, { from: s, to: e, limit: this.provider.maxPerRequest });
+            this.insert(fresh);
+            this.addRange(s, e);
+          }
+          tail = this.ranges.find((r) => r[0] < to && r[1] >= cap);
+        }
+      }
       if (tail) {
         have = lowerBound(this.bars, to) - lowerBound(this.bars, tail[0]);
         end = tail[0];
