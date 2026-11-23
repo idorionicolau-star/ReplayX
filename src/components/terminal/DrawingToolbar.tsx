@@ -27,6 +27,8 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuHeader } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
 import { toast } from '@/components/ui/Toast';
+import { useLongPress } from '@/components/ui/useLongPress';
+import { vibrate } from '@/lib/haptics';
 import { SavedElements } from '@/components/chart/SavedElements';
 
 import { COMPACT_QUERY } from '@/lib/compact';
@@ -154,6 +156,16 @@ export function DrawingToolbar({ className }: { className?: string }) {
   const [cursorOpen, setCursorOpen] = useState(false);
   const magRef = useRef<HTMLButtonElement>(null);
   const [magOpen, setMagOpen] = useState(false);
+  const magPress = useLongPress({
+    onClick: () => setMagOpen(true),
+    // 3 s premido, em qualquer nível (1 a 5): desliga o íman
+    onLong: () => {
+      if (magnet === 'off') return;
+      setSettings({ magnet: 'off' });
+      vibrate(30);
+      toast('Íman desligado', { kind: 'success', duration: 1500 });
+    },
+  });
   const CursorIco = TOOL_ICONS[tool === 'cursor' ? 'cursor' : 'cross'];
 
   return (
@@ -208,10 +220,11 @@ export function DrawingToolbar({ className }: { className?: string }) {
       <button
         ref={magRef}
         type="button"
-        title={magnetTitle(magnet)}
-        onClick={() => setMagOpen(true)}
-        className={cn('flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        title={`${magnetTitle(magnet)} (3 s premido desliga o íman)`}
+        {...magPress.props}
+        className={cn('relative flex h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12 items-center justify-center overflow-hidden rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
+        {magPress.holding && magnet !== 'off' && <span className="pointer-events-none absolute inset-0 origin-left bg-down/30" style={{ animation: 'rx-hold 3s linear forwards' }} aria-hidden />}
         <Magnet size={21} className="pointer-coarse:size-[25px]" />
       </button>
       <Popover anchor={magRef} open={magOpen} onClose={() => setMagOpen(false)} placement="right-start">

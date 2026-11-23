@@ -326,3 +326,13 @@ textarea {
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .rx-bar-in { animation: none; } }
+
+/* progresso de um toque longo (3 s) num botão */
+@keyframes rx-hold {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
