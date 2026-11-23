@@ -9,6 +9,9 @@ import { TOOL_ICONS } from '@/components/terminal/DrawingToolbar';
 import { cn } from '@/components/ui/cn';
 import { SavedElements } from './SavedElements';
 import { magnetLevel, magnetTitle, nextMagnet } from '@/core/magnet';
+import { useLongPress } from '@/components/ui/useLongPress';
+import { vibrate } from '@/lib/haptics';
+import { toast } from '@/components/ui/Toast';
 
 
 /** Barra flutuante com as ferramentas favoritas, como no TradingView. Arrasta-se pela pega. */
@@ -17,6 +20,16 @@ export function FavoritesBar() {
   const favs = useSettings((s) => s.favoriteTools);
   const pos = useSettings((s) => s.favoritesBarPos);
   const magnet = useSettings((s) => s.magnet);
+  const magPress = useLongPress({
+    onClick: () => set({ magnet: nextMagnet(magnet) }),
+    // 3 s premido, em qualquer nível (1 a 5): desliga o íman
+    onLong: () => {
+      if (magnet === 'off') return;
+      set({ magnet: 'off' });
+      vibrate(30);
+      toast('Íman desligado', { kind: 'success', duration: 1500 });
+    },
+  });
   const angleSnap = useSettings((s) => s.angleSnap);
   const vertical = useSettings((s) => s.favoritesBarVertical);
   const set = useSettings((s) => s.set);
@@ -117,11 +130,12 @@ export function FavoritesBar() {
       <SavedElements className="h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11" size={16} placement="bottom-start" />
       <button
         type="button"
-        title={`${magnetTitle(magnet)} (toque para mudar)`}
+        title={`${magnetTitle(magnet)} (toque para mudar; 3 s premido desliga o íman)`}
         aria-label="Íman"
-        onClick={() => set({ magnet: nextMagnet(magnet) })}
-        className={cn('relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
+        {...magPress.props}
+        className={cn('relative flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center overflow-hidden rounded-md', magnet !== 'off' ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
       >
+        {magPress.holding && magnet !== 'off' && <span className="pointer-events-none absolute inset-0 origin-left bg-down/30" style={{ animation: 'rx-hold 3s linear forwards' }} aria-hidden />}
         <Magnet size={16} />
         {magnet !== 'off' && <span className="absolute right-0.5 bottom-0 text-[9px] leading-none font-semibold">{magnetLevel(magnet)?.level}</span>}
       </button>
