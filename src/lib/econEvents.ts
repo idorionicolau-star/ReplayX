@@ -1,4 +1,5 @@
 'use client';
+import { meteredJson } from './dataMeter';
 
 export interface EconEvent {
   id: string;
@@ -17,7 +18,7 @@ export function loadEconEvents(): Promise<EconEvent[]> {
   if (Date.now() - failedAt < 10 * 60_000) return Promise.resolve([]);
   const get = (week: string) =>
     fetch(`/api/calendar?week=${week}`)
-      .then((r) => r.json() as Promise<{ events?: EconEvent[] }>)
+      .then((r) => meteredJson<{ events?: EconEvent[] }>(r, 'other'))
       .then((j) => j.events ?? [])
       .catch(() => [] as EconEvent[]);
   cache = Promise.all([get('this'), get('next')]).then(([a, b]) => {
