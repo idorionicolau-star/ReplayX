@@ -4,6 +4,7 @@ import { ChevronDown, Plus, Trash2, X, Pencil } from 'lucide-react';
 import { useWorkspace } from '@/store/workspace';
 import { useUi } from '@/store/ui';
 import { useSettings } from '@/store/settings';
+import { savedWatchRefresh, useSaverReason } from '@/lib/dataSaver';
 import { isHidden, onVisibilityChange } from '@/lib/visibility';
 import { resolveSymbol } from '@/core/symbols';
 import { dataFeed } from '@/core/feed/datafeed';
@@ -20,7 +21,8 @@ function Row({ id, active, fresh, onPick, onRemove }: { id: string; active: bool
   const [q, setQ] = useState<Quote | null>(null);
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
   const prev = useRef<number | null>(null);
-  const refresh = useSettings((s) => s.watchRefresh);
+  const saver = useSaverReason() !== null;
+  const refresh = savedWatchRefresh(useSettings((s) => s.watchRefresh), saver);
   useEffect(() => {
     const onQuote = (quote: Quote) => {
       if (prev.current !== null && quote.price !== prev.current) {
