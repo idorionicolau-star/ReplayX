@@ -1,3 +1,4 @@
+import { isHidden } from '@/lib/visibility';
 import type { AssetClass, Bar, SymbolInfo } from '../types';
 import { DAY, parseTf, tfSeconds, type Timeframe } from '../timeframes';
 import { fetchJson, nowSec, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
@@ -38,6 +39,7 @@ const quoteListeners = new Map<string, Set<(q: Quote) => void>>();
 let quoteTimer: ReturnType<typeof setInterval> | null = null;
 
 async function pollQuotes() {
+  if (isHidden()) return; // em segundo plano não gasta dados
   const symbols = Array.from(quoteListeners.keys());
   if (!symbols.length) return;
   for (let i = 0; i < symbols.length; i += 15) {
@@ -87,6 +89,7 @@ export const yahooProvider: Provider = {
   subscribe(symbol, tf, onBar) {
     let alive = true;
     const tick = async () => {
+      if (isHidden()) return;
       try {
         const bars = await yahooProvider.fetch(symbol, tf, { to: nowSec() + tfSeconds(tf), limit: 2 });
         if (alive) bars.forEach(onBar);

@@ -15,6 +15,13 @@ function derivServer(ws: WebSocketRoute, opts: { newApi: boolean }) {
         : { symbol: 'R_75', display_name: 'Volatility 75 Index', market: 'synthetic_index', submarket: 'random_index', pip: 0.0001, exchange_is_open: 1, is_trading_suspended: 0 };
       return reply({ msg_type: 'active_symbols', active_symbols: [row] });
     }
+    if (msg.ticks_history && msg.style === 'ticks') {
+      // histórico de ticks (a lista de observação pede só o último: count 1)
+      const now = Math.floor(Date.now() / 1000);
+      const n = Math.min(msg.count as number, 5000);
+      const times = Array.from({ length: n }, (_, i) => now - (n - 1 - i));
+      return reply({ msg_type: 'history', history: { times, prices: times.map(() => price.toFixed(4)) } });
+    }
     if (msg.ticks_history) {
       const gran = msg.granularity as number;
       const end = msg.end === 'latest' ? Math.floor(Date.now() / 1000) : (msg.end as number);
@@ -58,7 +65,16 @@ test('Deriv (endpoint novo): carrega o Volatility 75 e recebe ticks', async ({ p
   expect(info.symbol).toBe('DERIV:R_75');
   expect(info.tf).toBe('15m');
   expect(info.last.close).toBeGreaterThan(390000);
-  // cotação ao vivo na lista
+  // cotação na lista (por omissão: pedido único de 5 em 5 segundos, em vez de uma subscrição contínua)
+  await expect(page.getByTestId('watch-DERIV:R_75')).toContainText(/41\d[ ,.]?\d{3}/);
+});
+
+test('Deriv: a lista em tempo real (opção) recebe os ticks da subscrição', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { watchRefresh: 0 }, version: 3 })));
+  await blockBinance(page);
+  await page.routeWebSocket(/derivws\.com|binaryws\.com/, (ws) => derivServer(ws, { newApi: true }));
+  await enterAsGuest(page);
+  await waitBars(page, 100);
   await expect(page.getByTestId('watch-DERIV:R_75')).toContainText(/41\d[ ,.]?\d{3}/);
 });
 

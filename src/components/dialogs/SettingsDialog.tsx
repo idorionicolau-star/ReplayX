@@ -81,6 +81,14 @@ export function SettingsDialog() {
           <Row label="Selo de resultados das caixas de posição (acerto e R do backtest; toque no selo para ver a curva)">
             <Switch checked={s.backtestChip} onChange={(v) => s.set({ backtestChip: v })} />
           </Row>
+          <Row label="Lista de observação: atualização dos preços (mais lenta gasta bem menos dados)">
+            <Select className="w-56" value={s.watchRefresh} onChange={(e) => s.set({ watchRefresh: Number(e.target.value) as 0 | 5 | 15 | 60 })} data-testid="watch-refresh">
+              <option value={0}>Tempo real (gasta mais dados)</option>
+              <option value={5}>A cada 5 segundos</option>
+              <option value={15}>A cada 15 segundos</option>
+              <option value={60}>A cada minuto</option>
+            </Select>
+          </Row>
           <Row label="Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)">
             <Switch checked={s.floatNearMouse} onChange={(v) => s.set({ floatNearMouse: v })} />
           </Row>

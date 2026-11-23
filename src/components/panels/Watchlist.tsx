@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Plus, Trash2, X, Pencil } from 'lucide-react';
 import { useWorkspace } from '@/store/workspace';
 import { useUi } from '@/store/ui';
+import { useSettings } from '@/store/settings';
+import { isHidden, onVisibilityChange } from '@/lib/visibility';
 import { resolveSymbol } from '@/core/symbols';
 import { dataFeed } from '@/core/feed/datafeed';
 import type { Quote } from '@/core/feed/provider';
@@ -18,17 +20,33 @@ function Row({ id, active, fresh, onPick, onRemove }: { id: string; active: bool
   const [q, setQ] = useState<Quote | null>(null);
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
   const prev = useRef<number | null>(null);
+  const refresh = useSettings((s) => s.watchRefresh);
   useEffect(() => {
-    const unsub = dataFeed().subscribeQuote(sym, (quote) => {
+    const onQuote = (quote: Quote) => {
       if (prev.current !== null && quote.price !== prev.current) {
         setFlash(quote.price > prev.current ? 'up' : 'down');
         setTimeout(() => setFlash(null), 350);
       }
       prev.current = quote.price;
       setQ(quote);
+    };
+    const opts = refresh ? { everyMs: refresh * 1000 } : undefined;
+    let unsub: () => void = () => undefined;
+    const start = () => {
+      unsub = dataFeed().subscribeQuote(sym, onQuote, opts);
+    };
+    // em segundo plano (ecrã bloqueado, outro separador) a lista não gasta dados; ao voltar retoma
+    if (!isHidden()) start();
+    const off = onVisibilityChange((hidden) => {
+      unsub();
+      unsub = () => undefined;
+      if (!hidden) start();
     });
-    return unsub;
-  }, [sym]);
+    return () => {
+      off();
+      unsub();
+    };
+  }, [sym, refresh]);
   const ch = q?.changePct;
   return (
     <div onClick={onPick} className={cn('group flex h-9 cursor-pointer items-center gap-2 px-3 text-[13px] transition-colors duration-700', active ? 'bg-accent-soft' : fresh ? 'bg-up/20' : 'hover:bg-hover')} data-testid={`watch-${id}`}>

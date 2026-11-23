@@ -31,6 +31,8 @@ export interface Provider {
   subscribe?(symbol: SymbolInfo, tf: Timeframe, onBar: (bar: Bar) => void, seed?: Bar): () => void;
   /** Cotação ao vivo para a watchlist. */
   subscribeQuote?(symbol: SymbolInfo, onQuote: (q: Quote) => void): () => void;
+  /** Uma cotação pontual (pedido único, bem mais barato em dados que uma subscrição contínua). */
+  quoteOnce?(symbol: SymbolInfo): Promise<Quote>;
   search?(query: string): Promise<SymbolInfo[]>;
 }
 

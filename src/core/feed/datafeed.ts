@@ -1,3 +1,4 @@
+import { isHidden, onVisibilityChange } from '@/lib/visibility';
 import type { Bar, ProviderId, SymbolInfo } from '../types';
 import { aggregate, combine, lowerBound } from '../bars';
 import { alignTime, divides, nextBarTime, parseTf, SECOND_TFS, STANDARD_TFS, tfSeconds, tfToString, type Timeframe } from '../timeframes';
@@ -252,8 +253,33 @@ export class DataFeed {
     };
   }
 
-  subscribeQuote(sym: SymbolInfo, cb: (q: Quote) => void): () => void {
+  subscribeQuote(sym: SymbolInfo, cb: (q: Quote) => void, opts?: { everyMs?: number }): () => void {
     const p = this.provider(sym);
+    // atualização mais lenta: um pedido único de tempos a tempos em vez de uma subscrição contínua (gasta muito menos dados)
+    if (opts?.everyMs && p.quoteOnce) {
+      const once = p.quoteOnce.bind(p);
+      let alive = true;
+      const poll = async () => {
+        if (!alive || isHidden()) return;
+        try {
+          const q = await once(sym);
+          if (alive) cb(q);
+        } catch {
+          /* tenta na próxima volta */
+        }
+      };
+      void poll();
+      const timer = setInterval(poll, opts.everyMs);
+      // ao voltar ao separador atualiza logo
+      const off = onVisibilityChange((hidden) => {
+        if (!hidden) void poll();
+      });
+      return () => {
+        alive = false;
+        clearInterval(timer);
+        off();
+      };
+    }
     return p.subscribeQuote ? p.subscribeQuote(sym, cb) : () => undefined;
   }
 
