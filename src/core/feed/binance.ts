@@ -1,3 +1,4 @@
+import { addBytes } from '@/lib/dataMeter';
 import type { Bar, SymbolInfo } from '../types';
 import { parseTf, tfToString, type Timeframe } from '../timeframes';
 import { backoffDelay, fetchJson, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
@@ -85,6 +86,7 @@ class Stream {
       this.attempt = 0;
     };
     ws.onmessage = (ev) => {
+      addBytes('live', (ev.data as string).length);
       try {
         this.onMessage(JSON.parse(ev.data as string));
       } catch {

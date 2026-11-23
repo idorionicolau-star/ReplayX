@@ -1,4 +1,5 @@
 'use client';
+import { meteredJson } from '@/lib/dataMeter';
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useWorkspace } from '@/store/workspace';
@@ -57,7 +58,7 @@ export function CalendarPanel() {
     if (c && Date.now() - c.at < 30 * 60_000 && !nonce) return;
     let alive = true;
     fetch(`/api/calendar?week=${week}`)
-      .then((r) => r.json() as Promise<{ events: CalEvent[]; error?: string }>)
+      .then((r) => meteredJson<{ events: CalEvent[]; error?: string }>(r, 'other'))
       .then((j) => {
         const at = Date.now();
         cache.set(week, { at, ...j });

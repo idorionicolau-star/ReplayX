@@ -1,4 +1,5 @@
 'use client';
+import { meteredJson } from '@/lib/dataMeter';
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, RefreshCw, Info } from 'lucide-react';
 import { useWorkspace } from '@/store/workspace';
@@ -27,7 +28,7 @@ async function load(category: string, force = false): Promise<NewsItem[]> {
   const c = cache.get(category);
   if (!force && c && Date.now() - c.at < 5 * 60_000) return c.items;
   const res = await fetch(`/api/news?category=${category}`);
-  const j = (await res.json()) as { items: NewsItem[] };
+  const j = await meteredJson<{ items: NewsItem[] }>(res, 'other');
   cache.set(category, { at: Date.now(), items: j.items });
   return j.items;
 }

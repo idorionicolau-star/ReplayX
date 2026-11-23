@@ -114,7 +114,9 @@ test.describe('íman de preço (pivôs do ZigZag)', () => {
         } else if (mode === 'plain-wick') {
           // um máximo que NÃO é pivô: o cursor fica exatamente nele
           const pv = new Set(pivots.map((p) => p.price));
-          const b = vis.find((b: { high: number }) => !pv.has(b.high) && c.priceToY(b.high) > 30 && c.priceToY(b.high) < H - 30);
+          // com um pivô ao alcance (a menos de 35 px) para o íman poder prendê-lo, e que não seja ele próprio um pivô
+          const near = (y: number) => Math.min(...pivotYs.map((py: number) => Math.abs(py - y)));
+          const b = vis.find((b: { high: number }) => !pv.has(b.high) && c.priceToY(b.high) > 30 && c.priceToY(b.high) < H - 30 && near(c.priceToY(b.high)) > 4 && near(c.priceToY(b.high)) < 35);
           plainPrice = b.high;
           y = c.priceToY(b.high);
         } else y = pivotYs[0] + off;

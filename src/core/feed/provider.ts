@@ -1,5 +1,6 @@
 import type { Bar, ProviderId, SymbolInfo } from '../types';
 import type { Timeframe } from '../timeframes';
+import { meteredJson, type MeterKind } from '@/lib/dataMeter';
 
 export interface FetchArgs {
   /** Início (inclusive). Se omisso, devolve as `limit` barras mais recentes antes de `to`. */
@@ -44,7 +45,7 @@ export class ProviderError extends Error {
   }
 }
 
-export async function fetchJson<T = unknown>(url: string, timeoutMs = 15000): Promise<T> {
+export async function fetchJson<T = unknown>(url: string, timeoutMs = 15000, kind: MeterKind = 'history'): Promise<T> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -58,7 +59,7 @@ export async function fetchJson<T = unknown>(url: string, timeoutMs = 15000): Pr
       }
       throw new Error(`HTTP ${res.status} ${detail}`);
     }
-    return (await res.json()) as T;
+    return await meteredJson<T>(res, kind);
   } finally {
     clearTimeout(timer);
   }

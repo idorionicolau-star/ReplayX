@@ -1,3 +1,4 @@
+import { addBytes } from '@/lib/dataMeter';
 import type { AssetClass, Bar, SymbolInfo } from '../types';
 import { alignTime, parseTf, tfSeconds, type Timeframe } from '../timeframes';
 import { backoffDelay, nowSec, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
@@ -157,6 +158,9 @@ export class DerivClient {
       } catch {
         return;
       }
+      // dados recebidos: velas/ticks pedidos = histórico; ticks e velas em subscrição = tempo real
+      const type = (msg as { msg_type?: string }).msg_type;
+      addBytes(type === 'candles' || type === 'history' ? 'history' : type === 'tick' || type === 'ohlc' ? 'live' : 'other', (ev.data as string).length);
       this.handle(msg);
     };
     ws.onclose = () => {

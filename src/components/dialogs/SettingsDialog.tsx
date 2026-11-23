@@ -17,6 +17,7 @@ import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
 import { CHART_PRESETS, presetPatch } from '@/chart/presets';
 import { shade } from '@/chart/drawings/auto';
+import { fmtBytes, meterTotal, resetDataMeter, useDataMeter } from '@/lib/dataMeter';
 import { PIVOT_SENSITIVITY, type PivotSensitivity } from '@/core/priceSnap';
 
 export function SettingsDialog() {
@@ -218,6 +219,7 @@ export function SettingsDialog() {
       )}
       {tab === 'data' && (
         <div className="flex flex-col gap-3">
+          <DataUsage />
           <LegalFooter className="rounded-lg bg-sunken p-3" />
           <p className="text-xs leading-relaxed text-muted">
             Fontes: <b>Deriv</b> (índices sintéticos, forex, metais e índices — WebSocket público), <b>Binance</b> (cripto) e <b>Yahoo Finance</b> (ações, índices e futuros). Os dados ficam em memória
@@ -250,6 +252,66 @@ export function SettingsDialog() {
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Quantos dados a app consumiu: nesta sessão, hoje e este mês, por origem. */
+function DataUsage() {
+  const m = useDataMeter();
+  const rows: { label: string; hint: string; get: (c: typeof m.session) => number }[] = [
+    { label: 'Histórico', hint: 'velas descarregadas ao abrir, mudar de símbolo/intervalo ou procurar mais passado', get: (c) => c.history },
+    { label: 'Tempo real', hint: 'preços e velas a chegar em direto (gráfico e lista de observação)', get: (c) => c.live },
+    { label: 'Outros', hint: 'notícias e calendário', get: (c) => c.other },
+  ];
+  const cols: { id: string; title: string; c: typeof m.session }[] = [
+    { id: 'session', title: 'Esta sessão', c: m.session },
+    { id: 'today', title: 'Hoje', c: m.today },
+    { id: 'month', title: 'Este mês', c: m.monthly },
+  ];
+  return (
+    <section className="rounded-lg border border-line p-3" data-testid="data-usage">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-[13px] font-semibold">Consumo de dados</h3>
+        <button type="button" className="text-xs text-muted hover:text-text" onClick={() => resetDataMeter('all')} data-testid="data-usage-reset">
+          Repor contadores
+        </button>
+      </div>
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="text-left text-muted">
+            <th className="py-1 font-normal" />
+            {cols.map((c) => (
+              <th key={c.id} className="py-1 text-right font-normal">
+                {c.title}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} title={r.hint}>
+              <td className="py-0.5">{r.label}</td>
+              {cols.map((c) => (
+                <td key={c.id} className="py-0.5 text-right tnum" data-testid={`usage-${r.label}-${c.id}`}>
+                  {fmtBytes(r.get(c.c))}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr className="border-t border-line font-semibold">
+            <td className="py-1">Total</td>
+            {cols.map((c) => (
+              <td key={c.id} className="py-1 text-right tnum" data-testid={`usage-total-${c.id}`}>
+                {fmtBytes(meterTotal(c.c))}
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      <p className="mt-2 text-[11px] leading-snug text-muted">
+        Valores aproximados do que a app recebeu (texto das respostas, sem a compressão da rede). Não inclui o carregamento da própria app (cerca de 400 KB na primeira vez e depois fica guardada) nem a sincronização da conta.
+      </p>
+    </section>
   );
 }
 

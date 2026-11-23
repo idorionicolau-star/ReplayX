@@ -43,7 +43,7 @@ async function pollQuotes() {
   for (let i = 0; i < symbols.length; i += 15) {
     const batch = symbols.slice(i, i + 15);
     try {
-      const res = await fetchJson<Record<string, Quote>>(`/api/market/yahoo-quote?symbols=${encodeURIComponent(batch.join(','))}`);
+      const res = await fetchJson<Record<string, Quote>>(`/api/market/yahoo-quote?symbols=${encodeURIComponent(batch.join(','))}`, 15000, 'live');
       for (const [sym, q] of Object.entries(res)) quoteListeners.get(sym)?.forEach((cb) => cb(q));
     } catch {
       /* tenta na próxima volta */
