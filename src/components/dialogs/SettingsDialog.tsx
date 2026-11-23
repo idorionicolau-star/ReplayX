@@ -89,6 +89,13 @@ export function SettingsDialog() {
               <option value={60}>A cada minuto</option>
             </Select>
           </Row>
+          <Row label="Histórico automático dos indicadores (carregam sozinhos mais velas para achar sinais; gasta dados)">
+            <Select className="w-64" value={s.autoHistory} onChange={(e) => s.set({ autoHistory: e.target.value as 'ask' | 'always' | 'limit' })} data-testid="auto-history">
+              <option value="ask">Perguntar antes de passar das 5 000 velas</option>
+              <option value="always">Carregar sempre (até 20 000 velas)</option>
+              <option value="limit">Parar nas 5 000 velas</option>
+            </Select>
+          </Row>
           <Row label="Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)">
             <Switch checked={s.floatNearMouse} onChange={(v) => s.set({ floatNearMouse: v })} />
           </Row>

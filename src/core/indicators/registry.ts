@@ -1209,7 +1209,7 @@ export const INDICATORS: IndicatorDef[] = [
       'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. Os dois topos têm de estar praticamente no mesmo nível: escolhe a tolerância em pips (0 = automática, pelo ATR ou pela altura do padrão); o pavio pode furar um pouco o nível, o fecho não. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor), combinação (a vela que tocou na zona e a seguinte, juntas, fazem uma rejeição — duas de M5 vistas como uma de M10) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no fundo (ou topo, nas compras) mais próximo da entrada que ainda dê o R mínimo; desligando, sai no vale entre os topos ou na origem da pernada. Não entra quando a entrada ficou longe demais (menos de 1R até ao alvo, ajustável) nem quando o alvo está longe demais. O primeiro topo não pode ter mais de 50 velas (ajustável) até à entrada. Breakeven (desligado por padrão; ligas em % do caminho até à saída ou em R): o stop passa para um pouco além da entrada, para cobrir spread e comissões (folga em pips, ou 0,1 ATR). Uma operação de cada vez: enquanto uma compra ou venda está aberta, não entra outra. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
     inputs: [
       ...DT_INPUTS,
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 60, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
@@ -1290,7 +1290,7 @@ export const INDICATORS: IndicatorDef[] = [
       { key: 'maxBars', label: 'Velas máximas do padrão', type: 'int', default: PAT_DEFAULTS.maxBars, min: 20, max: 500, step: 10 },
       numInput('stopBuf', 'Folga do stop (ATR)', PAT_DEFAULTS.stopBuf, 0.05, 0, 2),
       numInput('minR', 'R mínimo (0 = sem limite)', PAT_DEFAULTS.minR, 0.25, 0, 10),
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 100, min: 0, max: 2000, step: 10 },
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 50, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
@@ -1326,7 +1326,7 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('riskPct', 'Risco por operação (% da conta)', 1, 0.25, 0.05, 100),
       { key: 'everyDays', label: 'Retirar o lucro a cada N dias (0 = nunca retira)', type: 'int', default: 1, min: 0, max: 365, step: 1 },
       ...DT_INPUTS,
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 200, min: 0, max: 2000, step: 10 },
+      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 60, min: 0, max: 2000, step: 10 },
     ],
     outputs: [
       { key: 'account', label: 'Conta', style: 'step', color: '#2962ff', width: 2 },

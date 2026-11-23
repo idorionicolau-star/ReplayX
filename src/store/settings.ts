@@ -64,6 +64,8 @@ export interface SettingsState {
   pivotFuture: boolean;
   /** Lista de observação: segundos entre atualizações (pedido único), ou 0 = tempo real (subscrição contínua, gasta mais dados). */
   watchRefresh: 0 | 5 | 15 | 60;
+  /** Histórico que os indicadores carregam sozinhos além de 5000 velas: perguntar, carregar sempre ou ficar pelas 5000. */
+  autoHistory: 'ask' | 'always' | 'limit';
   /** A barra do desenho aparece junto ao rato (onde se fez o último clique) ao terminar um desenho. */
   floatNearMouse: boolean;
   /** O mesmo ao clicar num desenho que já existia (a barra abre junto ao clique). */
@@ -132,6 +134,7 @@ export const useSettings = create<SettingsState>()(
       pivotSensitivity: 'normal',
       pivotFuture: true,
       watchRefresh: 5,
+      autoHistory: 'ask',
       floatNearMouse: true,
       floatOnSelect: false,
       backtestChip: true,

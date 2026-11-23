@@ -33,8 +33,9 @@ test('Topo e Fundo Duplo: entra no catálogo, desenha o cartão e corre no repla
   expect(errors).toEqual([]);
 });
 
-test('Topo e Fundo Duplo: carrega passado sozinho até 200 sinais (ou até o histórico acabar)', async ({ page }) => {
+test('Topo e Fundo Duplo: carrega passado sozinho até 60 sinais (ou até o histórico acabar)', async ({ page }) => {
   test.setTimeout(90_000);
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { autoHistory: 'always' }, version: 3 })));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await enterAsGuest(page);
@@ -54,7 +55,7 @@ test('Topo e Fundo Duplo: carrega passado sozinho até 200 sinais (ou até o his
   };
   await expect.poll(async () => {
     const s = await signals();
-    return s.n >= 200 || /o histórico acabou/.test(s.text);
+    return s.n >= 60 || /o histórico acabou/.test(s.text);
   }, { timeout: 60_000 }).toBe(true);
   const barsAfter = await page.evaluate(() => [...(window as unknown as { __rxCharts: Map<string, { bars: unknown[] }> }).__rxCharts.values()][0].bars.length);
   expect(barsAfter).toBeGreaterThan(barsBefore);

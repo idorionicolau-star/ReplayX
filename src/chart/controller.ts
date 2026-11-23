@@ -101,7 +101,24 @@ export interface ChartCallbacks {
   getCursor?(): number | null;
   /** O utilizador mexeu na escala de preços à mão: a escala automática desliga-se até voltar a ligá-la. */
   onManualScale?(): void;
+  /** Como carregar o passado que os indicadores pedem: perguntar antes de passar de 5000 velas, carregar sempre, ou parar nas 5000. */
+  getHistoryPolicy?(): 'ask' | 'always' | 'limit';
+  /** Os indicadores querem mais histórico do que o limite sem perguntar (null = já respondido). */
+  onHistoryAsk?(ask: HistoryAsk | null): void;
 }
+
+export interface HistoryAsk {
+  /** Velas já carregadas e velas a mais que seriam pedidas. */
+  loaded: number;
+  extra: number;
+  /** Estimativa dos dados a descarregar (MB). */
+  mb: number;
+}
+
+/** A partir de quantas velas carregadas, o histórico automático dos indicadores pede confirmação. */
+export const HISTORY_ASK_AT = 5000;
+/** Tamanho típico de uma vela em JSON na Deriv (bytes), para estimar os dados. */
+const BYTES_PER_BAR = 95;
 
 interface IndicatorView {
   inst: IndicatorInstance;
@@ -781,6 +798,11 @@ export class ChartController {
   private async loadInner(symbol: SymbolInfo, tf: string, cursor: number | null) {
     const same = this.symbol?.id === symbol.id && this.tf === tf && this.cursor === cursor && this.bars.length > 0;
     if (same) return;
+    // outro símbolo/intervalo: o aviso do histórico deixa de valer
+    if (this.historyAsked) {
+      this.historyAsked = null;
+      this.cb.onHistoryAsk?.(null);
+    }
     const symbolChanged = this.symbol?.id !== symbol.id;
     this.symbol = symbol;
     this.tf = tf;
@@ -1426,7 +1448,34 @@ export class ChartController {
       this.historyKey = key;
       this.historyRounds = 0;
     }
-    return this.startReached || this.loadedCount() >= AUTO_HISTORY_MAX || this.historyRounds >= AUTO_HISTORY_ROUNDS;
+    const policy = this.cb.getHistoryPolicy?.() ?? 'ask';
+    const loaded = this.loadedCount();
+    const cap = policy === 'limit' ? this.historyAskAt : AUTO_HISTORY_MAX;
+    // disse "agora não": fica pelas velas que já tem
+    if (this.historyDecision.get(key) === 'no' && loaded >= this.historyAskAt) return true;
+    return this.startReached || loaded >= cap || this.historyRounds >= AUTO_HISTORY_ROUNDS;
+  }
+
+  /** Velas a partir das quais se pergunta (5000; os testes baixam-no). */
+  historyAskAt = HISTORY_ASK_AT;
+  private historyDecision = new Map<string, 'yes' | 'no'>();
+  private historyAsked: string | null = null;
+
+  /** Passou do limite sem perguntar e o utilizador ainda não decidiu para este símbolo/intervalo. */
+  private historyNeedsApproval(): boolean {
+    if ((this.cb.getHistoryPolicy?.() ?? 'ask') !== 'ask') return false;
+    const key = `${this.symbol?.id}|${this.tf}`;
+    return !this.startReached && this.loadedCount() >= this.historyAskAt && !this.historyDecision.has(key);
+  }
+
+  /** Resposta do utilizador ao aviso: carregar o resto, ou ficar pelas velas que já tem. */
+  answerHistory(yes: boolean) {
+    const key = `${this.symbol?.id}|${this.tf}`;
+    this.historyDecision.set(key, yes ? 'yes' : 'no');
+    this.historyAsked = null;
+    this.cb.onHistoryAsk?.(null);
+    if (yes) this.requestHistory();
+    else this.updateIndicators(true);
   }
 
   private historyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1434,6 +1483,16 @@ export class ChartController {
   /** Um indicador pediu mais passado: carrega mais um bloco (ele volta a pedir se ainda faltar). */
   private requestHistory() {
     if (this.historyTimer || this.destroyed || !this.symbol || this.historyDone()) return;
+    if (this.historyNeedsApproval()) {
+      const key = `${this.symbol.id}|${this.tf}`;
+      if (this.historyAsked !== key) {
+        this.historyAsked = key;
+        const loaded = this.loadedCount();
+        const extra = Math.max(0, AUTO_HISTORY_MAX - loaded);
+        this.cb.onHistoryAsk?.({ loaded, extra, mb: Math.max(0.1, Math.round(((extra * BYTES_PER_BAR) / 1e6) * 10) / 10) });
+      }
+      return;
+    }
     this.historyTimer = setTimeout(async () => {
       this.historyTimer = null;
       if (this.destroyed || this.historyDone()) return;

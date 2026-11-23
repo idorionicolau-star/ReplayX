@@ -7,7 +7,7 @@ import { toolDef } from '@/chart/drawings/tools';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { ChartController, type ChartStatus, type CrosshairInfo, coarsePointer } from '@/chart/controller';
+import { ChartController, type HistoryAsk, type ChartStatus, type CrosshairInfo, coarsePointer } from '@/chart/controller';
 import { Interaction } from '@/chart/interaction';
 import { focus } from '@/chart/bus';
 import { registerChart, unregisterChart } from '@/chart/registry';
@@ -52,6 +52,7 @@ export function ChartPane({ index }: { index: number }) {
   const interRef = useRef<Interaction | null>(null);
   const [ctrl, setCtrl] = useState<ChartController | null>(null);
   const [status, setStatus] = useState<ChartStatus>({ state: 'idle' });
+  const [historyAsk, setHistoryAsk] = useState<HistoryAsk | null>(null);
   const [legend, setLegend] = useState<CrosshairInfo | null>(null);
   const [panes, setPanes] = useState<{ top: number; height: number }[]>([]);
   const [barsVersion, setBarsVersion] = useState(0);
@@ -82,6 +83,8 @@ export function ChartPane({ index }: { index: number }) {
         onPanes: setPanes,
         onBars: () => setBarsVersion((v) => v + 1),
         onManualScale: () => useSettings.getState().set({ autoFit: false }),
+        getHistoryPolicy: () => useSettings.getState().autoHistory,
+        onHistoryAsk: setHistoryAsk,
         getCursor: () => {
           const r = useReplay.getState();
           return r.active && !r.selecting ? r.cursor : null;
@@ -347,6 +350,21 @@ export function ChartPane({ index }: { index: number }) {
       {selecting && isActive && <ReplayPickBanner ctrl={ctrl} />}
       {ctrl && isActive && <DrawingToolbarFloat symbolId={cfg.symbolId} ctrl={ctrl} />}
       {ctrl && isActive && <BacktestChip symbolId={cfg.symbolId} ctrl={ctrl} />}
+      {ctrl && historyAsk && (
+        <div className="absolute bottom-16 left-1/2 z-30 w-[min(420px,calc(100%-16px))] -translate-x-1/2 rounded-lg border border-line bg-elev p-3 shadow-pop" data-testid="history-ask" onPointerDown={(e) => e.stopPropagation()}>
+          <p className="text-[12px] leading-snug">
+            Os indicadores querem carregar mais histórico (até cerca de <b>{historyAsk.mb} MB</b>, mais {historyAsk.extra.toLocaleString('pt-PT')} velas) para procurar sinais no passado. Já tens {historyAsk.loaded.toLocaleString('pt-PT')}.
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" className="h-8 rounded-md px-3 text-xs text-muted hover:bg-hover" onClick={() => ctrl.answerHistory(false)} data-testid="history-no">
+              Agora não
+            </button>
+            <button type="button" className="h-8 rounded-md bg-accent px-3 text-xs font-semibold text-on-accent hover:bg-accent-hover" onClick={() => ctrl.answerHistory(true)} data-testid="history-yes">
+              Carregar
+            </button>
+          </div>
+        </div>
+      )}
       {ctrl && <ChartNav ctrl={ctrl} />}
       {ctrl && <FitButton ctrl={ctrl} />}
       {ctrl && isActive && <PriceSnapButton />}

@@ -208,7 +208,7 @@ describe('padrões gráficos: geral', () => {
     expect(def.layer).toBe(true);
     const bars = hsTop();
     const p = defaultParams(def);
-    expect(p.minSignals).toBe(100);
+    expect(p.minSignals).toBe(50);
     const more = def.compute(bars, p, { historyDone: false });
     expect(more.markers!.length).toBeGreaterThan(0);
     expect(more.wantHistory).toBe(true);
