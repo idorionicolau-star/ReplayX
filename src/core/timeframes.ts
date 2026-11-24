@@ -1,3 +1,4 @@
+import { tr } from '@/i18n';
 /**
  * Timeframes ao estilo TradingView: "1m", "15m", "4h", "1D", "1W", "1M".
  * Todas as contas são feitas em segundos UTC.
@@ -38,12 +39,12 @@ export const DEFAULT_FAVORITE_TFS = ['1m', '5m', '15m', '1h', '4h', '1D'];
 
 export function parseTf(s: string): Timeframe {
   const m = /^(\d+)?\s*(s|m|h|D|W|M|d|w)$/.exec(s.trim());
-  if (!m) throw new Error(`Timeframe inválido: ${s}`);
+  if (!m) throw new Error(tr('Timeframe inválido: {0}', s));
   const n = m[1] ? parseInt(m[1], 10) : 1;
   let unit = m[2] as TfUnit | 'd' | 'w';
   if (unit === 'd') unit = 'D';
   if (unit === 'w') unit = 'W';
-  if (n <= 0) throw new Error(`Timeframe inválido: ${s}`);
+  if (n <= 0) throw new Error(tr('Timeframe inválido: {0}', s));
   return { n, unit: unit as TfUnit };
 }
 
@@ -151,17 +152,17 @@ export function tfLabel(s: string): string {
   const plural = tf.n > 1;
   switch (tf.unit) {
     case 's':
-      return `${tf.n} segundo${plural ? 's' : ''}`;
+      return plural ? tr('{0} segundos', tf.n) : tr('{0} segundo', tf.n);
     case 'm':
-      return `${tf.n} minuto${plural ? 's' : ''}`;
+      return plural ? tr('{0} minutos', tf.n) : tr('{0} minuto', tf.n);
     case 'h':
-      return `${tf.n} hora${plural ? 's' : ''}`;
+      return plural ? tr('{0} horas', tf.n) : tr('{0} hora', tf.n);
     case 'D':
-      return `${tf.n} dia${plural ? 's' : ''}`;
+      return plural ? tr('{0} dias', tf.n) : tr('{0} dia', tf.n);
     case 'W':
-      return `${tf.n} semana${plural ? 's' : ''}`;
+      return plural ? tr('{0} semanas', tf.n) : tr('{0} semana', tf.n);
     case 'M':
-      return `${tf.n} ${plural ? 'meses' : 'mês'}`;
+      return plural ? tr('{0} meses', tf.n) : tr('{0} mês', tf.n);
   }
 }
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTr } from '@/i18n/react';
 
 /**
  * Ilustrações da abertura: cenas a traço branco sobre preto, estilizadas, para a grelha (luxo e esforço lado a lado,
@@ -10,8 +11,9 @@ const SOFT = 'rgba(255,255,255,0.10)';
 const MID = 'rgba(255,255,255,0.28)';
 
 function Art({ children, label }: { children: ReactNode; label: string }) {
+  const tr = useTr();
   return (
-    <svg viewBox="0 0 120 160" className="rx-art" role="img" aria-label={label} fill="none" stroke={S} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 120 160" className="rx-art" role="img" aria-label={tr(label)} fill="none" stroke={S} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
       {children}
     </svg>
   );
@@ -28,7 +30,7 @@ const Waves = ({ y }: { y: number }) => (
 /** Iate de luxo ao pôr do sol. */
 function Yacht() {
   return (
-    <Art label="Iate ao pôr do sol">
+    <Art label={'Iate ao pôr do sol'}>
       <circle cx="84" cy="78" r="24" stroke={MID} />
       <path d="M60 78 h48 M62 71 h44 M66 64 h36" stroke={MID} />
       <path d="M8 112 H114 L100 130 H28 Z" fill={SOFT} />
@@ -51,7 +53,7 @@ function Skyline() {
     [102, 76, 12],
   ];
   return (
-    <Art label="Cidade à noite">
+    <Art label={'Cidade à noite'}>
       <path d="M96 22 a10 10 0 1 0 8 14 a8 8 0 0 1 -8 -14 z" stroke={MID} />
       {blocks.map(([x, h, w]) => (
         <g key={x}>
@@ -70,7 +72,7 @@ function Skyline() {
 /** Carro desportivo de lado. */
 function Car() {
   return (
-    <Art label="Carro desportivo">
+    <Art label={'Carro desportivo'}>
       <path d="M0 126 H120" stroke={MID} />
       <path d="M8 116 C12 106 26 102 40 100 L58 88 C72 82 90 86 98 98 L110 102 C114 104 114 112 112 116 Z" fill={SOFT} />
       <path d="M46 99 L60 90 C70 86 82 88 90 98 Z" stroke={MID} />
@@ -95,7 +97,7 @@ function Candles() {
     [94, 52, 28, 16],
   ];
   return (
-    <Art label="Gráfico de velas a subir">
+    <Art label={'Gráfico de velas a subir'}>
       <g stroke={MID}>
         {[40, 70, 100, 130].map((y) => (
           <path key={y} d={`M4 ${y} H116`} strokeDasharray="1 4" />
@@ -116,7 +118,7 @@ function Candles() {
 /** Mulher elegante com chapéu e óculos, de perfil. */
 function Woman() {
   return (
-    <Art label="Silhueta de mulher com chapéu">
+    <Art label={'Silhueta de mulher com chapéu'}>
       <ellipse cx="60" cy="42" rx="40" ry="7" fill={SOFT} />
       <path d="M40 42 C40 20 80 20 80 42" fill={SOFT} />
       <path d="M44 38 H76" stroke={MID} />
@@ -133,7 +135,7 @@ function Woman() {
 /** Madrugada na paragem: um homem simples à espera da camioneta com a mochila às costas. */
 function BusStop() {
   return (
-    <Art label="Homem à espera na paragem de manhã cedo">
+    <Art label={'Homem à espera na paragem de manhã cedo'}>
       <path d="M0 122 H120" stroke={MID} />
       <path d="M0 116 a40 28 0 0 1 80 0" stroke={MID} transform="translate(40 -18) scale(0.9)" />
       <path d="M96 122 V60" />
@@ -152,7 +154,7 @@ function BusStop() {
 /** Palmeiras ao fim da tarde. */
 function Palms() {
   return (
-    <Art label="Palmeiras ao pôr do sol">
+    <Art label={'Palmeiras ao pôr do sol'}>
       <circle cx="78" cy="92" r="20" stroke={MID} />
       <path d="M0 126 H120" stroke={MID} />
       <path d="M34 126 C36 104 32 84 38 52" />
@@ -167,7 +169,7 @@ function Palms() {
 /** Banca de rua: uma vendedora atrás da mesa, debaixo do guarda-sol. */
 function Vendor() {
   return (
-    <Art label="Banca de rua">
+    <Art label={'Banca de rua'}>
       <path d="M0 128 H120" stroke={MID} />
       <path d="M14 58 C30 30 90 30 106 58 Z" fill={SOFT} />
       <path d="M14 58 H106 M42 58 V40 M72 58 V40" stroke={MID} />
@@ -186,7 +188,7 @@ function Vendor() {
 /** Relógio com setas de retrocesso: o replay. */
 function Clock() {
   return (
-    <Art label="Relógio com retrocesso">
+    <Art label={'Relógio com retrocesso'}>
       <circle cx="60" cy="76" r="38" fill={SOFT} />
       <circle cx="60" cy="76" r="32" stroke={MID} />
       {Array.from({ length: 12 }).map((_, i) => {
@@ -204,7 +206,7 @@ function Clock() {
 /** Homem a trabalhar de capacete e fato-macaco, com uma ferramenta ao ombro. */
 function Worker() {
   return (
-    <Art label="Trabalhador com capacete">
+    <Art label={'Trabalhador com capacete'}>
       <path d="M0 128 H120" stroke={MID} />
       <path d="M38 52 C38 36 70 36 70 52 Z" fill={SOFT} />
       <path d="M34 52 H74" />

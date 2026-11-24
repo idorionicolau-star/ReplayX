@@ -4,6 +4,7 @@ import { Minus, Plus } from 'lucide-react';
 import { fmtLot, stepLot } from '@/core/trading/ticket';
 import { fmtLotWith, snapLot, stepLotRule, type LotRule } from '@/core/trading/lots';
 import { cn } from './cn';
+import { tr } from '@/i18n';
 
 /**
  * Lote intuitivo: − e + passam pela escada 0,01 · 0,02 · 0,05 · 0,1 · 0,2 · 0,5 · 1 · 2 · 5…
@@ -50,11 +51,11 @@ export function QtyStepper({ value, onChange, className, unit, rule }: { value: 
         onChange(rule ? stepLotRule(valueRef.current, dir, rule) : stepLot(valueRef.current, dir));
       }}
     >
-      <button type="button" aria-label="Menos lote" data-testid="qty-minus" className={btn} onPointerDown={(e) => press(-1, e)} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}>
+      <button type="button" aria-label={tr('Menos lote')} data-testid="qty-minus" className={btn} onPointerDown={(e) => press(-1, e)} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}>
         <Minus size={15} />
       </button>
       {editing === null ? (
-        <button type="button" title="Tocar para escrever o lote" data-testid="qty-value" onClick={() => setEditing(String(value))} className="h-8 min-w-[52px] rounded-md px-1.5 text-center text-[13px] font-semibold tnum hover:bg-hover">
+        <button type="button" title={tr('Tocar para escrever o lote')} data-testid="qty-value" onClick={() => setEditing(String(value))} className="h-8 min-w-[52px] rounded-md px-1.5 text-center text-[13px] font-semibold tnum hover:bg-hover">
           {rule ? fmtLotWith(value, rule) : fmtLot(value)}
           {unit && <span className="ml-0.5 text-[10px] font-normal text-muted">{unit}</span>}
         </button>
@@ -74,7 +75,7 @@ export function QtyStepper({ value, onChange, className, unit, rule }: { value: 
           data-testid="qty-input"
         />
       )}
-      <button type="button" aria-label="Mais lote" data-testid="qty-plus" className={btn} onPointerDown={(e) => press(1, e)} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}>
+      <button type="button" aria-label={tr('Mais lote')} data-testid="qty-plus" className={btn} onPointerDown={(e) => press(1, e)} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}>
         <Plus size={15} />
       </button>
     </div>

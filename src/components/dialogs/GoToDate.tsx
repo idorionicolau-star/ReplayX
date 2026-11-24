@@ -11,16 +11,17 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { fromInputDateTime, toInputDateTime } from '@/lib/format';
 import { nowSec } from '@/core/feed/provider';
+import { tr } from '@/i18n';
 
 const QUICK: { label: string; sec: number }[] = [
-  { label: '1 dia atrás', sec: 86400 },
-  { label: '1 semana', sec: 7 * 86400 },
-  { label: '1 mês', sec: 30 * 86400 },
-  { label: '3 meses', sec: 91 * 86400 },
-  { label: '6 meses', sec: 182 * 86400 },
-  { label: '1 ano', sec: 365 * 86400 },
-  { label: '2 anos', sec: 730 * 86400 },
-  { label: '5 anos', sec: 5 * 365 * 86400 },
+  { label: tr('1 dia atrás'), sec: 86400 },
+  { label: tr('1 semana'), sec: 7 * 86400 },
+  { label: tr('1 mês'), sec: 30 * 86400 },
+  { label: tr('3 meses'), sec: 91 * 86400 },
+  { label: tr('6 meses'), sec: 182 * 86400 },
+  { label: tr('1 ano'), sec: 365 * 86400 },
+  { label: tr('2 anos'), sec: 730 * 86400 },
+  { label: tr('5 anos'), sec: 5 * 365 * 86400 },
 ];
 
 export function GoToDate() {
@@ -40,7 +41,7 @@ function GoToDateForm() {
     const target = Math.min(t, nowSec() - 60);
     const acc = useTrading.getState().replay;
     if (st.active && st.cursor !== null && !st.selecting && target < st.cursor && (acc.trades.length || acc.positions.length)) {
-      if (!confirm('Voltar atrás recomeça a sessão de replay (as operações atuais são guardadas no Diário). Continuar?')) return;
+      if (!confirm(tr('Voltar atrás recomeça a sessão de replay (as operações atuais são guardadas no Diário). Continuar?'))) return;
       replay.saveCurrent();
     }
     close();
@@ -51,12 +52,12 @@ function GoToDateForm() {
     <Dialog
       open
       onClose={close}
-      title="Ir para data"
+      title={tr('Ir para data')}
       width={420}
       footer={
         <>
           <Button variant="ghost" onClick={close}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           {!(st.active && st.cursor !== null && !st.selecting) && (
             <Button
@@ -71,11 +72,11 @@ function GoToDateForm() {
                 if (id) void getChart(id)?.goToTime(Math.min(t, nowSec()));
               }}
             >
-              Mostrar no gráfico
+              {tr('Mostrar no gráfico')}
             </Button>
           )}
           <Button variant="primary" onClick={() => void go(fromInputDateTime(value, tz))} data-testid="goto-confirm">
-            {st.active && st.cursor !== null && !st.selecting ? 'Saltar' : 'Começar replay'}
+            {st.active && st.cursor !== null && !st.selecting ? tr('Saltar') : tr('Começar replay')}
           </Button>
         </>
       }
@@ -89,7 +90,7 @@ function GoToDateForm() {
             </Button>
           ))}
         </div>
-        <p className="text-xs text-muted">Para a frente, as ordens abertas são executadas pelo caminho. Para trás, a sessão recomeça.</p>
+        <p className="text-xs text-muted">{tr('Para a frente, as ordens abertas são executadas pelo caminho. Para trás, a sessão recomeça.')}</p>
       </div>
     </Dialog>
   );

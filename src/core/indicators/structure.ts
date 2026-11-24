@@ -3,6 +3,7 @@ import { aggregate, lowerBound } from '../bars';
 import { nextBarTime, parseTf, tfSeconds, tfShort } from '../timeframes';
 import { atrFilled, findPivots } from './apocalypse';
 import type { DrawData, DrawLine, DrawText } from '../../chart/layer';
+import { tr } from '@/i18n';
 
 /**
  * Estrutura de mercado (topos e fundos reais, BOS e CHoCH) sem contar velas.
@@ -217,7 +218,7 @@ export function topDown(chart: readonly Bar[], o: TopDownOptions): TopDownResult
   const empty: DrawData = { lines: [], texts: [] };
   const chartSec = chartSeconds(chart);
   const used = { analysis: o.analysis, entry: o.entry, chart: chartSec };
-  if (chart.length < 40) return { draw: { ...empty, panel: { lines: [{ text: 'Estrutura: poucos dados', color: GREY }] } }, htf: null, ltf: null, used };
+  if (chart.length < 40) return { draw: { ...empty, panel: { lines: [{ text: tr('Estrutura: poucos dados'), color: GREY }] } }, htf: null, ltf: null, used };
   // o intervalo de entradas nunca é mais fino do que o gráfico, e a análise nunca mais fina do que as entradas
   let entry = o.entry;
   if (tfSeconds(entry) < chartSec) entry = chart.length ? closestTf(chartSec) : o.entry;
@@ -267,7 +268,7 @@ export function topDown(chart: readonly Bar[], o: TopDownOptions): TopDownResult
       const i1 = hIdx.get(sw) ?? 0;
       lines.push({ i1, p1: price, i2: endIdx, p2: price, color, width: 1.5 });
       // a etiqueta encosta à margem direita do gráfico (nunca é cortada pelo eixo do preço)
-      texts.push({ i: chart.length - 1, edge: 'right', p: price, text: `${hTag} ${word} ${fmtPrice(price)}`, color, size: 10, pos: word === 'confirma' === up ? 'above' : 'below' });
+      texts.push({ i: chart.length - 1, edge: 'right', p: price, text: `${hTag} ${tr(word)} ${fmtPrice(price)}`, color, size: 10, pos: word === 'confirma' === up ? 'above' : 'below' });
     }
   }
 
@@ -304,26 +305,26 @@ export function topDown(chart: readonly Bar[], o: TopDownOptions): TopDownResult
         const mark = aligned === null ? '' : aligned ? ' ✓' : ' ✗';
         lines.push({ i1, p1: ev.level, i2, p2: ev.level, color: ev.dir === 1 ? GREEN : RED, width: 1, dash: true });
         texts.push({ i: Math.round((i1 + i2) / 2), p: ev.level, text: `${ev.kind}${mark}`, color: ev.dir === 1 ? GREEN : RED, size: 10, pos: ev.dir === 1 ? 'above' : 'below' });
-        lastLtfEvent = { text: `${ev.kind} de ${ev.dir === 1 ? 'alta' : 'baixa'}`, aligned };
+        lastLtfEvent = { text: ev.dir === 1 ? tr('{0} de alta', ev.kind) : tr('{0} de baixa', ev.kind), aligned };
       }
     }
   }
 
   // cartão com a leitura de agora
   const panel: { text: string; color?: string }[] = [];
-  if (!htf) panel.push({ text: `${hTag}: poucos dados (aumente o histórico)`, color: GREY });
+  if (!htf) panel.push({ text: tr('{0}: poucos dados (aumente o histórico)', hTag), color: GREY });
   else {
     const t = htf.trend;
-    panel.push({ text: `${hTag}: ${t === 1 ? 'tendência de ALTA' : t === -1 ? 'tendência de BAIXA' : 'sem estrutura clara'}`, color: t === 1 ? GREEN : t === -1 ? RED : GREY });
-    if (htf.phase) panel.push({ text: `fase: ${htf.phase === 'expansion' ? 'expansão' : 'correção'}`, color: htf.phase === 'expansion' ? EXP_HTF : COR_HTF });
-    if (htf.bosLevel !== null) panel.push({ text: `confirma (BOS): ${fmtPrice(htf.bosLevel)}`, color: t === 1 ? GREEN : RED });
-    if (htf.chochLevel !== null) panel.push({ text: `inverte (CHoCH): ${fmtPrice(htf.chochLevel)}`, color: t === 1 ? RED : GREEN });
+    panel.push({ text: `${hTag}: ${t === 1 ? tr('tendência de ALTA') : t === -1 ? tr('tendência de BAIXA') : tr('sem estrutura clara')}`, color: t === 1 ? GREEN : t === -1 ? RED : GREY });
+    if (htf.phase) panel.push({ text: `fase: ${htf.phase === 'expansion' ? tr('expansão') : tr('correção')}`, color: htf.phase === 'expansion' ? EXP_HTF : COR_HTF });
+    if (htf.bosLevel !== null) panel.push({ text: tr('confirma (BOS): {0}', fmtPrice(htf.bosLevel)), color: t === 1 ? GREEN : RED });
+    if (htf.chochLevel !== null) panel.push({ text: tr('inverte (CHoCH): {0}', fmtPrice(htf.chochLevel)), color: t === 1 ? RED : GREEN });
   }
   if (lastLtfEvent) {
     const e = lastLtfEvent as { text: string; aligned: boolean | null };
-    panel.push({ text: `${eTag}: ${e.text}${e.aligned === null ? '' : e.aligned ? ' ✓ a favor' : ' ✗ contra'}`, color: e.aligned === null ? GREY : e.aligned ? GREEN : RED });
+    panel.push({ text: `${eTag}: ${e.text}${e.aligned === null ? '' : e.aligned ? tr(' ✓ a favor') : tr(' ✗ contra')}`, color: e.aligned === null ? GREY : e.aligned ? GREEN : RED });
   }
-  if (entry !== o.entry) panel.push({ text: `gráfico em ${tfShort(closestTf(chartSec))}: entradas em ${eTag}`, color: GREY });
+  if (entry !== o.entry) panel.push({ text: tr('gráfico em {0}: entradas em {1}', tfShort(closestTf(chartSec)), eTag), color: GREY });
   return { draw: { lines, texts, panel: { lines: panel, corner: 'bl' } }, htf, ltf, used };
 }
 

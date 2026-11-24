@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { Popover } from './Popover';
 import { cn } from './cn';
+import { tr } from '@/i18n';
 
 const PALETTE = [
   '#ffffff', '#d1d4dc', '#b2b5be', '#9598a1', '#787b86', '#5d606b', '#434651', '#2a2e39', '#131722', '#000000',
@@ -44,7 +45,7 @@ function Swatch({ color, active, onClick, onRemove }: { color: string; active?: 
       <button
         type="button"
         aria-label={color}
-        title={onRemove ? `${color} (botão direito para remover)` : color}
+        title={onRemove ? tr('{0} (botão direito para remover)', color) : color}
         onClick={onClick}
         onContextMenu={(e) => {
           if (!onRemove) return;
@@ -57,7 +58,7 @@ function Swatch({ color, active, onClick, onRemove }: { color: string; active?: 
       {onRemove && (
         <button
           type="button"
-          aria-label={`Remover ${color}`}
+          aria-label={tr('Remover {0}', color)}
           onClick={onRemove}
           className="absolute -top-1.5 -right-1.5 hidden h-3.5 w-3.5 items-center justify-center rounded-full bg-text text-bg group-hover:flex"
         >
@@ -109,8 +110,8 @@ export function ColorPicker({
       <button
         ref={ref}
         type="button"
-        aria-label={label ?? 'Cor'}
-        title={label ?? 'Cor'}
+        aria-label={label ?? tr('Cor')}
+        title={label ?? tr('Cor')}
         onClick={() => setOpen((o) => !o)}
         className="relative h-7 w-7 shrink-0 rounded-md border border-line p-[3px] hover:border-accent"
       >
@@ -124,15 +125,15 @@ export function ColorPicker({
           ))}
         </div>
 
-        <div className="mt-3 mb-1 text-[11px] text-muted">As minhas cores</div>
+        <div className="mt-3 mb-1 text-[11px] text-muted">{tr('As minhas cores')}</div>
         <div className="flex flex-wrap gap-1" data-testid="custom-colors">
           {custom.map((c) => (
             <Swatch key={c} color={c} active={current === c} onClick={() => onChange(c)} onRemove={() => setCustom(custom.filter((x) => x !== c))} />
           ))}
           <button
             type="button"
-            aria-label="Guardar esta cor"
-            title="Guardar esta cor nas minhas cores"
+            aria-label={tr('Guardar esta cor')}
+            title={tr('Guardar esta cor nas minhas cores')}
             onClick={() => !custom.includes(current) && setCustom([current, ...custom])}
             className="flex h-5 w-5 items-center justify-center rounded-[3px] border border-dashed border-line text-muted hover:border-accent hover:text-accent"
           >
@@ -141,7 +142,7 @@ export function ColorPicker({
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <input type="color" value={hex} onChange={(e) => onChange(composeColor(e.target.value, alpha))} className="h-7 w-9 shrink-0 cursor-pointer rounded border border-line bg-transparent" aria-label="Escolher cor" />
+          <input type="color" value={hex} onChange={(e) => onChange(composeColor(e.target.value, alpha))} className="h-7 w-9 shrink-0 cursor-pointer rounded border border-line bg-transparent" aria-label={tr('Escolher cor')} />
           <input
             value={hexText}
             onChange={(e) => {
@@ -150,19 +151,19 @@ export function ColorPicker({
               const h = v.startsWith('#') ? v : `#${v}`;
               if (/^#[0-9a-f]{6}$/i.test(h)) onChange(composeColor(h.toLowerCase(), alpha));
             }}
-            aria-label="Código da cor"
+            aria-label={tr('Código da cor')}
             className="h-7 min-w-0 flex-1 rounded-md border border-line bg-input px-2 font-mono text-xs uppercase outline-none focus:border-accent"
           />
           {onReset && (
-            <button type="button" onClick={onReset} className={cn('h-7 shrink-0 rounded-md px-2 text-xs', isAuto ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-hover')} title="Usar a cor do tema">
-              Automático
+            <button type="button" onClick={onReset} className={cn('h-7 shrink-0 rounded-md px-2 text-xs', isAuto ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-hover')} title={tr('Usar a cor do tema')}>
+              {tr('Automático')}
             </button>
           )}
         </div>
         {withAlpha && (
           <div className="mt-3">
             <div className="mb-1 flex justify-between text-[11px] text-muted">
-              <span>Opacidade</span>
+              <span>{tr('Opacidade')}</span>
               <span className="tnum">{Math.round(alpha * 100)}%</span>
             </div>
             <input
@@ -172,7 +173,7 @@ export function ColorPicker({
               value={Math.round(alpha * 100)}
               onChange={(e) => onChange(composeColor(hex, Number(e.target.value) / 100))}
               className="w-full accent-[var(--c-accent)]"
-              aria-label="Opacidade"
+              aria-label={tr('Opacidade')}
             />
           </div>
         )}

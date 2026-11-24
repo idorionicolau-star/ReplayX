@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Switch } from '@/components/ui/Field';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { locale, tr } from '@/i18n';
 
 interface CalEvent {
   id: string;
@@ -29,7 +30,7 @@ function ImpactBars({ impact }: { impact: string }) {
   const n = impact === 'high' ? 3 : impact === 'medium' ? 2 : impact === 'low' ? 1 : 0;
   const color = impact === 'high' ? 'bg-down' : impact === 'medium' ? 'bg-warn' : impact === 'low' ? 'bg-[#f5c518]' : 'bg-faint';
   return (
-    <span className="flex items-end gap-[2px]" title={`Impacto: ${impact}`}>
+    <span className="flex items-end gap-[2px]" title={tr('Impacto: {0}', impact)}>
       {[1, 2, 3].map((i) => (
         <span key={i} className={cn('w-[3px] rounded-sm', i <= n ? color : 'bg-line')} style={{ height: 4 + i * 3 }} />
       ))}
@@ -64,7 +65,7 @@ export function CalendarPanel() {
         cache.set(week, { at, ...j });
         if (alive) setLoaded({ week, at, ...j });
       })
-      .catch(() => alive && setLoaded({ week, at: Date.now(), events: [], error: 'Calendário indisponível.' }));
+      .catch(() => alive && setLoaded({ week, at: Date.now(), events: [], error: tr('Calendário indisponível.') }));
     return () => {
       alive = false;
     };
@@ -87,7 +88,7 @@ export function CalendarPanel() {
     });
     const map = new Map<string, CalEvent[]>();
     for (const e of evs) {
-      const day = new Date(e.time * 1000).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz === 'local' ? undefined : tz });
+      const day = new Date(e.time * 1000).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz === 'local' ? undefined : tz });
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(e);
     }
@@ -103,19 +104,19 @@ export function CalendarPanel() {
             value={week}
             onChange={setWeek}
             items={[
-              { value: 'this', label: 'Esta semana' },
-              { value: 'next', label: 'Próxima' },
+              { value: 'this', label: tr('Esta semana') },
+              { value: 'next', label: tr('Próxima') },
             ]}
           />
           <div className="flex-1" />
-          <button type="button" aria-label="Atualizar" onClick={() => setNonce((n) => n + 1)} className="rounded p-1.5 text-muted hover:bg-hover hover:text-text">
+          <button type="button" aria-label={tr('Atualizar')} onClick={() => setNonce((n) => n + 1)} className="rounded p-1.5 text-muted hover:bg-hover hover:text-text">
             <RefreshCw size={14} />
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {(['high', 'medium', 'low', 'holiday'] as const).map((k) => (
             <button key={k} type="button" onClick={() => setImpacts((s) => ({ ...s, [k]: !s[k] }))} className={cn('h-6 rounded-full px-2 text-[11px]', impacts[k] ? 'bg-text text-bg' : 'bg-hover text-muted')}>
-              {k === 'high' ? 'Alto' : k === 'medium' ? 'Médio' : k === 'low' ? 'Baixo' : 'Feriados'}
+              {k === 'high' ? tr('Alto') : k === 'medium' ? tr('Médio') : k === 'low' ? tr('Baixo') : tr('Feriados')}
             </button>
           ))}
         </div>
@@ -126,7 +127,7 @@ export function CalendarPanel() {
             </button>
           ))}
         </div>
-        {symCcys.length > 0 && <Switch checked={onlySymbol} onChange={setOnlySymbol} label={<span className="text-xs text-muted">Só moedas de {sym?.name}</span>} />}
+        {symCcys.length > 0 && <Switch checked={onlySymbol} onChange={setOnlySymbol} label={<span className="text-xs text-muted">{tr('Só moedas de')} {sym?.name}</span>} />}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {loading && (
@@ -135,7 +136,7 @@ export function CalendarPanel() {
           </div>
         )}
         {data?.error && <div className="px-4 py-6 text-center text-xs text-down">{data.error}</div>}
-        {data && !data.error && !groups.length && <div className="px-4 py-8 text-center text-xs text-muted">Sem eventos com estes filtros.</div>}
+        {data && !data.error && !groups.length && <div className="px-4 py-8 text-center text-xs text-muted">{tr('Sem eventos com estes filtros.')}</div>}
         {groups.map(([day, evs]) => (
           <div key={day}>
             <div className="sticky top-0 z-10 bg-sunken px-3 py-1.5 text-[11px] font-semibold text-muted capitalize">{day}</div>
@@ -150,9 +151,9 @@ export function CalendarPanel() {
                   <span className="block leading-snug">{e.title}</span>
                   {(e.actual || e.forecast || e.previous) && (
                     <span className="mt-0.5 flex gap-2 text-[11px] text-muted tnum">
-                      {e.actual && <span className="text-text">Atual {e.actual}</span>}
-                      {e.forecast && <span>Prev. {e.forecast}</span>}
-                      {e.previous && <span>Ant. {e.previous}</span>}
+                      {e.actual && <span className="text-text">{tr('Atual')} {e.actual}</span>}
+                      {e.forecast && <span>{tr('Prev.')} {e.forecast}</span>}
+                      {e.previous && <span>{tr('Ant.')} {e.previous}</span>}
                     </span>
                   )}
                 </span>
@@ -161,7 +162,7 @@ export function CalendarPanel() {
           </div>
         ))}
       </div>
-      <div className="border-t border-line px-3 py-1.5 text-[10px] text-muted">Fonte: Forex Factory. Horas no fuso escolhido nas definições.</div>
+      <div className="border-t border-line px-3 py-1.5 text-[10px] text-muted">{tr('Fonte: Forex Factory. Horas no fuso escolhido nas definições.')}</div>
     </div>
   );
 }

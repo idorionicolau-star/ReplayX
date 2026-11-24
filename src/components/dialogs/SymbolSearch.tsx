@@ -13,17 +13,18 @@ import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/components/ui/cn';
 import { toast } from '@/components/ui/Toast';
 import { createPortal } from 'react-dom';
+import { tr } from '@/i18n';
 
 const TABS: { id: 'all' | AssetClass; label: string }[] = [
-  { id: 'all', label: 'Todos' },
-  { id: 'synthetic', label: 'Sintéticos' },
+  { id: 'all', label: tr('Todos') },
+  { id: 'synthetic', label: tr('Sintéticos') },
   { id: 'forex', label: 'Forex' },
-  { id: 'crypto', label: 'Cripto' },
-  { id: 'commodities', label: 'Matérias-primas' },
-  { id: 'indices', label: 'Índices' },
-  { id: 'stocks', label: 'Ações' },
-  { id: 'futures', label: 'Futuros' },
-  { id: 'demo', label: 'Simulado' },
+  { id: 'crypto', label: tr('Cripto') },
+  { id: 'commodities', label: tr('Matérias-primas') },
+  { id: 'indices', label: tr('Índices') },
+  { id: 'stocks', label: tr('Ações') },
+  { id: 'futures', label: tr('Futuros') },
+  { id: 'demo', label: tr('Simulado') },
 ];
 
 function score(s: SymbolInfo, q: string): number {
@@ -131,10 +132,10 @@ function SymbolSearchDialog() {
     if (mode === 'watchlist') {
       const ws = useWorkspace.getState();
       const list = ws.watchlists.find((w) => w.id === ws.activeWatchlist) ?? ws.watchlists[0];
-      if (list?.symbols.includes(s.id)) toast(`${s.name} já está na lista`, { kind: 'info' });
+      if (list?.symbols.includes(s.id)) toast(tr('{0} já está na lista', s.name), { kind: 'info' });
       else {
         addToWatchlist(s.id);
-        toast(`${s.name} adicionado à lista`, { kind: 'success' });
+        toast(tr('{0} adicionado à lista', s.name), { kind: 'success' });
       }
     } else setSymbol(s.id, chart);
     close();
@@ -142,14 +143,14 @@ function SymbolSearchDialog() {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-2 pt-[5vh] sm:p-6 sm:pt-[8vh]" onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="flex h-[min(640px,85vh)] w-full max-w-[720px] flex-col overflow-hidden rounded-xl border border-line bg-elev shadow-pop animate-pop" role="dialog" aria-label="Procurar símbolo">
+      <div className="flex h-[min(640px,85vh)] w-full max-w-[720px] flex-col overflow-hidden rounded-xl border border-line bg-elev shadow-pop animate-pop" role="dialog" aria-label={tr('Procurar símbolo')}>
         <div className="flex h-12 items-center gap-2 border-b border-line px-4">
           <Search size={18} className="text-muted" />
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={mode === 'watchlist' ? 'Adicionar à lista: símbolo ou nome' : 'Símbolo, nome ou mercado (ex.: Volatility 75, EURUSD, BTC, ouro)'}
+            placeholder={mode === 'watchlist' ? tr('Adicionar à lista: símbolo ou nome') : tr('Símbolo, nome ou mercado (ex.: Volatility 75, EURUSD, BTC, ouro)')}
             className="h-full flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
             data-testid="symbol-search-input"
             onKeyDown={(e) => {
@@ -164,7 +165,7 @@ function SymbolSearchDialog() {
             }}
           />
           {loading && <Spinner size={14} className="text-muted" />}
-          <button type="button" aria-label="Fechar" onClick={close} className="rounded-md p-1 text-muted hover:bg-hover hover:text-text">
+          <button type="button" aria-label={tr('Fechar')} onClick={close} className="rounded-md p-1 text-muted hover:bg-hover hover:text-text">
             <X size={18} />
           </button>
         </div>
@@ -181,7 +182,7 @@ function SymbolSearchDialog() {
           ))}
         </div>
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
-          {!q && recent.length > 0 && <div className="px-4 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Recentes e populares</div>}
+          {!q && recent.length > 0 && <div className="px-4 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">{tr('Recentes e populares')}</div>}
           {results.map((s, i) => {
             const inWatch = watch?.symbols.includes(s.id);
             return (
@@ -196,11 +197,11 @@ function SymbolSearchDialog() {
                 <AssetIcon symbol={s} size={22} />
                 <div className="w-[160px] shrink-0 truncate text-[13px] font-semibold">{s.name}</div>
                 <div className="min-w-0 flex-1 truncate text-[13px] text-muted">{s.description}</div>
-                <div className="hidden shrink-0 text-[11px] text-muted sm:block">{s.category ?? ASSET_CLASS_LABEL[s.assetClass]}</div>
+                <div className="hidden shrink-0 text-[11px] text-muted sm:block">{s.category ? tr(s.category) : ASSET_CLASS_LABEL[s.assetClass]}</div>
                 <div className="w-16 shrink-0 text-right text-[11px] font-semibold text-muted">{PROVIDER_LABEL[s.provider]}</div>
                 <button
                   type="button"
-                  aria-label="Adicionar à lista"
+                  aria-label={tr('Adicionar à lista')}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (inWatch) useWorkspace.getState().removeFromWatchlist(s.id);
@@ -213,9 +214,9 @@ function SymbolSearchDialog() {
               </div>
             );
           })}
-          {!results.length && !loading && <div className="px-4 py-10 text-center text-[13px] text-muted">Nenhum símbolo encontrado.</div>}
+          {!results.length && !loading && <div className="px-4 py-10 text-center text-[13px] text-muted">{tr('Nenhum símbolo encontrado.')}</div>}
         </div>
-        <div className="border-t border-line px-4 py-2 text-[11px] text-muted">↑ ↓ para navegar · Enter para escolher · cripto: todos os pares da Binance · ações/futuros: Yahoo Finance</div>
+        <div className="border-t border-line px-4 py-2 text-[11px] text-muted">{tr('↑ ↓ para navegar · Enter para escolher · cripto: todos os pares da Binance · ações/futuros: Yahoo Finance')}</div>
       </div>
     </div>,
     document.body,

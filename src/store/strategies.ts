@@ -6,6 +6,7 @@ import { SCRIPT_TEMPLATES } from '@/core/strategy/script';
 import type { OptimizeResult, StrategyRef, WalkForwardResult, BatchRow } from '@/core/strategy/runner';
 import type { monteCarlo } from '@/core/trading/stats';
 import { uid } from '@/lib/uid';
+import { tr } from '@/i18n';
 
 export interface SavedScript {
   id: string;
@@ -78,7 +79,7 @@ export const useStrategies = create<StrategiesState>()(
           const id = s.id ?? uid('sc');
           set((st) => {
             const existing = st.scripts.find((x) => x.id === id);
-            const row: SavedScript = { id, name: s.name ?? existing?.name ?? 'Novo script', code: s.code, updatedAt: Date.now() };
+            const row: SavedScript = { id, name: s.name ?? existing?.name ?? tr('Novo script'), code: s.code, updatedAt: Date.now() };
             return { scripts: existing ? st.scripts.map((x) => (x.id === id ? row : x)) : [...st.scripts, row], activeScript: id, updatedAt: Date.now() };
           });
           return id;

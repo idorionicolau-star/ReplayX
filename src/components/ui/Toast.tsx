@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { CheckCircle2, AlertTriangle, Info, X, XCircle } from 'lucide-react';
 import { cn } from './cn';
+import { tr } from '@/i18n';
 
 type Kind = 'info' | 'success' | 'error' | 'warning';
 
@@ -37,7 +38,7 @@ export function Toaster() {
               <div className="text-[13px] font-medium">{t.title}</div>
               {t.body && <div className="mt-0.5 text-xs text-muted">{t.body}</div>}
             </div>
-            <button type="button" aria-label="Fechar" className="text-muted hover:text-text" onClick={() => useToasts.setState((s) => ({ items: s.items.filter((x) => x.id !== t.id) }))}>
+            <button type="button" aria-label={tr('Fechar')} className="text-muted hover:text-text" onClick={() => useToasts.setState((s) => ({ items: s.items.filter((x) => x.id !== t.id) }))}>
               <X size={14} />
             </button>
           </div>

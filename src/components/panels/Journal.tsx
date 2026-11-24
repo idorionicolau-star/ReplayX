@@ -18,8 +18,9 @@ import { fmtDate, fmtDateTime, fmtMoney } from '@/lib/format';
 import { tfShort } from '@/core/timeframes';
 import { cn } from '@/components/ui/cn';
 import type { Trade } from '@/core/trading/engine';
+import { tr } from '@/i18n';
 
-const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DAYS = [tr('Dom'), tr('Seg'), tr('Ter'), tr('Qua'), tr('Qui'), tr('Sex'), tr('Sáb')];
 
 function exportCsv(trades: Trade[], name: string) {
   const head = ['id', 'simbolo', 'tipo', 'quantidade', 'entrada', 'hora_entrada', 'saida', 'hora_saida', 'lucro', 'r', 'motivo', 'notas'];
@@ -75,10 +76,10 @@ export function Journal() {
           value={tab}
           onChange={setTab}
           items={[
-            { value: 'overview', label: 'Resumo' },
-            { value: 'trades', label: `Operações (${acc.trades.length})` },
-            { value: 'sessions', label: `Sessões de replay (${sessions.length})` },
-            { value: 'analysis', label: 'Análise' },
+            { value: 'overview', label: tr('Resumo') },
+            { value: 'trades', label: tr('Operações ({0})', acc.trades.length) },
+            { value: 'sessions', label: tr('Sessões de replay ({0})', sessions.length) },
+            { value: 'analysis', label: tr('Análise') },
           ]}
         />
         <div className="flex-1" />
@@ -86,9 +87,9 @@ export function Journal() {
           value={modeSel}
           onChange={setModeSel}
           items={[
-            { value: 'auto', label: 'Atual' },
+            { value: 'auto', label: tr('Atual') },
             { value: 'replay', label: 'Replay' },
-            { value: 'live', label: 'Tempo real' },
+            { value: 'live', label: tr('Tempo real') },
           ]}
         />
         <Button size="sm" variant="ghost" onClick={() => exportCsv(acc.trades, `replayx-${mode}-${new Date().toISOString().slice(0, 10)}`)} disabled={!acc.trades.length}>
@@ -102,15 +103,15 @@ export function Journal() {
               <KeyStats s={stats} />
               <div className="rounded-lg border border-line p-2">
                 <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-muted">
-                  <span>Curva de capital ({mode === 'replay' ? 'sessão de replay' : 'conta demo'})</span>
-                  <span>Saldo {fmtMoney(acc.balance)}</span>
+                  <span>{tr('Curva de capital (')}{mode === 'replay' ? tr('sessão de replay') : tr('conta demo')})</span>
+                  <span>{tr('Saldo')} {fmtMoney(acc.balance)}</span>
                 </div>
                 <EquityChart points={curve} initial={acc.initial} height={170} />
               </div>
             </div>
           ) : (
-            <Empty title={mode === 'replay' ? 'Ainda sem operações nesta sessão de replay' : 'Ainda sem operações na conta demo'}>
-              Abra o Replay, escolha um ponto de partida e use os botões Comprar/Vender (ou o painel Negociar). As estatísticas aparecem aqui.
+            <Empty title={mode === 'replay' ? tr('Ainda sem operações nesta sessão de replay') : tr('Ainda sem operações na conta demo')}>
+              {tr('Abra o Replay, escolha um ponto de partida e use os botões Comprar/Vender (ou o painel Negociar). As estatísticas aparecem aqui.')}
             </Empty>
           ))}
         {tab === 'trades' && <TradesTable trades={acc.trades} onPick={goTo} editable onNote={(id, notes) => updateTrade(mode, id, { notes })} />}
@@ -118,7 +119,7 @@ export function Journal() {
           <div className="flex flex-col gap-2">
             {replayOn && (
               <Button size="sm" variant="primary" className="self-start" onClick={() => replay.saveCurrent()}>
-                Guardar a sessão atual
+                {tr('Guardar a sessão atual')}
               </Button>
             )}
             {sessions.map((s) => {
@@ -134,17 +135,17 @@ export function Journal() {
                   <div className="text-right">
                     <div className={cn('font-semibold tnum', st.netProfit >= 0 ? 'text-up' : 'text-down')}>{fmtMoney(st.netProfit)}</div>
                     <div className="text-muted">
-                      {st.trades} op. · {st.winRate.toFixed(0)}% acerto
+                      {st.trades} {tr('op. ·')} {st.winRate.toFixed(0)}{tr('% acerto')}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="primary" onClick={() => void replay.resume(s.id)}>
-                      <Play size={13} /> Continuar
+                      <Play size={13} /> {tr('Continuar')}
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      title="Recomeçar do início desta sessão"
+                      title={tr('Recomeçar do início desta sessão')}
                       onClick={() => {
                         const ws = useWorkspace.getState();
                         ws.updateChart(ws.active, { symbolId: s.symbolId, tf: s.tf });
@@ -157,20 +158,20 @@ export function Journal() {
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        const name = prompt('Nome da sessão', s.name);
+                        const name = prompt(tr('Nome da sessão'), s.name);
                         if (name?.trim()) useTrading.getState().renameSession(s.id, name.trim());
                       }}
                     >
                       <Pencil size={13} />
                     </Button>
-                    <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => confirm(`Apagar "${s.name}"?`) && useTrading.getState().deleteSession(s.id)}>
+                    <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => confirm(tr('Apagar "{0}"?', s.name)) && useTrading.getState().deleteSession(s.id)}>
                       <Trash2 size={13} />
                     </Button>
                   </div>
                 </div>
               );
             })}
-            {!sessions.length && <Empty title="Sem sessões guardadas">Durante o replay use o botão de guardar (💾) na barra do replay. Ao sair do replay a sessão também é guardada automaticamente.</Empty>}
+            {!sessions.length && <Empty title={tr('Sem sessões guardadas')}>{tr('Durante o replay use o botão de guardar (💾) na barra do replay. Ao sair do replay a sessão também é guardada automaticamente.')}</Empty>}
           </div>
         )}
         {tab === 'analysis' &&
@@ -181,7 +182,7 @@ export function Journal() {
               </div>
               <div className="flex flex-col gap-4">
                 <div>
-                  <div className="mb-1.5 text-[11px] font-semibold text-muted uppercase">Por dia da semana (UTC)</div>
+                  <div className="mb-1.5 text-[11px] font-semibold text-muted uppercase">{tr('Por dia da semana (UTC)')}</div>
                   {bd.byDay.map((d, i) =>
                     d.trades ? (
                       <div key={i} className="flex items-center gap-2 py-0.5 text-xs">
@@ -198,12 +199,12 @@ export function Journal() {
                   )}
                 </div>
                 <div>
-                  <div className="mb-1.5 text-[11px] font-semibold text-muted uppercase">Por hora de entrada (UTC)</div>
+                  <div className="mb-1.5 text-[11px] font-semibold text-muted uppercase">{tr('Por hora de entrada (UTC)')}</div>
                   <div className="flex h-24 items-end gap-[2px]">
                     {bd.byHour.map((h, i) => {
                       const max = Math.max(...bd.byHour.map((x) => Math.abs(x.pnl)), 1);
                       return (
-                        <div key={i} className="flex flex-1 flex-col items-center justify-end" title={`${i}h: ${h.trades} op., ${fmtMoney(h.pnl)}`}>
+                        <div key={i} className="flex flex-1 flex-col items-center justify-end" title={tr('{0}h: {1} op., {2}', i, h.trades, fmtMoney(h.pnl))}>
                           <div className={cn('w-full rounded-t-sm', h.pnl >= 0 ? 'bg-up' : 'bg-down', !h.trades && 'bg-transparent')} style={{ height: `${(Math.abs(h.pnl) / max) * 100}%` }} />
                         </div>
                       );
@@ -220,7 +221,7 @@ export function Journal() {
               </div>
             </div>
           ) : (
-            <Empty title="Sem dados para analisar" />
+            <Empty title={tr('Sem dados para analisar')} />
           ))}
       </div>
     </div>

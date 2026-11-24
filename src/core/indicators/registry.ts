@@ -9,6 +9,7 @@ import { drawVolumeProfile, VP_DEFAULTS } from './volprofile';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
 import type { MaType, Series, Source } from './ta';
+import { tr } from '@/i18n';
 
 export type InputType = 'int' | 'float' | 'source' | 'bool' | 'select' | 'ma';
 export type ParamValue = number | string | boolean;
@@ -94,12 +95,12 @@ const DOWN = '#f23645';
 
 const srcInput = (def: Source = 'close'): InputDef => ({
   key: 'source',
-  label: 'Fonte',
+  label: tr('Fonte'),
   type: 'source',
   default: def,
   options: ta.SOURCES.map((s) => ({ value: s, label: s })),
 });
-const lenInput = (def: number, label = 'Período', key = 'length'): InputDef => ({ key, label, type: 'int', default: def, min: 1, max: 2000, step: 1 });
+const lenInput = (def: number, label = tr('Período'), key = 'length'): InputDef => ({ key, label, type: 'int', default: def, min: 1, max: 2000, step: 1 });
 const numInput = (key: string, label: string, def: number, step = 0.1, min = 0, max = 100): InputDef => ({ key, label, type: 'float', default: def, min, max, step });
 
 const n = (p: Record<string, ParamValue>, k: string) => Number(p[k]);
@@ -113,7 +114,7 @@ function maDef(id: MaType | 'vwma', name: string, color: string, def = 20): Indi
     short: id.toUpperCase(),
     category: 'Médias móveis',
     overlay: true,
-    description: `${name} do preço.`,
+    description: tr('{0} do preço.', name),
     inputs: [lenInput(def), srcInput()],
     outputs: [{ key: 'ma', label: id.toUpperCase(), style: 'line', color, width: 2 }],
     compute(bars, p) {
@@ -127,22 +128,22 @@ function maDef(id: MaType | 'vwma', name: string, color: string, def = 20): Indi
 const MA_OPTIONS = ta.MA_TYPES.map((m) => ({ value: m, label: m.toUpperCase() }));
 
 const DT_INPUTS: InputDef[] = [
-  numInput('sens', 'Oscilação mínima do 1.º topo (ATR)', 2, 0.25, 0.5, 5),
-  numInput('tolPips', 'Mesmo nível: tolerância em pips (0 = automática)', 0, 1, 0, 1000000),
-  numInput('tolAtr', 'Mesmo nível automático (ATR)', 0.2, 0.05, 0.02, 3),
-  numInput('tolPct', 'Mesmo nível automático (% da altura do padrão)', 5, 0.5, 0, 50),
-  numInput('minDepth', 'Profundidade mínima do vale (ATR)', 2.5, 0.25, 0.5, 10),
-  numInput('wick', 'Pavio mínimo da rejeição (fração da vela)', 0.5, 0.05, 0.2, 0.9),
-  numInput('expansion', 'Corpo mínimo da expansão (ATR)', 1, 0.1, 0.3, 5),
-  numInput('tpRatio', 'Vale conta como saída a partir de (fração da pernada)', 0.6, 0.05, 0.1, 1),
-  numInput('stopBuf', 'Folga do stop (ATR)', 0.1, 0.05, 0, 2),
-  { key: 'maxBars', label: 'Velas máximas desde o 1.º topo até à entrada (0 = sem limite)', type: 'int', default: 50, min: 0, max: 500, step: 5 },
-  { key: 'tpNear', label: 'Saída no fundo/topo mais próximo (desligado: vale ou origem da pernada)', type: 'bool', default: true },
-  numInput('bePct', 'Breakeven: quando anda esta % do caminho até à saída (0 = usa o R abaixo)', 0, 5, 0, 100),
-  numInput('beAt', 'Breakeven em R (só se a % acima for 0; 0 = sem breakeven)', 0, 0.25, 0, 10),
-  numInput('bePips', 'Breakeven: folga para spread e comissões (pips; 0 = automática)', 0, 1, 0, 1000000),
-  numInput('minR', 'R mínimo (entrada longe demais não entra; 0 = sem limite)', 1, 0.25, 0, 10),
-  numInput('maxTargetAtr', 'Alvo máximo desde a entrada (ATR; 0 = sem limite)', 20, 1, 0, 200),
+  numInput('sens', tr('Oscilação mínima do 1.º topo (ATR)'), 2, 0.25, 0.5, 5),
+  numInput('tolPips', tr('Mesmo nível: tolerância em pips (0 = automática)'), 0, 1, 0, 1000000),
+  numInput('tolAtr', tr('Mesmo nível automático (ATR)'), 0.2, 0.05, 0.02, 3),
+  numInput('tolPct', tr('Mesmo nível automático (% da altura do padrão)'), 5, 0.5, 0, 50),
+  numInput('minDepth', tr('Profundidade mínima do vale (ATR)'), 2.5, 0.25, 0.5, 10),
+  numInput('wick', tr('Pavio mínimo da rejeição (fração da vela)'), 0.5, 0.05, 0.2, 0.9),
+  numInput('expansion', tr('Corpo mínimo da expansão (ATR)'), 1, 0.1, 0.3, 5),
+  numInput('tpRatio', tr('Vale conta como saída a partir de (fração da pernada)'), 0.6, 0.05, 0.1, 1),
+  numInput('stopBuf', tr('Folga do stop (ATR)'), 0.1, 0.05, 0, 2),
+  { key: 'maxBars', label: tr('Velas máximas desde o 1.º topo até à entrada (0 = sem limite)'), type: 'int', default: 50, min: 0, max: 500, step: 5 },
+  { key: 'tpNear', label: tr('Saída no fundo/topo mais próximo (desligado: vale ou origem da pernada)'), type: 'bool', default: true },
+  numInput('bePct', tr('Breakeven: quando anda esta % do caminho até à saída (0 = usa o R abaixo)'), 0, 5, 0, 100),
+  numInput('beAt', tr('Breakeven em R (só se a % acima for 0; 0 = sem breakeven)'), 0, 0.25, 0, 10),
+  numInput('bePips', tr('Breakeven: folga para spread e comissões (pips; 0 = automática)'), 0, 1, 0, 1000000),
+  numInput('minR', tr('R mínimo (entrada longe demais não entra; 0 = sem limite)'), 1, 0.25, 0, 10),
+  numInput('maxTargetAtr', tr('Alvo máximo desde a entrada (ATR; 0 = sem limite)'), 20, 1, 0, 200),
 ];
 
 /** Opções do Topo e Fundo Duplo a partir dos parâmetros do indicador (e do pip do símbolo, quando se conhece). */
@@ -174,29 +175,29 @@ function dtOptions(p: Record<string, ParamValue>, pip: number): { options: DtOpt
 }
 
 export const INDICATORS: IndicatorDef[] = [
-  maDef('sma', 'Média Móvel Simples', '#2962ff'),
-  maDef('ema', 'Média Móvel Exponencial', '#ff9800'),
-  maDef('wma', 'Média Móvel Ponderada', '#9c27b0'),
+  maDef('sma', tr('Média Móvel Simples'), '#2962ff'),
+  maDef('ema', tr('Média Móvel Exponencial'), '#ff9800'),
+  maDef('wma', tr('Média Móvel Ponderada'), '#9c27b0'),
   maDef('hma', 'Hull Moving Average', '#00bcd4'),
-  maDef('dema', 'Média Exponencial Dupla', '#e91e63'),
-  maDef('tema', 'Média Exponencial Tripla', '#8bc34a'),
-  maDef('vwma', 'Média Ponderada por Volume', '#795548'),
+  maDef('dema', tr('Média Exponencial Dupla'), '#e91e63'),
+  maDef('tema', tr('Média Exponencial Tripla'), '#8bc34a'),
+  maDef('vwma', tr('Média Ponderada por Volume'), '#795548'),
   {
     id: 'macross',
-    name: 'Cruzamento de Médias',
+    name: tr('Cruzamento de Médias'),
     short: 'MA Cross',
     category: 'Médias móveis',
     overlay: true,
-    description: 'Duas médias com setas nos cruzamentos.',
+    description: tr('Duas médias com setas nos cruzamentos.'),
     inputs: [
-      lenInput(9, 'Rápida', 'fast'),
-      lenInput(21, 'Lenta', 'slow'),
-      { key: 'type', label: 'Tipo', type: 'ma', default: 'ema', options: MA_OPTIONS },
+      lenInput(9, tr('Rápida'), 'fast'),
+      lenInput(21, tr('Lenta'), 'slow'),
+      { key: 'type', label: tr('Tipo'), type: 'ma', default: 'ema', options: MA_OPTIONS },
       srcInput(),
     ],
     outputs: [
-      { key: 'fast', label: 'Rápida', style: 'line', color: '#2962ff', width: 2 },
-      { key: 'slow', label: 'Lenta', style: 'line', color: '#ff6d00', width: 2 },
+      { key: 'fast', label: tr('Rápida'), style: 'line', color: '#2962ff', width: 2 },
+      { key: 'slow', label: tr('Lenta'), style: 'line', color: '#ff6d00', width: 2 },
     ],
     compute(bars, p) {
       const x = src(bars, p);
@@ -213,16 +214,16 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'bb',
-    name: 'Bandas de Bollinger',
+    name: tr('Bandas de Bollinger'),
     short: 'BB',
     category: 'Volatilidade',
     overlay: true,
-    description: 'Média com bandas de desvio-padrão.',
-    inputs: [lenInput(20), numInput('mult', 'Desvios', 2, 0.1, 0.1, 10), srcInput()],
+    description: tr('Média com bandas de desvio-padrão.'),
+    inputs: [lenInput(20), numInput('mult', tr('Desvios'), 2, 0.1, 0.1, 10), srcInput()],
     outputs: [
-      { key: 'basis', label: 'Base', style: 'line', color: '#ff6d00', width: 1 },
-      { key: 'upper', label: 'Superior', style: 'line', color: '#2962ff', width: 1 },
-      { key: 'lower', label: 'Inferior', style: 'line', color: '#2962ff', width: 1 },
+      { key: 'basis', label: tr('Base'), style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'upper', label: tr('Superior'), style: 'line', color: '#2962ff', width: 1 },
+      { key: 'lower', label: tr('Inferior'), style: 'line', color: '#2962ff', width: 1 },
     ],
     fills: [{ a: 'upper', b: 'lower', color: 'rgba(33,150,243,0.08)' }],
     compute(bars, p) {
@@ -231,16 +232,16 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'keltner',
-    name: 'Canais de Keltner',
+    name: tr('Canais de Keltner'),
     short: 'KC',
     category: 'Volatilidade',
     overlay: true,
-    description: 'EMA com bandas de ATR.',
-    inputs: [lenInput(20), numInput('mult', 'Multiplicador', 2, 0.1, 0.1, 10), lenInput(10, 'Período ATR', 'atr')],
+    description: tr('EMA com bandas de ATR.'),
+    inputs: [lenInput(20), numInput('mult', tr('Multiplicador'), 2, 0.1, 0.1, 10), lenInput(10, tr('Período ATR'), 'atr')],
     outputs: [
-      { key: 'basis', label: 'Base', style: 'line', color: '#2962ff', width: 1 },
-      { key: 'upper', label: 'Superior', style: 'line', color: '#2962ff', width: 1 },
-      { key: 'lower', label: 'Inferior', style: 'line', color: '#2962ff', width: 1 },
+      { key: 'basis', label: tr('Base'), style: 'line', color: '#2962ff', width: 1 },
+      { key: 'upper', label: tr('Superior'), style: 'line', color: '#2962ff', width: 1 },
+      { key: 'lower', label: tr('Inferior'), style: 'line', color: '#2962ff', width: 1 },
     ],
     fills: [{ a: 'upper', b: 'lower', color: 'rgba(41,98,255,0.07)' }],
     compute(bars, p) {
@@ -249,16 +250,16 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'donchian',
-    name: 'Canais de Donchian',
+    name: tr('Canais de Donchian'),
     short: 'DC',
     category: 'Volatilidade',
     overlay: true,
-    description: 'Máximos e mínimos de N barras.',
+    description: tr('Máximos e mínimos de N barras.'),
     inputs: [lenInput(20)],
     outputs: [
-      { key: 'upper', label: 'Superior', style: 'line', color: '#2962ff', width: 1 },
-      { key: 'basis', label: 'Base', style: 'line', color: '#ff6d00', width: 1 },
-      { key: 'lower', label: 'Inferior', style: 'line', color: '#2962ff', width: 1 },
+      { key: 'upper', label: tr('Superior'), style: 'line', color: '#2962ff', width: 1 },
+      { key: 'basis', label: tr('Base'), style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'lower', label: tr('Inferior'), style: 'line', color: '#2962ff', width: 1 },
     ],
     fills: [{ a: 'upper', b: 'lower', color: 'rgba(41,98,255,0.06)' }],
     compute(bars, p) {
@@ -271,25 +272,25 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'VWAP',
     category: 'Volume',
     overlay: true,
-    description: 'Preço médio ponderado por volume, reiniciado por sessão.',
+    description: tr('Preço médio ponderado por volume, reiniciado por sessão.'),
     inputs: [
       {
         key: 'anchor',
-        label: 'Âncora',
+        label: tr('Âncora'),
         type: 'select',
         default: 'D',
         options: [
-          { value: 'D', label: 'Sessão (dia)' },
-          { value: 'W', label: 'Semana' },
-          { value: 'M', label: 'Mês' },
+          { value: 'D', label: tr('Sessão (dia)') },
+          { value: 'W', label: tr('Semana') },
+          { value: 'M', label: tr('Mês') },
         ],
       },
-      numInput('bands', 'Bandas (desvios, 0 = sem)', 0, 0.5, 0, 5),
+      numInput('bands', tr('Bandas (desvios, 0 = sem)'), 0, 0.5, 0, 5),
     ],
     outputs: [
       { key: 'vwap', label: 'VWAP', style: 'line', color: '#2962ff', width: 2 },
-      { key: 'upper', label: 'Banda sup.', style: 'line', color: '#4caf50', width: 1 },
-      { key: 'lower', label: 'Banda inf.', style: 'line', color: '#4caf50', width: 1 },
+      { key: 'upper', label: tr('Banda sup.'), style: 'line', color: '#4caf50', width: 1 },
+      { key: 'lower', label: tr('Banda inf.'), style: 'line', color: '#4caf50', width: 1 },
     ],
     compute(bars, p) {
       return { values: ta.vwap(bars, s(p, 'anchor') as 'D' | 'W' | 'M', n(p, 'bands')) };
@@ -301,15 +302,15 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ST',
     category: 'Tendência',
     overlay: true,
-    description: 'Seguidor de tendência baseado no ATR.',
-    inputs: [lenInput(10, 'Período ATR'), numInput('mult', 'Multiplicador', 3, 0.1, 0.1, 20)],
+    description: tr('Seguidor de tendência baseado no ATR.'),
+    inputs: [lenInput(10, tr('Período ATR')), numInput('mult', tr('Multiplicador'), 3, 0.1, 0.1, 20)],
     outputs: [{ key: 'line', label: 'Supertrend', style: 'line', color: UP, width: 2 }],
     compute(bars, p) {
       const r = ta.supertrend(bars, n(p, 'length'), n(p, 'mult'));
       const markers: IndicatorMarker[] = [];
       for (let i = 1; i < r.dir.length; i++) {
-        if (r.dir[i] === 1 && r.dir[i - 1] === -1) markers.push({ index: i, position: 'below', shape: 'arrowUp', color: UP, text: 'Compra' });
-        if (r.dir[i] === -1 && r.dir[i - 1] === 1) markers.push({ index: i, position: 'above', shape: 'arrowDown', color: DOWN, text: 'Venda' });
+        if (r.dir[i] === 1 && r.dir[i - 1] === -1) markers.push({ index: i, position: 'below', shape: 'arrowUp', color: UP, text: tr('Compra') });
+        if (r.dir[i] === -1 && r.dir[i - 1] === 1) markers.push({ index: i, position: 'above', shape: 'arrowDown', color: DOWN, text: tr('Venda') });
       }
       return { values: { line: r.line }, colors: { line: r.dir.map((d) => (d === 1 ? UP : d === -1 ? DOWN : undefined)) }, markers };
     },
@@ -320,8 +321,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'SAR',
     category: 'Tendência',
     overlay: true,
-    description: 'Pontos de stop e reversão.',
-    inputs: [numInput('start', 'Início', 0.02, 0.01, 0.001, 1), numInput('inc', 'Incremento', 0.02, 0.01, 0.001, 1), numInput('max', 'Máximo', 0.2, 0.01, 0.01, 1)],
+    description: tr('Pontos de stop e reversão.'),
+    inputs: [numInput('start', tr('Início'), 0.02, 0.01, 0.001, 1), numInput('inc', tr('Incremento'), 0.02, 0.01, 0.001, 1), numInput('max', tr('Máximo'), 0.2, 0.01, 0.01, 1)],
     outputs: [{ key: 'sar', label: 'SAR', style: 'dots', color: '#2962ff', width: 2 }],
     compute(bars, p) {
       return { values: { sar: ta.psar(bars, n(p, 'start'), n(p, 'inc'), n(p, 'max')) } };
@@ -333,8 +334,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'Ichimoku',
     category: 'Tendência',
     overlay: true,
-    description: 'Nuvem de Ichimoku com Tenkan, Kijun e Chikou.',
-    inputs: [lenInput(9, 'Tenkan', 'conv'), lenInput(26, 'Kijun', 'base'), lenInput(52, 'Senkou B', 'spanB'), lenInput(26, 'Deslocamento', 'disp')],
+    description: tr('Nuvem de Ichimoku com Tenkan, Kijun e Chikou.'),
+    inputs: [lenInput(9, 'Tenkan', 'conv'), lenInput(26, 'Kijun', 'base'), lenInput(52, 'Senkou B', 'spanB'), lenInput(26, tr('Deslocamento'), 'disp')],
     outputs: [
       { key: 'conversion', label: 'Tenkan', style: 'line', color: '#2962ff', width: 1 },
       { key: 'base', label: 'Kijun', style: 'line', color: '#b71c1c', width: 1 },
@@ -353,8 +354,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ZZ',
     category: 'Tendência',
     overlay: true,
-    description: 'Liga os topos e fundos com desvio mínimo.',
-    inputs: [numInput('dev', 'Desvio (%)', 1, 0.1, 0.01, 50)],
+    description: tr('Liga os topos e fundos com desvio mínimo.'),
+    inputs: [numInput('dev', tr('Desvio (%)'), 1, 0.1, 0.01, 50)],
     outputs: [{ key: 'zz', label: 'ZigZag', style: 'line', color: '#ff9800', width: 2, sparse: true }],
     compute(bars, p) {
       return { values: { zz: ta.zigzag(bars, n(p, 'dev')) } };
@@ -362,11 +363,11 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'linreg',
-    name: 'Regressão Linear',
+    name: tr('Regressão Linear'),
     short: 'LinReg',
     category: 'Tendência',
     overlay: true,
-    description: 'Curva de regressão linear móvel.',
+    description: tr('Curva de regressão linear móvel.'),
     inputs: [lenInput(50), srcInput()],
     outputs: [{ key: 'lr', label: 'LinReg', style: 'line', color: '#e91e63', width: 2 }],
     compute(bars, p) {
@@ -375,21 +376,21 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'pivots',
-    name: 'Pontos Pivô Clássicos',
+    name: tr('Pontos Pivô Clássicos'),
     short: 'Pivots',
     category: 'Outros',
     overlay: true,
-    description: 'PP, R1–R3 e S1–S3 do período anterior.',
+    description: tr('PP, R1–R3 e S1–S3 do período anterior.'),
     inputs: [
       {
         key: 'period',
-        label: 'Período',
+        label: tr('Período'),
         type: 'select',
         default: 'D',
         options: [
-          { value: 'D', label: 'Diário' },
-          { value: 'W', label: 'Semanal' },
-          { value: 'M', label: 'Mensal' },
+          { value: 'D', label: tr('Diário') },
+          { value: 'W', label: tr('Semanal') },
+          { value: 'M', label: tr('Mensal') },
         ],
       },
     ],
@@ -408,12 +409,12 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'fractals',
-    name: 'Fractais de Williams',
+    name: tr('Fractais de Williams'),
     short: 'Fractals',
     category: 'Outros',
     overlay: true,
-    description: 'Setas nos topos e fundos fractais.',
-    inputs: [lenInput(2, 'Barras de cada lado', 'n')],
+    description: tr('Setas nos topos e fundos fractais.'),
+    inputs: [lenInput(2, tr('Barras de cada lado'), 'n')],
     outputs: [],
     compute(bars, p) {
       const f = ta.fractals(bars, n(p, 'n'));
@@ -432,11 +433,11 @@ export const INDICATORS: IndicatorDef[] = [
     category: 'Volume',
     overlay: true,
     overlayScale: 'volume',
-    description: 'Volume negociado em cada barra.',
-    inputs: [lenInput(20, 'Média do volume', 'maLen')],
+    description: tr('Volume negociado em cada barra.'),
+    inputs: [lenInput(20, tr('Média do volume'), 'maLen')],
     outputs: [
       { key: 'vol', label: 'Volume', style: 'histogram', color: '#26a69a' },
-      { key: 'ma', label: 'Média', style: 'line', color: '#2962ff', width: 1, hiddenByDefault: true },
+      { key: 'ma', label: tr('Média'), style: 'line', color: '#2962ff', width: 1, hiddenByDefault: true },
     ],
     compute(bars, p) {
       const vol = ta.source(bars, 'volume');
@@ -448,15 +449,15 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'rsi',
-    name: 'Índice de Força Relativa',
+    name: tr('Índice de Força Relativa'),
     short: 'RSI',
     category: 'Osciladores',
     overlay: false,
-    description: 'RSI de Wilder com zonas de 70/30.',
-    inputs: [lenInput(14), srcInput(), lenInput(14, 'Média do RSI (0 = sem)', 'maLen')],
+    description: tr('RSI de Wilder com zonas de 70/30.'),
+    inputs: [lenInput(14), srcInput(), lenInput(14, tr('Média do RSI (0 = sem)'), 'maLen')],
     outputs: [
       { key: 'rsi', label: 'RSI', style: 'line', color: '#7e57c2', width: 2 },
-      { key: 'ma', label: 'Média', style: 'line', color: '#ffeb3b', width: 1, hiddenByDefault: true },
+      { key: 'ma', label: tr('Média'), style: 'line', color: '#ffeb3b', width: 1, hiddenByDefault: true },
     ],
     levels: [
       { value: 70, color: '#787b86' },
@@ -475,12 +476,12 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'MACD',
     category: 'Osciladores',
     overlay: false,
-    description: 'Convergência/divergência de médias móveis.',
-    inputs: [lenInput(12, 'Rápida', 'fast'), lenInput(26, 'Lenta', 'slow'), lenInput(9, 'Sinal', 'signal'), srcInput()],
+    description: tr('Convergência/divergência de médias móveis.'),
+    inputs: [lenInput(12, tr('Rápida'), 'fast'), lenInput(26, tr('Lenta'), 'slow'), lenInput(9, tr('Sinal'), 'signal'), srcInput()],
     outputs: [
-      { key: 'hist', label: 'Histograma', style: 'histogram', color: '#26a69a' },
+      { key: 'hist', label: tr('Histograma'), style: 'histogram', color: '#26a69a' },
       { key: 'macd', label: 'MACD', style: 'line', color: '#2962ff', width: 2 },
-      { key: 'signal', label: 'Sinal', style: 'line', color: '#ff6d00', width: 2 },
+      { key: 'signal', label: tr('Sinal'), style: 'line', color: '#ff6d00', width: 2 },
     ],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -496,12 +497,12 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'stoch',
-    name: 'Estocástico',
+    name: tr('Estocástico'),
     short: 'Stoch',
     category: 'Osciladores',
     overlay: false,
-    description: 'Oscilador estocástico %K/%D.',
-    inputs: [lenInput(14, '%K', 'k'), lenInput(1, 'Suavização %K', 'smooth'), lenInput(3, '%D', 'd')],
+    description: tr('Oscilador estocástico %K/%D.'),
+    inputs: [lenInput(14, '%K', 'k'), lenInput(1, tr('Suavização %K'), 'smooth'), lenInput(3, '%D', 'd')],
     outputs: [
       { key: 'k', label: '%K', style: 'line', color: '#2962ff', width: 2 },
       { key: 'd', label: '%D', style: 'line', color: '#ff6d00', width: 1 },
@@ -521,8 +522,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'StochRSI',
     category: 'Osciladores',
     overlay: false,
-    description: 'Estocástico aplicado ao RSI.',
-    inputs: [lenInput(14, 'RSI', 'rsi'), lenInput(14, 'Estocástico', 'stoch'), lenInput(3, '%K', 'k'), lenInput(3, '%D', 'd'), srcInput()],
+    description: tr('Estocástico aplicado ao RSI.'),
+    inputs: [lenInput(14, 'RSI', 'rsi'), lenInput(14, tr('Estocástico'), 'stoch'), lenInput(3, '%K', 'k'), lenInput(3, '%D', 'd'), srcInput()],
     outputs: [
       { key: 'k', label: '%K', style: 'line', color: '#2962ff', width: 2 },
       { key: 'd', label: '%D', style: 'line', color: '#ff6d00', width: 1 },
@@ -542,7 +543,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'CCI',
     category: 'Osciladores',
     overlay: false,
-    description: 'Desvio do preço típico face à média.',
+    description: tr('Desvio do preço típico face à média.'),
     inputs: [lenInput(20)],
     outputs: [{ key: 'cci', label: 'CCI', style: 'line', color: '#2962ff', width: 2 }],
     levels: [
@@ -560,7 +561,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: '%R',
     category: 'Osciladores',
     overlay: false,
-    description: 'Posição do fecho no intervalo recente.',
+    description: tr('Posição do fecho no intervalo recente.'),
     inputs: [lenInput(14)],
     outputs: [{ key: 'r', label: '%R', style: 'line', color: '#7e57c2', width: 2 }],
     levels: [
@@ -578,8 +579,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ADX',
     category: 'Tendência',
     overlay: false,
-    description: 'Força da tendência com +DI e -DI.',
-    inputs: [lenInput(14, 'DI'), lenInput(14, 'Suavização ADX', 'smooth')],
+    description: tr('Força da tendência com +DI e -DI.'),
+    inputs: [lenInput(14, 'DI'), lenInput(14, tr('Suavização ADX'), 'smooth')],
     outputs: [
       { key: 'adx', label: 'ADX', style: 'line', color: '#ff9800', width: 2 },
       { key: 'plus', label: '+DI', style: 'line', color: UP, width: 1 },
@@ -596,7 +597,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ATR',
     category: 'Volatilidade',
     overlay: false,
-    description: 'Amplitude média verdadeira.',
+    description: tr('Amplitude média verdadeira.'),
     inputs: [lenInput(14)],
     outputs: [{ key: 'atr', label: 'ATR', style: 'line', color: '#b71c1c', width: 2 }],
     compute(bars, p) {
@@ -605,11 +606,11 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'stdev',
-    name: 'Desvio-padrão',
+    name: tr('Desvio-padrão'),
     short: 'StDev',
     category: 'Volatilidade',
     overlay: false,
-    description: 'Desvio-padrão do preço.',
+    description: tr('Desvio-padrão do preço.'),
     inputs: [lenInput(20), srcInput()],
     outputs: [{ key: 'sd', label: 'StDev', style: 'line', color: '#2962ff', width: 2 }],
     compute(bars, p) {
@@ -618,12 +619,12 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'bbw',
-    name: 'Largura das Bollinger',
+    name: tr('Largura das Bollinger'),
     short: 'BBW',
     category: 'Volatilidade',
     overlay: false,
-    description: 'Largura relativa das Bandas de Bollinger (compressões).',
-    inputs: [lenInput(20), numInput('mult', 'Desvios', 2, 0.1, 0.1, 10), srcInput()],
+    description: tr('Largura relativa das Bandas de Bollinger (compressões).'),
+    inputs: [lenInput(20), numInput('mult', tr('Desvios'), 2, 0.1, 0.1, 10), srcInput()],
     outputs: [{ key: 'w', label: 'BBW', style: 'line', color: '#2962ff', width: 2 }],
     compute(bars, p) {
       const b = ta.bollinger(src(bars, p), n(p, 'length'), n(p, 'mult'));
@@ -636,7 +637,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'MOM',
     category: 'Osciladores',
     overlay: false,
-    description: 'Diferença de preço face a N barras atrás.',
+    description: tr('Diferença de preço face a N barras atrás.'),
     inputs: [lenInput(10), srcInput()],
     outputs: [{ key: 'm', label: 'MOM', style: 'line', color: '#2962ff', width: 2 }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -650,7 +651,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ROC',
     category: 'Osciladores',
     overlay: false,
-    description: 'Variação percentual face a N barras atrás.',
+    description: tr('Variação percentual face a N barras atrás.'),
     inputs: [lenInput(9), srcInput()],
     outputs: [{ key: 'r', label: 'ROC', style: 'line', color: '#2962ff', width: 2 }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -664,7 +665,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'AO',
     category: 'Osciladores',
     overlay: false,
-    description: 'Diferença entre médias de 5 e 34 do preço médio.',
+    description: tr('Diferença entre médias de 5 e 34 do preço médio.'),
     inputs: [],
     outputs: [{ key: 'ao', label: 'AO', style: 'histogram', color: UP }],
     compute(bars) {
@@ -678,7 +679,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'TRIX',
     category: 'Osciladores',
     overlay: false,
-    description: 'Taxa de variação de uma EMA tripla.',
+    description: tr('Taxa de variação de uma EMA tripla.'),
     inputs: [lenInput(18), srcInput()],
     outputs: [{ key: 't', label: 'TRIX', style: 'line', color: '#e91e63', width: 2 }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -692,7 +693,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'Aroon',
     category: 'Tendência',
     overlay: false,
-    description: 'Tempo desde o máximo/mínimo recente.',
+    description: tr('Tempo desde o máximo/mínimo recente.'),
     inputs: [lenInput(14)],
     outputs: [
       { key: 'up', label: 'Aroon Up', style: 'line', color: '#ff6d00', width: 2 },
@@ -709,7 +710,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'OBV',
     category: 'Volume',
     overlay: false,
-    description: 'Volume acumulado pela direção do preço.',
+    description: tr('Volume acumulado pela direção do preço.'),
     inputs: [],
     outputs: [{ key: 'obv', label: 'OBV', style: 'line', color: '#2962ff', width: 2 }],
     compute(bars) {
@@ -722,7 +723,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'MFI',
     category: 'Volume',
     overlay: false,
-    description: 'RSI ponderado por volume.',
+    description: tr('RSI ponderado por volume.'),
     inputs: [lenInput(14)],
     outputs: [{ key: 'mfi', label: 'MFI', style: 'line', color: '#7e57c2', width: 2 }],
     levels: [
@@ -740,7 +741,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'CMF',
     category: 'Volume',
     overlay: false,
-    description: 'Pressão compradora/vendedora ponderada por volume.',
+    description: tr('Pressão compradora/vendedora ponderada por volume.'),
     inputs: [lenInput(20)],
     outputs: [{ key: 'cmf', label: 'CMF', style: 'histogram', color: UP }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -757,7 +758,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'AC',
     category: 'Osciladores',
     overlay: false,
-    description: 'Mostra se o momento do preço está a acelerar (AO menos a sua média de 5). Verde quando sobe, vermelho quando desce.',
+    description: tr('Mostra se o momento do preço está a acelerar (AO menos a sua média de 5). Verde quando sobe, vermelho quando desce.'),
     inputs: [],
     outputs: [{ key: 'ac', label: 'AC', style: 'histogram', color: UP }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -772,12 +773,12 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ALLIG',
     category: 'Tendência',
     overlay: true,
-    description: 'Três médias suavizadas (maxilar, dentes, lábios) deslocadas para o futuro. Quando se abrem, há tendência; quando se juntam, o mercado dorme.',
+    description: tr('Três médias suavizadas (maxilar, dentes, lábios) deslocadas para o futuro. Quando se abrem, há tendência; quando se juntam, o mercado dorme.'),
     inputs: [],
     outputs: [
-      { key: 'jaw', label: 'Maxilar', style: 'line', color: '#2962ff', width: 1, offset: () => 8 },
-      { key: 'teeth', label: 'Dentes', style: 'line', color: '#f23645', width: 1, offset: () => 5 },
-      { key: 'lips', label: 'Lábios', style: 'line', color: '#089981', width: 1, offset: () => 3 },
+      { key: 'jaw', label: tr('Maxilar'), style: 'line', color: '#2962ff', width: 1, offset: () => 8 },
+      { key: 'teeth', label: tr('Dentes'), style: 'line', color: '#f23645', width: 1, offset: () => 5 },
+      { key: 'lips', label: tr('Lábios'), style: 'line', color: '#089981', width: 1, offset: () => 3 },
     ],
     compute(bars) {
       return { values: ta.alligator(bars) };
@@ -789,11 +790,11 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'SQZ',
     category: 'Osciladores',
     overlay: false,
-    description: 'Deteta compressões de volatilidade (Bandas de Bollinger dentro dos canais de Keltner, pontos laranja) e o momento que vem a seguir.',
-    inputs: [lenInput(20), numInput('bb', 'Desvios das Bollinger', 2, 0.1, 0.1, 10), numInput('kc', 'Múltiplo de Keltner', 1.5, 0.1, 0.1, 10)],
+    description: tr('Deteta compressões de volatilidade (Bandas de Bollinger dentro dos canais de Keltner, pontos laranja) e o momento que vem a seguir.'),
+    inputs: [lenInput(20), numInput('bb', tr('Desvios das Bollinger'), 2, 0.1, 0.1, 10), numInput('kc', tr('Múltiplo de Keltner'), 1.5, 0.1, 0.1, 10)],
     outputs: [
-      { key: 'mom', label: 'Momento', style: 'histogram', color: UP },
-      { key: 'sqz', label: 'Compressão', style: 'dots', color: '#ff9800' },
+      { key: 'mom', label: tr('Momento'), style: 'histogram', color: UP },
+      { key: 'sqz', label: tr('Compressão'), style: 'dots', color: '#ff9800' },
     ],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -813,8 +814,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'UO',
     category: 'Osciladores',
     overlay: false,
-    description: 'Junta três horizontes (7, 14 e 28) para dar menos sinais falsos. Abaixo de 30 sobrevendido, acima de 70 sobrecomprado.',
-    inputs: [lenInput(7, 'Curto', 'a'), lenInput(14, 'Médio', 'b'), lenInput(28, 'Longo', 'c')],
+    description: tr('Junta três horizontes (7, 14 e 28) para dar menos sinais falsos. Abaixo de 30 sobrevendido, acima de 70 sobrecomprado.'),
+    inputs: [lenInput(7, tr('Curto'), 'a'), lenInput(14, tr('Médio'), 'b'), lenInput(28, tr('Longo'), 'c')],
     outputs: [{ key: 'uo', label: 'UO', style: 'line', color: '#7e57c2', width: 2 }],
     levels: [
       { value: 70, color: 'rgba(242,54,69,0.5)' },
@@ -832,7 +833,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'CMO',
     category: 'Osciladores',
     overlay: false,
-    description: 'Momento entre −100 e +100. Acima de +50 sobrecomprado, abaixo de −50 sobrevendido.',
+    description: tr('Momento entre −100 e +100. Acima de +50 sobrecomprado, abaixo de −50 sobrevendido.'),
     inputs: [lenInput(9), srcInput()],
     outputs: [{ key: 'cmo', label: 'CMO', style: 'line', color: '#26a69a', width: 2 }],
     levels: [
@@ -850,7 +851,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'ELDER',
     category: 'Osciladores',
     overlay: false,
-    description: 'Mede a força dos compradores (máximo menos EMA) e dos vendedores (mínimo menos EMA).',
+    description: tr('Mede a força dos compradores (máximo menos EMA) e dos vendedores (mínimo menos EMA).'),
     inputs: [lenInput(13)],
     outputs: [
       { key: 'bull', label: 'Bull Power', style: 'histogram', color: UP },
@@ -867,11 +868,11 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'KST',
     category: 'Osciladores',
     overlay: false,
-    description: 'Quatro taxas de variação suavizadas e ponderadas (Martin Pring). Cruzamentos com o sinal indicam viragens.',
-    inputs: [lenInput(9, 'Sinal', 'signal')],
+    description: tr('Quatro taxas de variação suavizadas e ponderadas (Martin Pring). Cruzamentos com o sinal indicam viragens.'),
+    inputs: [lenInput(9, tr('Sinal'), 'signal')],
     outputs: [
       { key: 'kst', label: 'KST', style: 'line', color: UP, width: 2 },
-      { key: 'signal', label: 'Sinal', style: 'line', color: DOWN, width: 1 },
+      { key: 'signal', label: tr('Sinal'), style: 'line', color: DOWN, width: 1 },
     ],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -884,8 +885,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'COPP',
     category: 'Osciladores',
     overlay: false,
-    description: 'Indicador de momento de longo prazo, criado para encontrar fundos de mercado.',
-    inputs: [lenInput(10, 'Média ponderada', 'wma'), lenInput(14, 'ROC longo', 'long'), lenInput(11, 'ROC curto', 'short')],
+    description: tr('Indicador de momento de longo prazo, criado para encontrar fundos de mercado.'),
+    inputs: [lenInput(10, tr('Média ponderada'), 'wma'), lenInput(14, tr('ROC longo'), 'long'), lenInput(11, tr('ROC curto'), 'short')],
     outputs: [{ key: 'coppock', label: 'Coppock', style: 'histogram', color: UP }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -899,7 +900,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'DPO',
     category: 'Osciladores',
     overlay: false,
-    description: 'Tira a tendência do preço para destacar os ciclos.',
+    description: tr('Tira a tendência do preço para destacar os ciclos.'),
     inputs: [lenInput(21), srcInput()],
     outputs: [{ key: 'dpo', label: 'DPO', style: 'line', color: '#2962ff', width: 2 }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -913,7 +914,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'VI',
     category: 'Tendência',
     overlay: false,
-    description: 'Quando VI+ passa acima de VI−, começa uma tendência de alta; ao contrário, de baixa.',
+    description: tr('Quando VI+ passa acima de VI−, começa uma tendência de alta; ao contrário, de baixa.'),
     inputs: [lenInput(14)],
     outputs: [
       { key: 'plus', label: 'VI+', style: 'line', color: '#2962ff', width: 2 },
@@ -930,8 +931,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'CHO',
     category: 'Volume',
     overlay: false,
-    description: 'Momento da linha de acumulação/distribuição (EMA 3 menos EMA 10).',
-    inputs: [lenInput(3, 'Rápida', 'fast'), lenInput(10, 'Lenta', 'slow')],
+    description: tr('Momento da linha de acumulação/distribuição (EMA 3 menos EMA 10).'),
+    inputs: [lenInput(3, tr('Rápida'), 'fast'), lenInput(10, tr('Lenta'), 'slow')],
     outputs: [{ key: 'cho', label: 'CHO', style: 'histogram', color: UP }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -945,7 +946,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'FI',
     category: 'Volume',
     overlay: false,
-    description: 'Variação do preço vezes o volume, suavizada. Mede a força de cada movimento.',
+    description: tr('Variação do preço vezes o volume, suavizada. Mede a força de cada movimento.'),
     inputs: [lenInput(13)],
     outputs: [{ key: 'fi', label: 'FI', style: 'histogram', color: UP }],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
@@ -956,11 +957,11 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'ad',
-    name: 'Acumulação/Distribuição',
+    name: tr('Acumulação/Distribuição'),
     short: 'A/D',
     category: 'Volume',
     overlay: false,
-    description: 'Linha cumulativa que mostra se o volume entra com os compradores ou com os vendedores.',
+    description: tr('Linha cumulativa que mostra se o volume entra com os compradores ou com os vendedores.'),
     inputs: [],
     outputs: [{ key: 'ad', label: 'A/D', style: 'line', color: '#2962ff', width: 2 }],
     compute(bars) {
@@ -973,7 +974,7 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'CHOP',
     category: 'Tendência',
     overlay: false,
-    description: 'Perto de 100 o mercado está lateral; perto de 0 há tendência forte. Referências em 38,2 e 61,8.',
+    description: tr('Perto de 100 o mercado está lateral; perto de 0 há tendência forte. Referências em 38,2 e 61,8.'),
     inputs: [lenInput(14)],
     outputs: [{ key: 'chop', label: 'CHOP', style: 'line', color: '#2962ff', width: 2 }],
     levels: [
@@ -991,12 +992,12 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'PPO',
     category: 'Osciladores',
     overlay: false,
-    description: 'O MACD em percentagem, por isso compara-se entre ativos de preços diferentes.',
-    inputs: [lenInput(12, 'Rápida', 'fast'), lenInput(26, 'Lenta', 'slow'), lenInput(9, 'Sinal', 'signal'), srcInput()],
+    description: tr('O MACD em percentagem, por isso compara-se entre ativos de preços diferentes.'),
+    inputs: [lenInput(12, tr('Rápida'), 'fast'), lenInput(26, tr('Lenta'), 'slow'), lenInput(9, tr('Sinal'), 'signal'), srcInput()],
     outputs: [
-      { key: 'hist', label: 'Histograma', style: 'histogram', color: UP },
+      { key: 'hist', label: tr('Histograma'), style: 'histogram', color: UP },
       { key: 'ppo', label: 'PPO', style: 'line', color: '#2962ff', width: 2 },
-      { key: 'signal', label: 'Sinal', style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'signal', label: tr('Sinal'), style: 'line', color: '#ff6d00', width: 1 },
     ],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -1010,11 +1011,11 @@ export const INDICATORS: IndicatorDef[] = [
     short: 'TSI',
     category: 'Osciladores',
     overlay: false,
-    description: 'Momento suavizado duas vezes (William Blau). Cruzamentos com o sinal e com o zero indicam viragens.',
-    inputs: [lenInput(25, 'Longo', 'long'), lenInput(13, 'Curto', 'short'), lenInput(7, 'Sinal', 'signal'), srcInput()],
+    description: tr('Momento suavizado duas vezes (William Blau). Cruzamentos com o sinal e com o zero indicam viragens.'),
+    inputs: [lenInput(25, tr('Longo'), 'long'), lenInput(13, tr('Curto'), 'short'), lenInput(7, tr('Sinal'), 'signal'), srcInput()],
     outputs: [
       { key: 'tsi', label: 'TSI', style: 'line', color: '#2962ff', width: 2 },
-      { key: 'signal', label: 'Sinal', style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'signal', label: tr('Sinal'), style: 'line', color: '#ff6d00', width: 1 },
     ],
     levels: [{ value: 0, color: 'rgba(120,123,134,0.5)' }],
     compute(bars, p) {
@@ -1027,8 +1028,8 @@ export const INDICATORS: IndicatorDef[] = [
     short: '%B',
     category: 'Volatilidade',
     overlay: false,
-    description: 'Onde o preço está dentro das Bandas de Bollinger: 0 na de baixo, 1 na de cima.',
-    inputs: [lenInput(20), numInput('mult', 'Desvios', 2, 0.1, 0.1, 10), srcInput()],
+    description: tr('Onde o preço está dentro das Bandas de Bollinger: 0 na de baixo, 1 na de cima.'),
+    inputs: [lenInput(20), numInput('mult', tr('Desvios'), 2, 0.1, 0.1, 10), srcInput()],
     outputs: [{ key: 'pctb', label: '%B', style: 'line', color: '#2962ff', width: 2 }],
     levels: [
       { value: 1, color: 'rgba(242,54,69,0.5)' },
@@ -1041,16 +1042,16 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'envelope',
-    name: 'Envelope de Média',
+    name: tr('Envelope de Média'),
     short: 'ENV',
     category: 'Volatilidade',
     overlay: true,
-    description: 'Média móvel com bandas a uma percentagem fixa acima e abaixo.',
-    inputs: [lenInput(20), numInput('pct', 'Percentagem', 2.5, 0.1, 0.1, 50), { key: 'type', label: 'Tipo', type: 'ma', default: 'sma', options: MA_OPTIONS }, srcInput()],
+    description: tr('Média móvel com bandas a uma percentagem fixa acima e abaixo.'),
+    inputs: [lenInput(20), numInput('pct', tr('Percentagem'), 2.5, 0.1, 0.1, 50), { key: 'type', label: tr('Tipo'), type: 'ma', default: 'sma', options: MA_OPTIONS }, srcInput()],
     outputs: [
-      { key: 'basis', label: 'Base', style: 'line', color: '#ff6d00', width: 1 },
-      { key: 'upper', label: 'Superior', style: 'line', color: '#2962ff', width: 1 },
-      { key: 'lower', label: 'Inferior', style: 'line', color: '#2962ff', width: 1 },
+      { key: 'basis', label: tr('Base'), style: 'line', color: '#ff6d00', width: 1 },
+      { key: 'upper', label: tr('Superior'), style: 'line', color: '#2962ff', width: 1 },
+      { key: 'lower', label: tr('Inferior'), style: 'line', color: '#2962ff', width: 1 },
     ],
     fills: [{ a: 'upper', b: 'lower', color: 'rgba(33,150,243,0.07)' }],
     compute(bars, p) {
@@ -1065,26 +1066,26 @@ export const INDICATORS: IndicatorDef[] = [
     category: 'Outros',
     overlay: true,
     description:
-      'Encontra as pernadas longas do próprio ativo (as que andaram mais ou duraram mais), marca onde começaram e junta esses pontos em zonas: verde onde as subidas longas nasceram, vermelho onde as descidas nasceram. A etiqueta na última vela diz, pelo histórico, quantas vezes uma situação parecida com a de agora foi seguida de uma pernada longa. É a frequência do passado, não uma garantia.',
+      tr('Encontra as pernadas longas do próprio ativo (as que andaram mais ou duraram mais), marca onde começaram e junta esses pontos em zonas: verde onde as subidas longas nasceram, vermelho onde as descidas nasceram. A etiqueta na última vela diz, pelo histórico, quantas vezes uma situação parecida com a de agora foi seguida de uma pernada longa. É a frequência do passado, não uma garantia.'),
     inputs: [
-      numInput('sens', 'Sensibilidade (ATR por oscilação)', 2.5, 0.25, 1, 10),
-      { key: 'top', label: 'Pernadas longas: melhores %', type: 'int', default: 25, min: 10, max: 50, step: 5 },
-      { key: 'h', label: 'Horizonte (velas à frente)', type: 'int', default: 6, min: 2, max: 50, step: 1 },
-      { key: 'signals', label: 'Sinais de entrada (com stop e alvo)', type: 'bool', default: true },
-      numInput('ratio', 'Exigência: chance vs média (×)', 1.5, 0.1, 1, 5),
+      numInput('sens', tr('Sensibilidade (ATR por oscilação)'), 2.5, 0.25, 1, 10),
+      { key: 'top', label: tr('Pernadas longas: melhores %'), type: 'int', default: 25, min: 10, max: 50, step: 5 },
+      { key: 'h', label: tr('Horizonte (velas à frente)'), type: 'int', default: 6, min: 2, max: 50, step: 1 },
+      { key: 'signals', label: tr('Sinais de entrada (com stop e alvo)'), type: 'bool', default: true },
+      numInput('ratio', tr('Exigência: chance vs média (×)'), 1.5, 0.1, 1, 5),
     ],
     outputs: [
-      { key: 'd1hi', label: 'Procura 1 (cima)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
-      { key: 'd1lo', label: 'Procura 1 (baixo)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
-      { key: 'd2hi', label: 'Procura 2 (cima)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
-      { key: 'd2lo', label: 'Procura 2 (baixo)', style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
-      { key: 's1hi', label: 'Oferta 1 (cima)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
-      { key: 's1lo', label: 'Oferta 1 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
-      { key: 's2hi', label: 'Oferta 2 (cima)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
-      { key: 's2lo', label: 'Oferta 2 (baixo)', style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
-      { key: 'entry', label: 'Entrada', style: 'line', color: '#b0b3bd', width: 1, hiddenByDefault: true },
+      { key: 'd1hi', label: tr('Procura 1 (cima)'), style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd1lo', label: tr('Procura 1 (baixo)'), style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd2hi', label: tr('Procura 2 (cima)'), style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'd2lo', label: tr('Procura 2 (baixo)'), style: 'line', color: 'rgba(8,153,129,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's1hi', label: tr('Oferta 1 (cima)'), style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's1lo', label: tr('Oferta 1 (baixo)'), style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's2hi', label: tr('Oferta 2 (cima)'), style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 's2lo', label: tr('Oferta 2 (baixo)'), style: 'line', color: 'rgba(242,54,69,0.7)', width: 1, hiddenByDefault: true },
+      { key: 'entry', label: tr('Entrada'), style: 'line', color: '#b0b3bd', width: 1, hiddenByDefault: true },
       { key: 'sl', label: 'Stop', style: 'line', color: '#f23645', width: 1, hiddenByDefault: true },
-      { key: 'tp', label: 'Alvo', style: 'line', color: '#089981', width: 1, hiddenByDefault: true },
+      { key: 'tp', label: tr('Alvo'), style: 'line', color: '#089981', width: 1, hiddenByDefault: true },
     ],
     fills: [
       { a: 'd1hi', b: 'd1lo', color: 'rgba(8,153,129,0.2)' },
@@ -1129,8 +1130,8 @@ export const INDICATORS: IndicatorDef[] = [
           values.sl[i] = sg.stop;
           values.tp[i] = sg.target;
         }
-        markers.push({ index: sg.idx, position: sg.dir === 1 ? 'below' : 'above', shape: sg.dir === 1 ? 'arrowUp' : 'arrowDown', color: sg.dir === 1 ? UP : DOWN, text: `${sg.dir === 1 ? 'COMPRA' : 'VENDA'} 1:${sg.rr.toFixed(1)}` });
-        if (sg.outcome === 'tp' || sg.outcome === 'sl') markers.push({ index: sg.exitIdx, position: sg.dir === 1 ? 'above' : 'below', shape: 'circle', color: sg.outcome === 'tp' ? UP : DOWN, text: sg.outcome === 'tp' ? 'alvo' : 'stop' });
+        markers.push({ index: sg.idx, position: sg.dir === 1 ? 'below' : 'above', shape: sg.dir === 1 ? 'arrowUp' : 'arrowDown', color: sg.dir === 1 ? UP : DOWN, text: `${sg.dir === 1 ? tr('COMPRA') : tr('VENDA')} 1:${sg.rr.toFixed(1)}` });
+        if (sg.outcome === 'tp' || sg.outcome === 'sl') markers.push({ index: sg.exitIdx, position: sg.dir === 1 ? 'above' : 'below', shape: 'circle', color: sg.outcome === 'tp' ? UP : DOWN, text: sg.outcome === 'tp' ? tr('alvo') : 'stop' });
       }
       // a leitura atual: uma linha curta por marcador, empilhadas por cima da última vela
       if (N) readingLines(r.reading, r.typical, r.signals).forEach((text, k) => markers.push({ index: N - 1, position: 'above', shape: k === 0 ? 'circle' : 'square', color: '#b39ddb', text }));
@@ -1140,18 +1141,18 @@ export const INDICATORS: IndicatorDef[] = [
 
   {
     id: 'structure',
-    name: 'Estrutura de Mercado (Top-Down)',
+    name: tr('Estrutura de Mercado (Top-Down)'),
     short: 'ESTR',
     category: 'Tendência',
     overlay: true,
     layer: true,
     description:
-      'Lê a estrutura sozinho, sem contar velas: topos e fundos reais (HH, HL, LH, LL), quebras de estrutura (BOS) e mudanças de carácter (CHoCH). Escolha um intervalo de análise (ex.: 4h) e um de entradas (ex.: 15m): marca a estrutura grande e, dentro da pernada atual, a pequena. Linha cheia = expansão, tracejada = correção. O cartão diz a tendência, a fase e os níveis que confirmam ou invertem; ✓ quando a estrutura de entradas vai a favor da análise. Só usa o que já se sabia em cada vela (não repinta, serve no replay). O gráfico tem de estar no intervalo de entradas ou abaixo.',
+      tr('Lê a estrutura sozinho, sem contar velas: topos e fundos reais (HH, HL, LH, LL), quebras de estrutura (BOS) e mudanças de carácter (CHoCH). Escolha um intervalo de análise (ex.: 4h) e um de entradas (ex.: 15m): marca a estrutura grande e, dentro da pernada atual, a pequena. Linha cheia = expansão, tracejada = correção. O cartão diz a tendência, a fase e os níveis que confirmam ou invertem; ✓ quando a estrutura de entradas vai a favor da análise. Só usa o que já se sabia em cada vela (não repinta, serve no replay). O gráfico tem de estar no intervalo de entradas ou abaixo.'),
     inputs: [
-      { key: 'analysis', label: 'Intervalo de análise', type: 'select', default: '4h', options: ['30m', '1h', '2h', '4h', '6h', '12h', '1D', '1W'].map((v) => ({ value: v, label: v })) },
-      { key: 'entry', label: 'Intervalo de entradas', type: 'select', default: '15m', options: ['1m', '3m', '5m', '15m', '30m', '1h', '4h'].map((v) => ({ value: v, label: v })) },
-      { key: 'showEntry', label: 'Mostrar a estrutura de entradas', type: 'bool', default: true },
-      numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
+      { key: 'analysis', label: tr('Intervalo de análise'), type: 'select', default: '4h', options: ['30m', '1h', '2h', '4h', '6h', '12h', '1D', '1W'].map((v) => ({ value: v, label: v })) },
+      { key: 'entry', label: tr('Intervalo de entradas'), type: 'select', default: '15m', options: ['1m', '3m', '5m', '15m', '30m', '1h', '4h'].map((v) => ({ value: v, label: v })) },
+      { key: 'showEntry', label: tr('Mostrar a estrutura de entradas'), type: 'bool', default: true },
+      numInput('sens', tr('Sensibilidade (ATR por oscilação)'), 1.5, 0.25, 0.5, 5),
     ],
     outputs: [],
     compute(bars, p) {
@@ -1161,34 +1162,34 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'footprint',
-    name: 'Footprint + Layer Line (divergência)',
+    name: tr('Footprint + Layer Line (divergência)'),
     short: 'FP',
     category: 'Tendência',
     overlay: true,
     layer: true,
     description:
-      'Método footprint: topo mais baixo e segunda perna maior que a primeira (espelho para vendas), layer line que toca nos topos dos recuos, rompimento com reteste e divergência escondida no Estocástico (5,3,3). A divergência é obrigatória: a entrada só aparece quando há divergência e o %K cruza o %D. Sem divergência não há sinal. Depois da primeira entrada, escalona a favor da nova tendência (divergência escondida num novo recuo, ou o Accelerator: barras verdes e uma vermelha abaixo de zero) enquanto a layer line da nova tendência não for violada. O stop fica além do primeiro ponto da divergência. Só usa o que já se sabia em cada vela (não repinta, serve no replay).',
+      tr('Método footprint: topo mais baixo e segunda perna maior que a primeira (espelho para vendas), layer line que toca nos topos dos recuos, rompimento com reteste e divergência escondida no Estocástico (5,3,3). A divergência é obrigatória: a entrada só aparece quando há divergência e o %K cruza o %D. Sem divergência não há sinal. Depois da primeira entrada, escalona a favor da nova tendência (divergência escondida num novo recuo, ou o Accelerator: barras verdes e uma vermelha abaixo de zero) enquanto a layer line da nova tendência não for violada. O stop fica além do primeiro ponto da divergência. Só usa o que já se sabia em cada vela (não repinta, serve no replay).'),
     inputs: [
-      numInput('sens', 'Sensibilidade (ATR por oscilação)', 1.5, 0.25, 0.5, 5),
-      numInput('size', 'Tamanho mínimo da 2.ª perna (x a 1.ª)', 1.3, 0.1, 1, 10),
-      numInput('ratio', 'Inclinação mínima da 2.ª perna (x a 1.ª)', 0.8, 0.1, 0.1, 10),
-      numInput('minMove', 'Movimento mínimo (ATR)', 3, 0.5, 1, 20),
-      numInput('stopBuf', 'Folga do stop (ATR)', 0.3, 0.1, 0, 5),
+      numInput('sens', tr('Sensibilidade (ATR por oscilação)'), 1.5, 0.25, 0.5, 5),
+      numInput('size', tr('Tamanho mínimo da 2.ª perna (x a 1.ª)'), 1.3, 0.1, 1, 10),
+      numInput('ratio', tr('Inclinação mínima da 2.ª perna (x a 1.ª)'), 0.8, 0.1, 0.1, 10),
+      numInput('minMove', tr('Movimento mínimo (ATR)'), 3, 0.5, 1, 20),
+      numInput('stopBuf', tr('Folga do stop (ATR)'), 0.3, 0.1, 0, 5),
       {
         key: 'trigger',
-        label: 'Gatilho dos escalonamentos',
+        label: tr('Gatilho dos escalonamentos'),
         type: 'select',
         default: 'div',
         options: [
-          { value: 'div', label: 'Divergência escondida' },
+          { value: 'div', label: tr('Divergência escondida') },
           { value: 'ac', label: 'Accelerator' },
-          { value: 'both', label: 'Qualquer um' },
+          { value: 'both', label: tr('Qualquer um') },
         ],
       },
-      lenInput(4, 'Accelerator: barras verdes antes da vermelha', 'acBars'),
-      lenInput(5, 'Estocástico %K', 'k'),
-      lenInput(3, 'Estocástico suavização', 'smooth'),
-      lenInput(3, 'Estocástico %D', 'd'),
+      lenInput(4, tr('Accelerator: barras verdes antes da vermelha'), 'acBars'),
+      lenInput(5, tr('Estocástico %K'), 'k'),
+      lenInput(3, tr('Estocástico suavização'), 'smooth'),
+      lenInput(3, tr('Estocástico %D'), 'd'),
     ],
     outputs: [],
     compute(bars, p) {
@@ -1200,16 +1201,16 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'doubletop',
-    name: 'Topo e Fundo Duplo (entradas)',
+    name: tr('Topo e Fundo Duplo (entradas)'),
     short: 'TD',
     category: 'Tendência',
     overlay: true,
     layer: true,
     description:
-      'Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. Os dois topos têm de estar praticamente no mesmo nível: escolhe a tolerância em pips (0 = automática, pelo ATR ou pela altura do padrão); o pavio pode furar um pouco o nível, o fecho não. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor), combinação (a vela que tocou na zona e a seguinte, juntas, fazem uma rejeição — duas de M5 vistas como uma de M10) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no fundo (ou topo, nas compras) mais próximo da entrada que ainda dê o R mínimo; desligando, sai no vale entre os topos ou na origem da pernada. Não entra quando a entrada ficou longe demais (menos de 1R até ao alvo, ajustável) nem quando o alvo está longe demais. O primeiro topo não pode ter mais de 50 velas (ajustável) até à entrada. Breakeven (desligado por padrão; ligas em % do caminho até à saída ou em R): o stop passa para um pouco além da entrada, para cobrir spread e comissões (folga em pips, ou 0,1 ATR). Uma operação de cada vez: enquanto uma compra ou venda está aberta, não entra outra. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.',
+      tr('Topo duplo (venda) e fundo duplo (compra). O primeiro topo é uma oscilação já confirmada; o preço faz um vale e volta à zona. Os dois topos têm de estar praticamente no mesmo nível: escolhe a tolerância em pips (0 = automática, pelo ATR ou pela altura do padrão); o pavio pode furar um pouco o nível, o fecho não. A entrada é a vela de confirmação: rejeição (pavio grande na zona, qualquer cor), combinação (a vela que tocou na zona e a seguinte, juntas, fazem uma rejeição — duas de M5 vistas como uma de M10) ou expansão (vela forte contra o topo logo depois de tocar). Stop logo além da caixa. Saída no fundo (ou topo, nas compras) mais próximo da entrada que ainda dê o R mínimo; desligando, sai no vale entre os topos ou na origem da pernada. Não entra quando a entrada ficou longe demais (menos de 1R até ao alvo, ajustável) nem quando o alvo está longe demais. O primeiro topo não pode ter mais de 50 velas (ajustável) até à entrada. Breakeven (desligado por padrão; ligas em % do caminho até à saída ou em R): o stop passa para um pouco além da entrada, para cobrir spread e comissões (folga em pips, ou 0,1 ATR). Uma operação de cada vez: enquanto uma compra ou venda está aberta, não entra outra. Mostra o resultado de cada sinal (alvo ou stop) e um placar. Só usa velas fechadas: no replay, cada sinal aparece na vela em que se confirmou.'),
     inputs: [
       ...DT_INPUTS,
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 60, min: 0, max: 2000, step: 10 },
+      { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 60, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
@@ -1226,7 +1227,7 @@ export const INDICATORS: IndicatorDef[] = [
       if (pip && (tolPrice || lastAtr > 0)) {
         const pips = (tolPrice || n(p, 'tolAtr') * lastAtr) / pip;
         const txt = pips >= 10 ? String(Math.round(pips)) : pips.toFixed(1).replace('.', ',');
-        levelNote = tolPrice ? `mesmo nível: ±${txt} pips` : `mesmo nível: ±${txt} pips ou ${String(n(p, 'tolPct')).replace('.', ',')}% do padrão (automático)`;
+        levelNote = tolPrice ? tr('mesmo nível: ±{0} pips', txt) : tr('mesmo nível: ±{0} pips ou {1}% do padrão (automático)', txt, String(n(p, 'tolPct')).replace('.', ','));
       }
       const out = drawDoubleTops(bars, r, undefined, goal ? { target: goal, historyDone } : undefined, levelNote);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
@@ -1234,23 +1235,23 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'vpvr',
-    name: 'Perfil de volume (intervalo visível)',
+    name: tr('Perfil de volume (intervalo visível)'),
     short: 'VP',
     category: 'Volume',
     overlay: true,
     layer: true,
     usesRange: true,
     description:
-      'Perfil de volume do que está visível no gráfico, como o VPVR do TradingView: histograma horizontal por faixa de preço (volume de subida e de descida), linha de controlo (POC, a faixa com mais volume) e área de valor (VAH e VAL, 70% do volume por padrão). Muda quando mexes no gráfico. Em dados sem volume (índices sintéticos e forex da Deriv) mostra o tempo que o preço passou em cada faixa, e diz-o no cartão.',
+      tr('Perfil de volume do que está visível no gráfico, como o VPVR do TradingView: histograma horizontal por faixa de preço (volume de subida e de descida), linha de controlo (POC, a faixa com mais volume) e área de valor (VAH e VAL, 70% do volume por padrão). Muda quando mexes no gráfico. Em dados sem volume (índices sintéticos e forex da Deriv) mostra o tempo que o preço passou em cada faixa, e diz-o no cartão.'),
     inputs: [
-      { key: 'rows', label: 'Número de linhas', type: 'int', default: VP_DEFAULTS.rows, min: 4, max: 300, step: 4 },
-      numInput('widthPct', 'Largura máxima (% do gráfico)', VP_DEFAULTS.widthPct, 5, 5, 100),
-      numInput('valueArea', 'Área de valor (% do volume)', VP_DEFAULTS.valueArea * 100, 5, 10, 99),
-      { key: 'place', label: 'Posição', type: 'select', default: 'right', options: [{ value: 'right', label: 'Direita' }, { value: 'left', label: 'Esquerda' }] },
-      { key: 'mode', label: 'Origem', type: 'select', default: 'auto', options: [{ value: 'auto', label: 'Automática (volume, ou tempo se não houver)' }, { value: 'volume', label: 'Volume' }, { value: 'tempo', label: 'Tempo (tempo em cada preço)' }] },
-      { key: 'split', label: 'Separar subida e descida', type: 'bool', default: true },
-      { key: 'showPoc', label: 'Mostrar a linha de controlo (POC)', type: 'bool', default: true },
-      { key: 'showVa', label: 'Mostrar VAH e VAL', type: 'bool', default: true },
+      { key: 'rows', label: tr('Número de linhas'), type: 'int', default: VP_DEFAULTS.rows, min: 4, max: 300, step: 4 },
+      numInput('widthPct', tr('Largura máxima (% do gráfico)'), VP_DEFAULTS.widthPct, 5, 5, 100),
+      numInput('valueArea', tr('Área de valor (% do volume)'), VP_DEFAULTS.valueArea * 100, 5, 10, 99),
+      { key: 'place', label: tr('Posição'), type: 'select', default: 'right', options: [{ value: 'right', label: tr('Direita') }, { value: 'left', label: tr('Esquerda') }] },
+      { key: 'mode', label: tr('Origem'), type: 'select', default: 'auto', options: [{ value: 'auto', label: tr('Automática (volume, ou tempo se não houver)') }, { value: 'volume', label: 'Volume' }, { value: 'tempo', label: tr('Tempo (tempo em cada preço)') }] },
+      { key: 'split', label: tr('Separar subida e descida'), type: 'bool', default: true },
+      { key: 'showPoc', label: tr('Mostrar a linha de controlo (POC)'), type: 'bool', default: true },
+      { key: 'showVa', label: tr('Mostrar VAH e VAL'), type: 'bool', default: true },
     ],
     outputs: [],
     compute(bars, p, ctx) {
@@ -1271,26 +1272,26 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'patterns',
-    name: 'Padrões gráficos (ombro-cabeça-ombro e triângulos)',
+    name: tr('Padrões gráficos (ombro-cabeça-ombro e triângulos)'),
     short: 'PG',
     category: 'Tendência',
     overlay: true,
     layer: true,
     description:
-      'Reconhece ombro-cabeça-ombro (normal e invertido) e triângulos (ascendente, descendente e simétrico) a partir das oscilações confirmadas. Só usa velas fechadas: um padrão aparece a tracejado enquanto se forma e só vira sinal quando uma vela fecha para lá do pescoço ou da linha do triângulo. A entrada é no fecho dessa vela, o alvo é a altura do padrão medida a partir do rompimento e o stop fica do outro lado (acima do ombro direito, ou na linha oposta do triângulo). Cada sinal mostra o resultado (alvo ou stop) e o cartão faz o placar por tipo de padrão. Os padrões são subjetivos: este indicador dá candidatos, com falsos positivos e padrões perdidos.',
+      tr('Reconhece ombro-cabeça-ombro (normal e invertido) e triângulos (ascendente, descendente e simétrico) a partir das oscilações confirmadas. Só usa velas fechadas: um padrão aparece a tracejado enquanto se forma e só vira sinal quando uma vela fecha para lá do pescoço ou da linha do triângulo. A entrada é no fecho dessa vela, o alvo é a altura do padrão medida a partir do rompimento e o stop fica do outro lado (acima do ombro direito, ou na linha oposta do triângulo). Cada sinal mostra o resultado (alvo ou stop) e o cartão faz o placar por tipo de padrão. Os padrões são subjetivos: este indicador dá candidatos, com falsos positivos e padrões perdidos.'),
     inputs: [
-      { key: 'hs', label: 'Ombro-cabeça-ombro', type: 'bool', default: PAT_DEFAULTS.hs },
-      { key: 'tri', label: 'Triângulos', type: 'bool', default: PAT_DEFAULTS.tri },
-      numInput('sensHs', 'Oscilação mínima do ombro-cabeça-ombro (ATR)', PAT_DEFAULTS.sensHs, 0.25, 0.5, 6),
-      numInput('sensTri', 'Oscilação mínima dos triângulos (ATR)', PAT_DEFAULTS.sensTri, 0.1, 0.4, 5),
-      numInput('shoulderTol', 'Diferença máxima entre os ombros (fração da altura)', PAT_DEFAULTS.shoulderTol, 0.05, 0.05, 1),
-      numInput('minHeightHs', 'Altura mínima do ombro-cabeça-ombro (ATR)', PAT_DEFAULTS.minHeightHs, 0.25, 0.5, 20),
-      numInput('minHeightTri', 'Altura mínima do triângulo (ATR)', PAT_DEFAULTS.minHeightTri, 0.25, 0.5, 20),
-      { key: 'triPoints', label: 'Oscilações do triângulo (4 ou 5)', type: 'int', default: PAT_DEFAULTS.triPoints, min: 4, max: 5, step: 1 },
-      { key: 'maxBars', label: 'Velas máximas do padrão', type: 'int', default: PAT_DEFAULTS.maxBars, min: 20, max: 500, step: 10 },
-      numInput('stopBuf', 'Folga do stop (ATR)', PAT_DEFAULTS.stopBuf, 0.05, 0, 2),
-      numInput('minR', 'R mínimo (0 = sem limite)', PAT_DEFAULTS.minR, 0.25, 0, 10),
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 50, min: 0, max: 2000, step: 10 },
+      { key: 'hs', label: tr('Ombro-cabeça-ombro'), type: 'bool', default: PAT_DEFAULTS.hs },
+      { key: 'tri', label: tr('Triângulos'), type: 'bool', default: PAT_DEFAULTS.tri },
+      numInput('sensHs', tr('Oscilação mínima do ombro-cabeça-ombro (ATR)'), PAT_DEFAULTS.sensHs, 0.25, 0.5, 6),
+      numInput('sensTri', tr('Oscilação mínima dos triângulos (ATR)'), PAT_DEFAULTS.sensTri, 0.1, 0.4, 5),
+      numInput('shoulderTol', tr('Diferença máxima entre os ombros (fração da altura)'), PAT_DEFAULTS.shoulderTol, 0.05, 0.05, 1),
+      numInput('minHeightHs', tr('Altura mínima do ombro-cabeça-ombro (ATR)'), PAT_DEFAULTS.minHeightHs, 0.25, 0.5, 20),
+      numInput('minHeightTri', tr('Altura mínima do triângulo (ATR)'), PAT_DEFAULTS.minHeightTri, 0.25, 0.5, 20),
+      { key: 'triPoints', label: tr('Oscilações do triângulo (4 ou 5)'), type: 'int', default: PAT_DEFAULTS.triPoints, min: 4, max: 5, step: 1 },
+      { key: 'maxBars', label: tr('Velas máximas do padrão'), type: 'int', default: PAT_DEFAULTS.maxBars, min: 20, max: 500, step: 10 },
+      numInput('stopBuf', tr('Folga do stop (ATR)'), PAT_DEFAULTS.stopBuf, 0.05, 0, 2),
+      numInput('minR', tr('R mínimo (0 = sem limite)'), PAT_DEFAULTS.minR, 0.25, 0, 10),
+      { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 50, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
     compute(bars, p, ctx) {
@@ -1315,24 +1316,24 @@ export const INDICATORS: IndicatorDef[] = [
   },
   {
     id: 'doubletop-equity',
-    name: 'Curva de capital com retiradas (Topo e Fundo Duplo)',
+    name: tr('Curva de capital com retiradas (Topo e Fundo Duplo)'),
     short: 'CC',
     category: 'Outros',
     overlay: false,
     description:
-      'Painel extra com a curva de capital dos sinais do Topo e Fundo Duplo (os mesmos parâmetros). Cada operação fechada arrisca uma % da conta e rende o seu R. No fim de cada N dias retira o lucro acima do capital inicial (a conta volta ao capital inicial); se a conta estiver abaixo, não retira nem repõe. Mostra a conta, o lucro líquido (conta + retiradas - capital inicial, desce quando se perde), o total (conta + retiradas) e, escondido, o retirado bruto (só os lucros que sobraram em cada dia, sem descontar as perdas). Não inclui spread nem comissões. Se for mais de uma operação por dia, cada uma conta pelo capital que a conta tem nesse momento.',
+      tr('Painel extra com a curva de capital dos sinais do Topo e Fundo Duplo (os mesmos parâmetros). Cada operação fechada arrisca uma % da conta e rende o seu R. No fim de cada N dias retira o lucro acima do capital inicial (a conta volta ao capital inicial); se a conta estiver abaixo, não retira nem repõe. Mostra a conta, o lucro líquido (conta + retiradas - capital inicial, desce quando se perde), o total (conta + retiradas) e, escondido, o retirado bruto (só os lucros que sobraram em cada dia, sem descontar as perdas). Não inclui spread nem comissões. Se for mais de uma operação por dia, cada uma conta pelo capital que a conta tem nesse momento.'),
     inputs: [
-      numInput('capital', 'Capital inicial', 1000, 100, 1, 1e9),
-      numInput('riskPct', 'Risco por operação (% da conta)', 1, 0.25, 0.05, 100),
-      { key: 'everyDays', label: 'Retirar o lucro a cada N dias (0 = nunca retira)', type: 'int', default: 1, min: 0, max: 365, step: 1 },
+      numInput('capital', tr('Capital inicial'), 1000, 100, 1, 1e9),
+      numInput('riskPct', tr('Risco por operação (% da conta)'), 1, 0.25, 0.05, 100),
+      { key: 'everyDays', label: tr('Retirar o lucro a cada N dias (0 = nunca retira)'), type: 'int', default: 1, min: 0, max: 365, step: 1 },
       ...DT_INPUTS,
-      { key: 'minSignals', label: 'Sinais a procurar no passado (0 = não procura)', type: 'int', default: 60, min: 0, max: 2000, step: 10 },
+      { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 60, min: 0, max: 2000, step: 10 },
     ],
     outputs: [
-      { key: 'account', label: 'Conta', style: 'step', color: '#2962ff', width: 2 },
-      { key: 'net', label: 'Lucro líquido', style: 'step', color: '#ff9800', width: 2 },
-      { key: 'withdrawn', label: 'Retirado (bruto)', style: 'step', color: '#9c27b0', width: 1, hiddenByDefault: true },
-      { key: 'total', label: 'Total (conta + retiradas)', style: 'line', color: '#089981', width: 2 },
+      { key: 'account', label: tr('Conta'), style: 'step', color: '#2962ff', width: 2 },
+      { key: 'net', label: tr('Lucro líquido'), style: 'step', color: '#ff9800', width: 2 },
+      { key: 'withdrawn', label: tr('Retirado (bruto)'), style: 'step', color: '#9c27b0', width: 1, hiddenByDefault: true },
+      { key: 'total', label: tr('Total (conta + retiradas)'), style: 'line', color: '#089981', width: 2 },
     ],
     compute(bars, p, ctx) {
       const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;

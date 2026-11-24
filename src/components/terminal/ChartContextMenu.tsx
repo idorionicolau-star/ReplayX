@@ -17,6 +17,7 @@ import { fmtPrice } from '@/lib/format';
 import { uid } from '@/lib/uid';
 import { CHANNEL_DRAWINGS, LINE_DRAWINGS } from '@/core/alerts';
 import { toolDef } from '@/chart/drawings/tools';
+import { tr } from '@/i18n';
 
 /** Linha horizontal num preço (menu do gráfico e "+" da escala). */
 function addHLine(symbolId: string, chartId: string, price: number) {
@@ -54,39 +55,39 @@ export function ChartContextMenu() {
       <MenuList className="w-[260px]">
         {d ? (
           <>
-            <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))} />
+            <MenuItem icon={<Settings2 size={15} />} label={tr('Definições…')} onClick={act(() => useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))} />
             {!d.pane && (LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
-              <MenuItem icon={<Bell size={15} />} label="Adicionar alerta neste desenho" onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, drawingId: d.id } }))} />
+              <MenuItem icon={<Bell size={15} />} label={tr('Adicionar alerta neste desenho')} onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, drawingId: d.id } }))} />
             )}
-            <MenuItem icon={<CopyPlus size={15} />} label="Clonar" onClick={cloneDrawing} />
-            <MenuItem icon={d.locked ? <LockOpen size={15} /> : <Lock size={15} />} label={d.locked ? 'Desbloquear' : 'Bloquear'} onClick={act(() => st.update(cfg.symbolId, d.id, { locked: !d.locked }))} />
-            <MenuItem icon={<Eye size={15} />} label="Ocultar" onClick={act(() => st.update(cfg.symbolId, d.id, { hidden: true }))} />
-            <MenuItem icon={<Layers size={15} />} label="Trazer para a frente" onClick={act(() => st.bringToFront(cfg.symbolId, d.id))} />
+            <MenuItem icon={<CopyPlus size={15} />} label={tr('Clonar')} onClick={cloneDrawing} />
+            <MenuItem icon={d.locked ? <LockOpen size={15} /> : <Lock size={15} />} label={d.locked ? tr('Desbloquear') : tr('Bloquear')} onClick={act(() => st.update(cfg.symbolId, d.id, { locked: !d.locked }))} />
+            <MenuItem icon={<Eye size={15} />} label={tr('Ocultar')} onClick={act(() => st.update(cfg.symbolId, d.id, { hidden: true }))} />
+            <MenuItem icon={<Layers size={15} />} label={tr('Trazer para a frente')} onClick={act(() => st.bringToFront(cfg.symbolId, d.id))} />
             <MenuSeparator />
-            <MenuItem icon={<Trash2 size={15} />} label="Remover" danger hint="Del" onClick={act(() => st.remove(cfg.symbolId, d.id))} />
+            <MenuItem icon={<Trash2 size={15} />} label={tr('Remover')} danger hint="Del" onClick={act(() => st.remove(cfg.symbolId, d.id))} />
           </>
         ) : (
           <>
             {price !== null && last !== undefined && (
               <>
-                <MenuItem icon={<ListPlus size={15} />} label="Posição com SL e TP aqui" onClick={act(() => createPosition(cfg.symbolId, { price }))} />
+                <MenuItem icon={<ListPlus size={15} />} label={tr('Posição com SL e TP aqui')} onClick={act(() => createPosition(cfg.symbolId, { price }))} />
                 <MenuSeparator />
               </>
             )}
             {price !== null && (
               <MenuItem
                 icon={<Minus size={15} />}
-                label={`Linha horizontal em ${fmtPrice(price, sym.precision)}`}
+                label={tr('Linha horizontal em {0}', fmtPrice(price, sym.precision))}
                 onClick={act(() => addHLine(cfg.symbolId, cfg.id, price))}
               />
             )}
             {price !== null && (
-              <MenuItem icon={<Bell size={15} />} label={`Adicionar alerta em ${fmtPrice(price, sym.precision)}`} onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, price } }))} />
+              <MenuItem icon={<Bell size={15} />} label={tr('Adicionar alerta em {0}', fmtPrice(price, sym.precision))} onClick={act(() => useUi.getState().set({ alertDraft: { symbolId: cfg.symbolId, price } }))} />
             )}
             {menu.time !== null && (
               <MenuItem
                 icon={<Rewind size={15} />}
-                label={replayActive ? 'Recomeçar replay nesta barra' : 'Começar replay nesta barra'}
+                label={replayActive ? tr('Recomeçar replay nesta barra') : tr('Começar replay nesta barra')}
                 onClick={act(() => {
                   const c = getChart(cfg.id);
                   const t = c?.barTimeAt(menu.time!) ?? menu.time!;
@@ -95,19 +96,19 @@ export function ChartContextMenu() {
               />
             )}
             {price !== null && (
-              <MenuItem icon={<Copy size={15} />} label={`Copiar preço ${fmtPrice(price, sym.precision)}`} onClick={act(() => void navigator.clipboard?.writeText(fmtPrice(price, sym.precision)))} />
+              <MenuItem icon={<Copy size={15} />} label={tr('Copiar preço {0}', fmtPrice(price, sym.precision))} onClick={act(() => void navigator.clipboard?.writeText(fmtPrice(price, sym.precision)))} />
             )}
             <MenuSeparator />
-            <MenuItem icon={<RefreshCcw size={15} />} label="Repor vista do gráfico" hint="Alt+R" onClick={act(() => getChart(cfg.id)?.resetView())} />
+            <MenuItem icon={<RefreshCcw size={15} />} label={tr('Repor vista do gráfico')} hint="Alt+R" onClick={act(() => getChart(cfg.id)?.resetView())} />
             <MenuItem
               icon={<Trash2 size={15} />}
-              label="Remover desenhos deste símbolo"
+              label={tr('Remover desenhos deste símbolo')}
               danger
               onClick={act(() => {
-                if (confirm('Remover todos os desenhos? (Ctrl+Z desfaz)')) st.clear(cfg.symbolId);
+                if (confirm(tr('Remover todos os desenhos? (Ctrl+Z desfaz)'))) st.clear(cfg.symbolId);
               })}
             />
-            <MenuItem icon={<Settings2 size={15} />} label="Definições do gráfico…" onClick={act(() => useUi.getState().set({ settings: true }))} />
+            <MenuItem icon={<Settings2 size={15} />} label={tr('Definições do gráfico…')} onClick={act(() => useUi.getState().set({ settings: true }))} />
           </>
         )}
       </MenuList>

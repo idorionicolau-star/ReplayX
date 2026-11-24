@@ -14,8 +14,9 @@ import { toast } from '@/components/ui/Toast';
 import { uid } from '@/lib/uid';
 import { currentPrice, submitOrder, tradingMode } from './actions';
 import { ruleFor } from './lotRule';
+import { tr } from '@/i18n';
 
-const KIND_LABEL = { market: 'A MERCADO', limit: 'LIMITE', stop: 'STOP' } as const;
+const KIND_LABEL = { market: tr('A MERCADO'), limit: tr('LIMITE'), stop: 'STOP' };
 
 export const isPositionDrawing = (d: Drawing): boolean => (d.type === 'long' || d.type === 'short') && !!d.data;
 
@@ -44,7 +45,7 @@ export function positionSizing(symbolId: string | null | undefined, d: Drawing):
   const reward = Math.abs(pnlFor(side, qty, entry, data.target, spec));
   const cur = currentPrice(symbolId);
   const kind = cur === undefined ? 'market' : orderKind(side, entry, cur, pipSize(sym) * 0.5);
-  const label = kind === 'market' ? `${side === 'long' ? 'COMPRA' : 'VENDA'} ${KIND_LABEL.market.toLowerCase()}` : `${side === 'long' ? 'COMPRA' : 'VENDA'} ${KIND_LABEL[kind]}`;
+  const label = kind === 'market' ? `${side === 'long' ? tr('COMPRA') : tr('VENDA')} ${KIND_LABEL.market.toLowerCase()}` : `${side === 'long' ? tr('COMPRA') : tr('VENDA')} ${KIND_LABEL[kind]}`;
   return { qty, risk, reward, riskPct: balance > 0 ? (risk / balance) * 100 : 0, minExceeds, label, kind, qtyText: fmtLotWith(qty, rule) };
 }
 
@@ -54,7 +55,7 @@ export function sendPosition(symbolId: string, d: Drawing): boolean {
   if (!sz || !d.data) return false;
   const side: Side = d.type === 'long' ? 'long' : 'short';
   const ok = submitOrder({ symbolId, side, type: sz.kind, qty: sz.qty, price: sz.kind === 'market' ? undefined : d.points[0].price, sl: d.data.stop, tp: d.data.target });
-  if (ok) toast(sz.kind === 'market' ? 'Ordem enviada a mercado' : `Ordem ${KIND_LABEL[sz.kind].toLowerCase()} pendente colocada`, { kind: 'success', body: `Lote ${sz.qtyText} · risco ${sz.risk.toFixed(2)}` });
+  if (ok) toast(sz.kind === 'market' ? tr('Ordem enviada a mercado') : tr('Ordem {0} pendente colocada', KIND_LABEL[sz.kind].toLowerCase()), { kind: 'success', body: tr('Lote {0} · risco {1}', sz.qtyText, sz.risk.toFixed(2)) });
   return ok;
 }
 
@@ -78,7 +79,7 @@ export function createPosition(symbolId: string, opts: { price?: number; side?: 
   const ctrl = chartEntry ? getChart(chartEntry[0]) : undefined;
   const vp = ctrl?.viewport();
   if (cur === undefined || !ctrl || !vp || !ctrl.bars.length) {
-    toast('Ainda sem preço para este símbolo', { kind: 'error' });
+    toast(tr('Ainda sem preço para este símbolo'), { kind: 'error' });
     return false;
   }
   const side: Side = opts.side ?? (opts.price !== undefined && opts.price > cur ? 'short' : 'long');

@@ -12,18 +12,19 @@ import type { Dataset, StrategyRef } from '@/core/strategy/runner';
 import type { BacktestResult } from '@/core/strategy/types';
 import type { Bar } from '@/core/types';
 import { consumeBacktest } from '@/lib/billing';
+import { locale, tr } from '@/i18n';
 
 export const MIN_BARS = 50;
 
 /** Diz porquê há poucas barras (replay, fonte sem mais histórico, ou falha ao carregar) e o que fazer. */
 export function fewBarsMessage(o: { name: string; tf: string; n: number; replay: boolean; startReached: boolean; first: number | null }): string {
-  const head = `Poucos dados para testar ${o.name} ${o.tf} (${o.n} barras, mínimo ${MIN_BARS}).`;
-  if (o.replay) return `${head} No replay só se testa o que vem antes do cursor: começa o replay mais tarde ou testa fora do replay.`;
+  const head = tr('Poucos dados para testar {0} {1} ({2} barras, mínimo {3}).', o.name, o.tf, o.n, MIN_BARS);
+  if (o.replay) return tr('{0} No replay só se testa o que vem antes do cursor: começa o replay mais tarde ou testa fora do replay.', head);
   if (o.startReached) {
-    const since = o.first !== null ? new Date(o.first * 1000).toLocaleDateString('pt-PT') : null;
-    return `${head} A fonte só tem dados${since ? ` desde ${since}` : ''}: experimenta um intervalo mais curto (por exemplo H4 ou H1) ou outro mercado.`;
+    const since = o.first !== null ? new Date(o.first * 1000).toLocaleDateString(locale()) : null;
+    return tr('{0} A fonte só tem dados{1}: experimenta um intervalo mais curto (por exemplo H4 ou H1) ou outro mercado.', head, since ? ` desde ${since}` : '');
   }
-  return `${head} Não consegui carregar mais histórico: tenta outra vez ou muda de intervalo.`;
+  return tr('{0} Não consegui carregar mais histórico: tenta outra vez ou muda de intervalo.', head);
 }
 
 /** Dados do gráfico ativo para testar (no replay, só até ao cursor — sem espreitar o futuro). */
@@ -58,10 +59,10 @@ export function currentRef(kind: 'visual' | 'script'): { ref: StrategyRef; label
 export async function runTester(ref: StrategyRef, label: string): Promise<BacktestResult | null> {
   const st = useStrategies.getState();
   if (!consumeBacktest()) return null;
-  st.set({ running: { kind: 'backtest', done: 0, total: 1, info: 'A carregar dados…' }, error: null });
+  st.set({ running: { kind: 'backtest', done: 0, total: 1, info: tr('A carregar dados…') }, error: null });
   try {
     const data = await loadDataset(st.barsToTest);
-    st.set({ running: { kind: 'backtest', done: 0, total: 1, info: 'A testar…' } });
+    st.set({ running: { kind: 'backtest', done: 0, total: 1, info: tr('A testar…') } });
     const result = await runStrategy<BacktestResult>({ type: 'backtest', strategy: ref, data, settings: st.settings }, { timeoutMs: 60000 });
     const ws = useWorkspace.getState();
     st.set({ tester: { label: `${label} — ${data.label}`, symbolId: data.symbolId, tf: data.tf, result, at: Date.now() }, running: null });

@@ -9,6 +9,7 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuHeader, MenuItem, MenuList } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
 import type { ToolId } from '@/chart/drawings/types';
+import { tr } from '@/i18n';
 
 /** Elementos guardados (modelos de todas as ferramentas) numa lista só: um toque ativa a ferramenta já com esse estilo. */
 export function SavedElements({ className, placement = 'right-start', size = 18, onPicked }: { className?: string; placement?: 'right-start' | 'bottom-start'; size?: number; onPicked?: () => void }) {
@@ -23,8 +24,8 @@ export function SavedElements({ className, placement = 'right-start', size = 18,
       <button
         ref={ref}
         type="button"
-        title="Elementos guardados"
-        aria-label="Elementos guardados"
+        title={tr('Elementos guardados')}
+        aria-label={tr('Elementos guardados')}
         onClick={() => setOpen((o) => !o)}
         className={cn('flex items-center justify-center rounded-md hover:bg-hover', open && 'bg-accent-soft text-accent', className)}
         data-testid="saved-elements"
@@ -33,8 +34,8 @@ export function SavedElements({ className, placement = 'right-start', size = 18,
       </button>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement={placement}>
         <MenuList className="max-h-[60vh] w-[250px] overflow-y-auto">
-          <MenuHeader>Elementos guardados</MenuHeader>
-          {entries.length === 0 && <div className="px-3 py-2 text-xs text-muted">Ainda não guardou nenhum. Desenhe, escolha o desenho e use “Modelo → Guardar como modelo”.</div>}
+          <MenuHeader>{tr('Elementos guardados')}</MenuHeader>
+          {entries.length === 0 && <div className="px-3 py-2 text-xs text-muted">{tr('Ainda não guardou nenhum. Desenhe, escolha o desenho e use “Modelo → Guardar como modelo”.')}</div>}
           {entries.map(({ type, t }) => {
             const I = TOOL_ICONS[type];
             return (

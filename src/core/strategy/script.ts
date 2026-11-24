@@ -5,6 +5,7 @@ import { runBacktest } from './backtester';
 import { indicatorValues } from './visual';
 import type { BacktestInput, BacktestResult, PlotOutput, ShapeOutput, StrategyApi, StrategyProgram } from './types';
 import type { PlotStyle, ParamValue } from '../indicators/registry';
+import { tr } from '@/i18n';
 
 /**
  * Scripts em JavaScript ao estilo Pine Script.
@@ -189,7 +190,7 @@ function compile(code: string, bars: readonly Bar[], overrides: Record<string, P
   };
 
   const needApi = () => {
-    if (!api) throw new ScriptError('As ordens só podem ser usadas dentro de onBar(i => …)');
+    if (!api) throw new ScriptError(tr('As ordens só podem ser usadas dentro de onBar(i => …)'));
     return api;
   };
   const strategyFn = declare('strategy') as ((title: string, o?: { overlay?: boolean }) => void) & Record<string, unknown>;
@@ -252,7 +253,7 @@ function compile(code: string, bars: readonly Bar[], overrides: Record<string, P
     // 3 linhas de prelúdio: cabeçalho da função + "use strict"
     fn = new Function(...names, `"use strict";\n${code}`) as (...args: unknown[]) => unknown;
   } catch (e) {
-    throw new ScriptError(`Erro de sintaxe: ${(e as Error).message}`, lineFromStack(e));
+    throw new ScriptError(tr('Erro de sintaxe: {0}', (e as Error).message), lineFromStack(e));
   }
   try {
     fn(...names.map((k) => env[k]));
@@ -308,7 +309,7 @@ export function scriptToProgram(code: string, bars: readonly Bar[], overrides?: 
 
 export const SCRIPT_TEMPLATES: { name: string; code: string }[] = [
   {
-    name: 'Estratégia: cruzamento EMA + filtro RSI',
+    name: tr('Estratégia: cruzamento EMA + filtro RSI'),
     code: `// Estratégia de exemplo: compra no cruzamento de médias com RSI acima de 50.
 strategy('Cruzamento EMA + RSI', { overlay: true });
 
@@ -338,7 +339,7 @@ onBar((i) => {
 `,
   },
   {
-    name: 'Estratégia: rompimento com trailing stop',
+    name: tr('Estratégia: rompimento com trailing stop'),
     code: `// Rompimento do máximo/mínimo de N barras com trailing stop de ATR.
 strategy('Rompimento + trailing', { overlay: true });
 
@@ -359,7 +360,7 @@ onBar((i) => {
 `,
   },
   {
-    name: 'Indicador: bandas de médias e sinais',
+    name: tr('Indicador: bandas de médias e sinais'),
     code: `// Indicador personalizado: canal de médias com setas de cruzamento.
 indicator('Canal de médias', { overlay: true });
 
@@ -380,7 +381,7 @@ plotshape(ta.crossunder(close, inf), { location: 'above', color: '#f23645', text
 `,
   },
   {
-    name: 'Indicador: RSI com divergências simples',
+    name: tr('Indicador: RSI com divergências simples'),
     code: `// Oscilador num painel separado.
 indicator('RSI personalizado', { overlay: false });
 

@@ -8,6 +8,7 @@ import type { SymbolInfo } from '@/core/types';
 import { Tabs } from '@/components/ui/Tabs';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 interface NewsItem {
   id: string;
@@ -74,9 +75,9 @@ function categoryFor(s: SymbolInfo): string {
 
 function ago(t: number): string {
   const s = Math.max(0, Date.now() / 1000 - t);
-  if (s < 3600) return `há ${Math.max(1, Math.round(s / 60))} min`;
-  if (s < 86400) return `há ${Math.round(s / 3600)} h`;
-  return `há ${Math.round(s / 86400)} d`;
+  if (s < 3600) return tr('há {0} min', Math.max(1, Math.round(s / 60)));
+  if (s < 86400) return tr('há {0} h', Math.round(s / 3600));
+  return tr('há {0} d', Math.round(s / 86400));
 }
 
 export function NewsPanel() {
@@ -96,7 +97,7 @@ export function NewsPanel() {
     let alive = true;
     load(category, nonce > 0)
       .then((r) => alive && setResult({ key, items: r, error: null }))
-      .catch(() => alive && setResult({ key, items: [], error: 'Não foi possível carregar as notícias.' }));
+      .catch(() => alive && setResult({ key, items: [], error: tr('Não foi possível carregar as notícias.') }));
     return () => {
       alive = false;
     };
@@ -122,21 +123,21 @@ export function NewsPanel() {
           value={tab}
           onChange={setTab}
           items={[
-            { value: 'symbol', label: sym ? sym.name : 'Símbolo' },
+            { value: 'symbol', label: sym ? sym.name : tr('Símbolo') },
             { value: 'forex', label: 'Forex' },
-            { value: 'crypto', label: 'Cripto' },
-            { value: 'stocks', label: 'Ações' },
-            { value: 'commodities', label: 'Matérias' },
+            { value: 'crypto', label: tr('Cripto') },
+            { value: 'stocks', label: tr('Ações') },
+            { value: 'commodities', label: tr('Matérias') },
           ]}
         />
-        <button type="button" aria-label="Atualizar" onClick={() => setNonce((n) => n + 1)} className="rounded p-1.5 text-muted hover:bg-hover hover:text-text">
+        <button type="button" aria-label={tr('Atualizar')} onClick={() => setNonce((n) => n + 1)} className="rounded p-1.5 text-muted hover:bg-hover hover:text-text">
           <RefreshCw size={14} />
         </button>
       </div>
       {tab === 'symbol' && sym?.assetClass === 'synthetic' && (
         <div className="m-2 flex gap-2 rounded-md bg-accent-soft p-2.5 text-xs text-text">
           <Info size={15} className="mt-0.5 shrink-0 text-accent" />
-          <span>Os índices sintéticos são gerados por um algoritmo e não reagem a notícias. Abaixo ficam as notícias gerais de mercado.</span>
+          <span>{tr('Os índices sintéticos são gerados por um algoritmo e não reagem a notícias. Abaixo ficam as notícias gerais de mercado.')}</span>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -146,7 +147,7 @@ export function NewsPanel() {
           </div>
         )}
         {error && <div className="px-4 py-8 text-center text-xs text-down">{error}</div>}
-        {!loading && !error && !shown.length && <div className="px-4 py-8 text-center text-xs text-muted">Sem notícias de momento.</div>}
+        {!loading && !error && !shown.length && <div className="px-4 py-8 text-center text-xs text-muted">{tr('Sem notícias de momento.')}</div>}
         {shown.map((n) => (
           <a key={n.id} href={n.link} target="_blank" rel="noopener noreferrer" className="group flex gap-3 border-b border-line px-3 py-2.5 hover:bg-hover">
             <div className="min-w-0 flex-1">

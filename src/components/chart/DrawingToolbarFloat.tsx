@@ -20,6 +20,7 @@ import { useLotRule } from '@/trading/lotRule';
 import { QtyStepper } from '@/components/ui/QtyStepper';
 import { PctStepper } from '@/components/ui/PctStepper';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 const DASH_ICONS = ['—', '- -', '···'];
 const TEXT_TOOLS = new Set(['trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowline', 'infoline', 'arrowup', 'arrowdown']);
@@ -78,12 +79,12 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
   return (
     <div ref={boxRef} data-testid="drawing-float" data-near-mouse={pos && pos.id === d.id ? 'true' : undefined} className={cn('absolute z-20 flex max-w-[calc(100%-16px)] overflow-x-auto items-center gap-0.5 rounded-lg border border-line bg-elev p-1 shadow-pop', !(pos && pos.id === d.id) && 'top-12 left-1/2 -translate-x-1/2')} style={pos && pos.id === d.id ? { left: pos.left, top: pos.top } : undefined} onPointerDown={(e) => e.stopPropagation()}>
       <TemplateMenu symbolId={symbolId} d={d} compact />
-      {!isPosition && <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} label="Cor da linha" />}
-      {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label="Preenchimento" />}
-      {textTool && <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label="Cor do texto" />}
+      {!isPosition && <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} label={tr('Cor da linha')} />}
+      {hasFill && <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha label={tr('Preenchimento')} />}
+      {textTool && <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label={tr('Cor do texto')} />}
       {!isPosition && !textTool && (
         <>
-          <button ref={widthRef} type="button" title="Espessura" onClick={() => setWidthOpen((o) => !o)} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs hover:bg-hover">
+          <button ref={widthRef} type="button" title={tr('Espessura')} onClick={() => setWidthOpen((o) => !o)} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs hover:bg-hover">
             <Minus size={14} strokeWidth={d.style.width + 1} /> {d.style.width}px
           </button>
           <Popover anchor={widthRef} open={widthOpen} onClose={() => setWidthOpen(false)} className="p-1">
@@ -101,35 +102,35 @@ export function DrawingToolbarFloat({ symbolId, ctrl }: { symbolId: string; ctrl
               </button>
             ))}
           </Popover>
-          <button type="button" title="Estilo da linha" onClick={() => setStyle({ dash: ((d.style.dash + 1) % 3) as 0 | 1 | 2 })} className="h-7 rounded-md px-2 font-mono text-xs hover:bg-hover">
+          <button type="button" title={tr('Estilo da linha')} onClick={() => setStyle({ dash: ((d.style.dash + 1) % 3) as 0 | 1 | 2 })} className="h-7 rounded-md px-2 font-mono text-xs hover:bg-hover">
             {DASH_ICONS[d.style.dash]}
           </button>
         </>
       )}
       {isPosition && d.data && <PositionControls symbolId={symbolId} d={d} />}
       {!d.pane && (LINE_DRAWINGS.has(d.type) || CHANNEL_DRAWINGS.has(d.type)) && (
-        <IconButton size="sm" label="Adicionar alerta neste desenho" onClick={() => useUi.getState().set({ alertDraft: { symbolId, drawingId: d.id } })}>
+        <IconButton size="sm" label={tr('Adicionar alerta neste desenho')} onClick={() => useUi.getState().set({ alertDraft: { symbolId, drawingId: d.id } })}>
           <Bell size={15} />
         </IconButton>
       )}
       {TEXT_TOOLS.has(d.type) && (
-        <IconButton size="sm" label="Texto na linha" active={!!d.style.text} onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id, tab: 'text' } })}>
+        <IconButton size="sm" label={tr('Texto na linha')} active={!!d.style.text} onClick={() => useUi.getState().set({ drawingSettings: { symbolId, id: d.id, tab: 'text' } })}>
           <Type size={15} />
         </IconButton>
       )}
       <AngleMenu symbolId={symbolId} d={d} ctrl={ctrl} />
-      <IconButton ref={moreRef} size="sm" label="Mais opções" active={moreOpen} onClick={() => setMoreOpen((o) => !o)} data-testid="drawing-more">
+      <IconButton ref={moreRef} size="sm" label={tr('Mais opções')} active={moreOpen} onClick={() => setMoreOpen((o) => !o)} data-testid="drawing-more">
         <Ellipsis size={16} />
       </IconButton>
       <Popover anchor={moreRef} open={moreOpen} onClose={() => setMoreOpen(false)} placement="bottom-end">
         <MenuList className="w-[210px]">
-          <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={() => (setMoreOpen(false), useUi.getState().set({ drawingSettings: { symbolId, id: d.id } }))} />
-          <MenuItem icon={d.locked ? <Lock size={15} /> : <LockOpen size={15} />} label={d.locked ? 'Desbloquear' : 'Bloquear'} onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { locked: !d.locked }))} />
-          <MenuItem icon={<Eye size={15} />} label="Ocultar" onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { hidden: true }))} />
-          <MenuItem icon={<Copy size={15} />} label="Clonar" onClick={() => (setMoreOpen(false), clone())} />
+          <MenuItem icon={<Settings2 size={15} />} label={tr('Definições…')} onClick={() => (setMoreOpen(false), useUi.getState().set({ drawingSettings: { symbolId, id: d.id } }))} />
+          <MenuItem icon={d.locked ? <Lock size={15} /> : <LockOpen size={15} />} label={d.locked ? tr('Desbloquear') : tr('Bloquear')} onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { locked: !d.locked }))} />
+          <MenuItem icon={<Eye size={15} />} label={tr('Ocultar')} onClick={() => (setMoreOpen(false), st.update(symbolId, d.id, { hidden: true }))} />
+          <MenuItem icon={<Copy size={15} />} label={tr('Clonar')} onClick={() => (setMoreOpen(false), clone())} />
         </MenuList>
       </Popover>
-      <IconButton size="sm" label="Remover (Delete)" onClick={() => st.remove(symbolId, d.id)} className="hover:text-down">
+      <IconButton size="sm" label={tr('Remover (Delete)')} onClick={() => st.remove(symbolId, d.id)} className="hover:text-down">
         <Trash2 size={15} />
       </IconButton>
     </div>
@@ -150,15 +151,15 @@ function PositionControls({ symbolId, d }: { symbolId: string; d: Drawing }) {
   const seg = 'h-7 px-2 text-[11px] font-semibold';
   return (
     <>
-      <IconButton size="sm" label={long ? 'Compra: tocar para inverter para venda' : 'Venda: tocar para inverter para compra'} onClick={() => flipPosition(symbolId, d)} data-testid="position-flip" className={long ? 'text-up' : 'text-down'}>
+      <IconButton size="sm" label={long ? tr('Compra: tocar para inverter para venda') : tr('Venda: tocar para inverter para compra')} onClick={() => flipPosition(symbolId, d)} data-testid="position-flip" className={long ? 'text-up' : 'text-down'}>
         <ArrowUpDown size={15} />
       </IconButton>
-      <div className="flex overflow-hidden rounded-md border border-line" title="Como calcular o lote">
+      <div className="flex overflow-hidden rounded-md border border-line" title={tr('Como calcular o lote')}>
         <button type="button" onClick={() => (patch({ sizing: 'qty', qty: sz?.qty ?? defaultQty }), setTrading({ sizing: 'qty' }))} className={cn(seg, sizing === 'qty' ? 'bg-accent text-on-accent' : 'hover:bg-hover')} data-testid="position-mode-lot">
-          Lote
+          {tr('Lote')}
         </button>
         <button type="button" onClick={() => (patch({ sizing: 'risk' }), setTrading({ sizing: 'risk' }))} className={cn(seg, sizing === 'risk' ? 'bg-accent text-on-accent' : 'hover:bg-hover')} data-testid="position-mode-risk">
-          Risco
+          {tr('Risco')}
         </button>
       </div>
       {sizing === 'qty' ? (
@@ -167,18 +168,18 @@ function PositionControls({ symbolId, d }: { symbolId: string; d: Drawing }) {
         <PctStepper value={data.riskPct} onChange={(v) => (patch({ riskPct: v }), setTrading({ defaultRiskPct: v }))} />
       )}
       {sz && (
-        <span className="px-1 text-[11px] whitespace-nowrap text-muted tnum" data-testid="position-info" title={`Mínimo ${rule.min} · passo ${rule.step} · máximo ${rule.max}`}>
-          Lote <b className="text-text">{sz.qtyText}</b> · risco <b className={sz.minExceeds ? 'text-warn' : 'text-text'}>{sz.risk.toFixed(2)}</b> ({sz.riskPct.toFixed(2)}%)
+        <span className="px-1 text-[11px] whitespace-nowrap text-muted tnum" data-testid="position-info" title={tr('Mínimo {0} · passo {1} · máximo {2}', rule.min, rule.step, rule.max)}>
+          {tr('Lote')} <b className="text-text">{sz.qtyText}</b> {tr('· risco')} <b className={sz.minExceeds ? 'text-warn' : 'text-text'}>{sz.risk.toFixed(2)}</b> ({sz.riskPct.toFixed(2)}%)
         </span>
       )}
       <button
         type="button"
         onClick={() => sendPosition(symbolId, d)}
         className={cn('flex h-7 shrink-0 items-center gap-1 rounded-md px-2.5 text-[11px] font-semibold whitespace-nowrap text-white hover:brightness-110', long ? 'bg-up' : 'bg-down')}
-        title={sz ? `${sz.label}: envia a ordem com este stop e alvo` : 'Enviar ordem'}
+        title={sz ? tr('{0}: envia a ordem com este stop e alvo', sz.label) : tr('Enviar ordem')}
         data-testid="position-send"
       >
-        <Send size={13} /> {sz && sz.kind !== 'market' ? `Enviar ${sz.kind === 'limit' ? 'limite' : 'stop'}` : 'Enviar'}
+        <Send size={13} /> {sz && sz.kind !== 'market' ? tr('Enviar {0}', sz.kind === 'limit' ? 'limite' : 'stop') : tr('Enviar')}
       </button>
     </>
   );

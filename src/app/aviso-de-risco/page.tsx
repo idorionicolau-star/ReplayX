@@ -1,12 +1,22 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal/LegalLayout';
 import { Contact } from '@/components/legal/Contact';
+import { ByLang } from '@/components/legal/ByLang';
+import { RiskEn } from '@/components/legal/en/RiskEn';
 
 export const metadata: Metadata = { title: 'Aviso de risco — ReplayX' };
 
 export default function AvisoDeRisco() {
   return (
     <LegalLayout title="Aviso de risco">
+      <ByLang pt={<Pt />} en={<RiskEn />} />
+    </LegalLayout>
+  );
+}
+
+function Pt() {
+  return (
+    <>
       <p className="rounded-lg border border-warn/50 bg-warn/10 p-3">
         <b>Negociar em mercados financeiros envolve um risco elevado e pode levar à perda de todo o capital.</b> O ReplayX é uma ferramenta de estudo e simulação e não constitui aconselhamento
         financeiro, de investimento ou fiscal.
@@ -43,6 +53,6 @@ export default function AvisoDeRisco() {
 
       <h2>Contacto</h2>
       <Contact />
-    </LegalLayout>
+    </>
   );
 }

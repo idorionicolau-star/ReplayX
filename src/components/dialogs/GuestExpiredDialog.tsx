@@ -7,6 +7,8 @@ import { useGuestTimer, formatGuestTime } from '@/lib/guestTimer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Segmented } from '@/components/ui/Tabs';
+import { TRIAL_DAYS } from '@/core/plans';
+import { tr } from '@/i18n';
 
 function GoogleIcon() {
   return (
@@ -100,7 +102,7 @@ export function GuestExpiredDialog() {
         {!isExpired && (
           <button
             type="button"
-            aria-label="Voltar ao teste"
+            aria-label={tr('Voltar ao teste')}
             onClick={handleClose}
             className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-hover hover:text-text transition-colors"
           >
@@ -112,13 +114,13 @@ export function GuestExpiredDialog() {
           {isExpired ? (
             <>
               <Sparkles size={20} className="animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-wider">A sua experiência continua</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{tr('A sua experiência continua')}</span>
             </>
           ) : (
             <>
               <Clock size={18} className="text-warn animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-wider text-warn">
-                Demonstração ativa · {formatGuestTime(remainingMs)} restantes
+                {tr('Demonstração ativa ·')} {formatGuestTime(remainingMs)} restantes
               </span>
             </>
           )}
@@ -127,28 +129,28 @@ export function GuestExpiredDialog() {
         <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">
           {isExpired ? (
             <>
-              Não terminou! <span className="text-accent">A sua jornada está só a começar</span>
+              {tr('Não terminou!')} <span className="text-accent">{tr('A sua jornada está só a começar')}</span>
             </>
           ) : (
             <>
-              Guarde os seus estudos <span className="text-accent">e ganhe 14 dias de Pro</span>
+              {tr('Guarde os seus estudos')} <span className="text-accent">{tr('e ganhe {0} dias de Pro', TRIAL_DAYS)}</span>
             </>
           )}
         </h2>
 
         <p className="mt-2 text-[13px] leading-relaxed text-muted">
           {isExpired
-            ? 'O seu tempo de demonstração terminou, mas as suas análises continuam aqui. Registe-se agora para continuar o seu teste grátis sem perder os seus desenhos, configurações e sessões de treino!'
-            : 'Pode continuar a testar livremente durante o tempo restante. Se quiser guardar os seus desenhos e desbloquear todos os recursos Pro sem limites, crie a sua conta gratuita agora!'}
+            ? tr('O seu tempo de demonstração terminou, mas as suas análises continuam aqui. Registe-se agora para continuar o seu teste grátis sem perder os seus desenhos, configurações e sessões de treino!')
+            : tr('Pode continuar a testar livremente durante o tempo restante. Se quiser guardar os seus desenhos e desbloquear todos os recursos Pro sem limites, crie a sua conta gratuita agora!')}
         </p>
 
         {/* Card de Bónus Pro */}
         <div className="my-4 flex items-start gap-3 rounded-xl border border-accent/30 bg-accent-soft p-3 text-[13px]">
           <Gift size={20} className="mt-0.5 shrink-0 text-accent" />
           <div>
-            <div className="font-semibold text-text">Bónus Imediato de Boas-Vindas</div>
+            <div className="font-semibold text-text">{tr('Bónus Imediato de Boas-Vindas')}</div>
             <div className="mt-0.5 text-xs text-muted">
-              Ao criar a sua conta gratuita, recebe automaticamente <b>14 dias de ReplayX Pro Grátis</b> (Replay em 1m, multi-gráficos e backtests ilimitados).
+              {tr('Ao criar a sua conta gratuita, recebe automaticamente')} <b>{tr('{0} dias de ReplayX Pro Grátis', TRIAL_DAYS)}</b> {tr('(Replay em 1m, multi-gráficos e backtests ilimitados).')}
             </div>
           </div>
         </div>
@@ -156,12 +158,12 @@ export function GuestExpiredDialog() {
         {/* Botão Google com 1 clique */}
         <Button variant="outline" size="lg" block className="bg-input" disabled={!!busy} onClick={() => run('google', loginGoogle)}>
           {busy === 'google' ? <Loader2 size={18} className="animate-spin" /> : <GoogleIcon />}
-          Continuar com Google
+          {tr('Continuar com Google')}
         </Button>
 
         <div className="my-4 flex items-center gap-3 text-[11px] uppercase text-muted">
           <span className="h-px flex-1 bg-line" />
-          ou com e-mail
+          {tr('ou com e-mail')}
           <span className="h-px flex-1 bg-line" />
         </div>
 
@@ -173,8 +175,8 @@ export function GuestExpiredDialog() {
             setError(null);
           }}
           items={[
-            { value: 'register', label: 'Criar conta gratuita' },
-            { value: 'login', label: 'Já tenho conta' },
+            { value: 'register', label: tr('Criar conta gratuita') },
+            { value: 'login', label: tr('Já tenho conta') },
           ]}
         />
 
@@ -187,14 +189,14 @@ export function GuestExpiredDialog() {
           }}
         >
           {mode === 'register' && (
-            <Input placeholder="Nome" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-[13px]" />
+            <Input placeholder={tr('Nome')} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-[13px]" />
           )}
-          <Input type="email" required placeholder="E-mail" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 text-[13px]" />
+          <Input type="email" required placeholder={tr('E-mail')} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 text-[13px]" />
           <Input
             type="password"
             required
             minLength={6}
-            placeholder="Palavra-passe (mínimo 6 caracteres)"
+            placeholder={tr('Palavra-passe (mínimo 6 caracteres)')}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -205,21 +207,21 @@ export function GuestExpiredDialog() {
 
           <Button variant="primary" size="lg" type="submit" disabled={!!busy} className="mt-1">
             {busy === 'email' ? <Loader2 size={18} className="animate-spin" /> : <Mail size={16} />}
-            {mode === 'register' ? 'Criar conta e guardar progresso' : 'Entrar na minha conta'}
+            {mode === 'register' ? tr('Criar conta e guardar progresso') : tr('Entrar na minha conta')}
           </Button>
         </form>
 
         {/* Botão de Retorno se ainda houver tempo */}
         {!isExpired && (
           <Button variant="ghost" size="md" block onClick={handleClose} className="mt-2 text-xs text-muted hover:text-text">
-            Continuar a testar ({formatGuestTime(remainingMs)} restantes)
+            {tr('Continuar a testar (')}{formatGuestTime(remainingMs)} {tr('restantes)')}
           </Button>
         )}
 
         <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-xs text-muted">
-          <span>Os seus dados ficam guardados</span>
+          <span>{tr('Os seus dados ficam guardados')}</span>
           <button type="button" onClick={handleExit} className="hover:text-down hover:underline">
-            Sair para a página inicial
+            {tr('Sair para a página inicial')}
           </button>
         </div>
       </div>

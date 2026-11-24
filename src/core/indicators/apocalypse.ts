@@ -1,5 +1,6 @@
 import type { Bar } from '../types';
 import * as ta from './ta';
+import { tr } from '@/i18n';
 
 /**
  * Apocalypse: estatística das pernadas longas do próprio ativo.
@@ -491,15 +492,15 @@ export function entrySignals(bars: readonly Bar[], atr: readonly number[], pivot
 /** Linhas curtas da leitura atual, para empilhar na última vela (cada uma cabe na margem à direita do gráfico). */
 export function readingLines(r: Reading, typical: ApocalypseResult['typical'], signals: readonly Signal[] = []): string[] {
   const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
-  const flags = [r.situation.compression && 'compressão', r.situation.atLevel && 'num nível', r.situation.pullback && 'recuo'].filter(Boolean).join(' + ');
-  const lines = [r.enough ? `↑${pct(r.pUp)} ↓${pct(r.pDown)} (média ${pct(r.baseUp)}·${pct(r.baseDown)}) n=${r.cases}` : `poucos casos (${r.cases})`];
+  const flags = [r.situation.compression && tr('compressão'), r.situation.atLevel && tr('num nível'), r.situation.pullback && tr('recuo')].filter(Boolean).join(' + ');
+  const lines = [r.enough ? `↑${pct(r.pUp)} ↓${pct(r.pDown)} (média ${pct(r.baseUp)}·${pct(r.baseDown)}) n=${r.cases}` : tr('poucos casos ({0})', r.cases)];
   if (flags) lines.push(flags);
-  if (r.edge === false) lines.push('sem vantagem estatística');
-  if (typical) lines.push(`longa típica ${typical.size.toFixed(1)} ATR · ${Math.round(typical.dur)} velas`);
+  if (r.edge === false) lines.push(tr('sem vantagem estatística'));
+  if (typical) lines.push(tr('longa típica {0} ATR · {1} velas', typical.size.toFixed(1), Math.round(typical.dur)));
   // como os sinais se portaram neste gráfico (só as operações já fechadas)
   const won = signals.filter((x) => x.outcome === 'tp').length;
   const lost = signals.filter((x) => x.outcome === 'sl').length;
-  if (won + lost > 0) lines.push(`sinais: ${won} alvo · ${lost} stop`);
+  if (won + lost > 0) lines.push(tr('sinais: {0} alvo · {1} stop', won, lost));
   return lines;
 }
 

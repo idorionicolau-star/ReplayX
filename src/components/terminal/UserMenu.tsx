@@ -13,6 +13,7 @@ import { useUi } from '@/store/ui';
 import { Popover } from '@/components/ui/Popover';
 import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 export function UserMenu() {
   const user = useAuth((s) => s.user);
@@ -32,7 +33,7 @@ export function UserMenu() {
   const dot = sync.state === 'ok' ? 'bg-up' : sync.state === 'syncing' ? 'bg-warn animate-pulse-soft' : sync.state === 'error' ? 'bg-down' : 'bg-faint';
   return (
     <>
-      <button ref={ref} type="button" onClick={() => setOpen((o) => !o)} className="relative ml-0.5 shrink-0 rounded-full p-0.5 hover:bg-hover" aria-label="Conta" data-testid="user-menu">
+      <button ref={ref} type="button" onClick={() => setOpen((o) => !o)} className="relative ml-0.5 shrink-0 rounded-full p-0.5 hover:bg-hover" aria-label={tr('Conta')} data-testid="user-menu">
         {user.photo ? (
           <img src={user.photo} alt="" className="h-7 w-7 rounded-full" referrerPolicy="no-referrer" />
         ) : (
@@ -44,25 +45,25 @@ export function UserMenu() {
         <MenuList className="w-[270px]">
           <div className="px-3 pt-1 pb-2">
             <div className="truncate text-[13px] font-semibold">{user.name}</div>
-            <div className="truncate text-xs text-muted">{user.guest ? 'Modo convidado — dados só neste dispositivo' : user.email}</div>
+            <div className="truncate text-xs text-muted">{user.guest ? tr('Modo convidado — dados só neste dispositivo') : user.email}</div>
           </div>
           {!user.guest && (
             <div className="mx-3 mb-2 flex items-start gap-2 rounded-md bg-sunken px-2.5 py-2 text-xs">
               {sync.state === 'error' ? <CloudOff size={14} className="mt-0.5 shrink-0 text-down" /> : <Cloud size={14} className="mt-0.5 shrink-0 text-accent" />}
               <span className="text-muted">
-                {sync.state === 'ok' && 'Sincronizado com a nuvem.'}
-                {sync.state === 'syncing' && 'A sincronizar…'}
-                {sync.state === 'off' && 'Sincronização desligada.'}
+                {sync.state === 'ok' && tr('Sincronizado com a nuvem.')}
+                {sync.state === 'syncing' && tr('A sincronizar…')}
+                {sync.state === 'off' && tr('Sincronização desligada.')}
                 {sync.state === 'error' && sync.message}
               </span>
             </div>
           )}
           <MenuSeparator />
-          {!user.guest && <MenuItem icon={<RefreshCw size={15} />} label="Guardar na nuvem agora" onClick={() => void flushSync()} />}
+          {!user.guest && <MenuItem icon={<RefreshCw size={15} />} label={tr('Guardar na nuvem agora')} onClick={() => void flushSync()} />}
           {user.guest && (
             <MenuItem
               icon={<UserPlus size={15} />}
-              label="Entrar / criar conta"
+              label={tr('Entrar / criar conta')}
               onClick={async () => {
                 await logout();
                 router.replace('/');
@@ -71,7 +72,7 @@ export function UserMenu() {
           )}
           <MenuItem
             icon={<Crown size={15} />}
-            label="Plano e pagamentos"
+            label={tr('Plano e pagamentos')}
             onClick={() => {
               setOpen(false);
               openUpgrade();
@@ -80,7 +81,7 @@ export function UserMenu() {
           {!pwa.standalone && (pwa.canInstall || pwa.ios) && (
             <MenuItem
               icon={<Download size={15} />}
-              label="Instalar a app"
+              label={tr('Instalar a app')}
               onClick={async () => {
                 setOpen(false);
                 if (pwa.canInstall) await promptInstall();
@@ -90,23 +91,23 @@ export function UserMenu() {
           )}
           <MenuItem
             icon={<BellRing size={15} />}
-            label={notifyPermission() === 'granted' ? 'Testar notificação' : 'Ativar notificações'}
+            label={notifyPermission() === 'granted' ? tr('Testar notificação') : tr('Ativar notificações')}
             onClick={async () => {
               setOpen(false);
               const p = await requestNotifyPermission();
               if (p === 'granted') {
-                const ok = await notifyDevice('ReplayX', 'As notificações dos alertas estão a funcionar.', 'rx-test');
-                if (!ok) toast('Não foi possível mostrar a notificação', { kind: 'error' });
-              } else if (p === 'denied') toast('Notificações bloqueadas', { kind: 'error', body: 'Ative-as nas definições do site no navegador.' });
-              else if (p === 'unsupported') toast('Este navegador não suporta notificações', { kind: 'warning', body: pwa.ios ? 'No iPhone, instale primeiro a app no ecrã principal.' : undefined });
+                const ok = await notifyDevice('ReplayX', tr('As notificações dos alertas estão a funcionar.'), 'rx-test');
+                if (!ok) toast(tr('Não foi possível mostrar a notificação'), { kind: 'error' });
+              } else if (p === 'denied') toast(tr('Notificações bloqueadas'), { kind: 'error', body: tr('Ative-as nas definições do site no navegador.') });
+              else if (p === 'unsupported') toast(tr('Este navegador não suporta notificações'), { kind: 'warning', body: pwa.ios ? tr('No iPhone, instale primeiro a app no ecrã principal.') : undefined });
             }}
           />
-          <MenuItem icon={<FileText size={15} />} label="Termos, privacidade e aviso de risco" onClick={() => (setOpen(false), window.open('/termos', '_blank', 'noopener'))} />
-          <MenuItem icon={<Keyboard size={15} />} label="Atalhos de teclado" onClick={() => useUi.getState().set({ shortcuts: true })} />
+          <MenuItem icon={<FileText size={15} />} label={tr('Termos, privacidade e aviso de risco')} onClick={() => (setOpen(false), window.open('/termos', '_blank', 'noopener'))} />
+          <MenuItem icon={<Keyboard size={15} />} label={tr('Atalhos de teclado')} onClick={() => useUi.getState().set({ shortcuts: true })} />
           <MenuSeparator />
           <MenuItem
             icon={<LogOut size={15} />}
-            label="Terminar sessão"
+            label={tr('Terminar sessão')}
             danger
             onClick={async () => {
               await flushSync().catch(() => undefined);

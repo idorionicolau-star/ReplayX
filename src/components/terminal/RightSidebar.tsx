@@ -10,13 +10,14 @@ import { AlertsPanel } from '@/components/panels/AlertsPanel';
 import { Resizer } from './Resizer';
 import { cn } from '@/components/ui/cn';
 import { useCompact } from '@/lib/compact';
+import { tr } from '@/i18n';
 
 export const RIGHT_TABS: { id: RightTab; label: string; icon: typeof ListOrdered }[] = [
-  { id: 'watchlist', label: 'Lista de observação', icon: ListOrdered },
-  { id: 'trade', label: 'Negociar', icon: Briefcase },
-  { id: 'news', label: 'Notícias', icon: Newspaper },
-  { id: 'calendar', label: 'Calendário económico', icon: CalendarDays },
-  { id: 'objects', label: 'Árvore de objetos', icon: ListTree },
+  { id: 'watchlist', label: tr('Lista de observação'), icon: ListOrdered },
+  { id: 'trade', label: tr('Negociar'), icon: Briefcase },
+  { id: 'news', label: tr('Notícias'), icon: Newspaper },
+  { id: 'calendar', label: tr('Calendário económico'), icon: CalendarDays },
+  { id: 'objects', label: tr('Árvore de objetos'), icon: ListTree },
   { id: 'alerts', label: 'Alertas', icon: Bell },
 ];
 
@@ -64,7 +65,7 @@ export function RightPanel() {
       >
         <div className="flex h-10 shrink-0 items-center justify-between border-b border-line px-3">
           <span className="text-[13px] font-semibold">{info.label}</span>
-          <button type="button" aria-label="Fechar painel" onClick={() => setTab(null)} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
+          <button type="button" aria-label={tr('Fechar painel')} onClick={() => setTab(null)} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
             <X size={16} />
           </button>
         </div>

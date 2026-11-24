@@ -4,6 +4,7 @@ import { alignTime, parseTf, tfSeconds, type Timeframe } from '../timeframes';
 import { backoffDelay, nowSec, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
 import { allSymbols, registerSymbol } from '../symbols';
 import { extendWithYahoo } from './yahooFallback';
+import { tr } from '@/i18n';
 
 /**
  * Cliente WebSocket da Deriv (índices sintéticos, forex, metais, índices de bolsa).
@@ -79,12 +80,12 @@ function openSocket(url: string, timeoutMs: number): Promise<WebSocket> {
     };
     ws.onerror = () => {
       clearTimeout(timer);
-      reject(new Error('erro de ligação'));
+      reject(new Error(tr('erro de ligação')));
     };
     // fechada antes de abrir (handshake recusado)
     ws.onclose = () => {
       clearTimeout(timer);
-      reject(new Error('ligação recusada'));
+      reject(new Error(tr('ligação recusada')));
     };
   });
 }
@@ -140,7 +141,7 @@ export class DerivClient {
         }
       }
       this.setStatus('error');
-      throw new ProviderError(`Não foi possível ligar à Deriv (${(lastErr as Error)?.message ?? 'rede'})`, 'deriv');
+      throw new ProviderError(tr('Não foi possível ligar à Deriv ({0})', (lastErr as Error)?.message ?? tr('rede')), 'deriv');
     })().finally(() => {
       this.connecting = null;
     });
@@ -171,7 +172,7 @@ export class DerivClient {
       this.pingTimer = null;
       for (const [id, p] of this.pending) {
         clearTimeout(p.timer);
-        p.reject(new ProviderError('Ligação à Deriv perdida', 'deriv'));
+        p.reject(new ProviderError(tr('Ligação à Deriv perdida'), 'deriv'));
         this.pending.delete(id);
       }
       for (const s of this.streams.values()) s.subId = undefined;
@@ -206,14 +207,14 @@ export class DerivClient {
       if (p) {
         this.pending.delete(id);
         clearTimeout(p.timer);
-        if (msg.error) p.reject(new DerivError(msg.error.code ?? 'Error', msg.error.message ?? 'Erro Deriv'));
+        if (msg.error) p.reject(new DerivError(msg.error.code ?? 'Error', msg.error.message ?? tr('Erro Deriv')));
         else p.resolve(msg);
         return;
       }
       const s = this.streams.get(id);
       if (s) {
         if (msg.error) {
-          s.onError?.(new DerivError(msg.error.code ?? 'Error', msg.error.message ?? 'Erro Deriv'));
+          s.onError?.(new DerivError(msg.error.code ?? 'Error', msg.error.message ?? tr('Erro Deriv')));
           return;
         }
         if (msg.subscription?.id) s.subId = msg.subscription.id;
@@ -240,7 +241,7 @@ export class DerivClient {
     this.ws = null;
     for (const [id, p] of this.pending) {
       clearTimeout(p.timer);
-      p.reject(new ProviderError('Ligação à Deriv reiniciada noutro servidor', 'deriv'));
+      p.reject(new ProviderError(tr('Ligação à Deriv reiniciada noutro servidor'), 'deriv'));
       this.pending.delete(id);
     }
     if (old) {
@@ -278,7 +279,7 @@ export class DerivClient {
     return new Promise<DerivMsg>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new ProviderError('Tempo esgotado à espera da Deriv', 'deriv'));
+        reject(new ProviderError(tr('Tempo esgotado à espera da Deriv'), 'deriv'));
       }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       try {
@@ -362,9 +363,9 @@ export function subscribeTicks(ticker: string, cb: (price: number, epoch: number
 // ---------- símbolos ativos ----------
 
 const SUBMARKET_LABEL: Record<string, string> = {
-  random_index: 'Volatilidade',
-  random_daily: 'Reset diário',
-  random_nightly: 'Reset noturno',
+  random_index: tr('Volatilidade'),
+  random_daily: tr('Reset diário'),
+  random_nightly: tr('Reset noturno'),
   crash_index: 'Boom & Crash',
   crash_boom: 'Boom & Crash',
   step_index: 'Step',
@@ -373,17 +374,17 @@ const SUBMARKET_LABEL: Record<string, string> = {
   dex: 'DEX',
   dxi: 'DEX',
   drift_switch: 'Drift Switch',
-  forex_basket: 'Cestas',
-  commodity_basket: 'Cestas',
-  major_pairs: 'Principais',
-  minor_pairs: 'Cruzados e exóticos',
-  exotic_pairs: 'Cruzados e exóticos',
-  smart_fx: 'Cestas',
-  metals: 'Metais',
-  energy: 'Energia',
-  americas_OTC: 'Américas',
-  europe_OTC: 'Europa',
-  asia_oceania_OTC: 'Ásia/Pacífico',
+  forex_basket: tr('Cestas'),
+  commodity_basket: tr('Cestas'),
+  major_pairs: tr('Principais'),
+  minor_pairs: tr('Cruzados e exóticos'),
+  exotic_pairs: tr('Cruzados e exóticos'),
+  smart_fx: tr('Cestas'),
+  metals: tr('Metais'),
+  energy: tr('Energia'),
+  americas_OTC: tr('Américas'),
+  europe_OTC: tr('Europa'),
+  asia_oceania_OTC: tr('Ásia/Pacífico'),
   non_stable_coin: 'Deriv',
 };
 
@@ -457,7 +458,7 @@ type Candle = { epoch: number; open: number | string; high: number | string; low
 
 function granularity(tf: Timeframe): number {
   const s = tfSeconds(tf);
-  if (!GRANULARITIES.includes(s)) throw new ProviderError(`Granularidade não suportada: ${s}s`, 'deriv', false);
+  if (!GRANULARITIES.includes(s)) throw new ProviderError(tr('Granularidade não suportada: {0}s', s), 'deriv', false);
   return s;
 }
 
@@ -588,7 +589,7 @@ export const derivProvider: Provider = {
     const h = msg.history as { times?: (number | string)[]; prices?: (number | string)[] } | undefined;
     const price = Number(h?.prices?.[h.prices.length - 1]);
     const time = Number(h?.times?.[h.times.length - 1]);
-    if (!Number.isFinite(price)) throw new ProviderError('Sem cotação', 'deriv');
+    if (!Number.isFinite(price)) throw new ProviderError(tr('Sem cotação'), 'deriv');
     const open = await dayOpenFor(symbol);
     return { price, time: Number.isFinite(time) ? time : nowSec(), changePct: open ? ((price - open) / open) * 100 : undefined };
   },

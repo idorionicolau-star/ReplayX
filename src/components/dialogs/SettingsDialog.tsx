@@ -21,6 +21,7 @@ import { clearBarCache } from '@/core/feed/barCache';
 import { useSaverReason, type DataSaverSetting } from '@/lib/dataSaver';
 import { fmtBytes, meterTotal, resetDataMeter, useDataMeter } from '@/lib/dataMeter';
 import { PIVOT_SENSITIVITY, type PivotSensitivity } from '@/core/priceSnap';
+import { getLang, LANGS, setLang, tr, type Lang } from '@/i18n';
 
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
@@ -31,19 +32,19 @@ export function SettingsDialog() {
   const close = () => useUi.getState().set({ settings: false });
   const t = s.trading;
   return (
-    <Dialog open onClose={close} title="Definições do gráfico" width={560} footer={<Button variant="primary" onClick={close}>Fechar</Button>}>
+    <Dialog open onClose={close} title={tr('Definições do gráfico')} width={560} footer={<Button variant="primary" onClick={close}>{tr('Fechar')}</Button>}>
       <Tabs
         className="mb-3"
         value={tab}
         onChange={setTab}
         items={[
-          { value: 'symbol', label: 'Símbolo' },
-          { value: 'scales', label: 'Escalas' },
+          { value: 'symbol', label: tr('Símbolo') },
+          { value: 'scales', label: tr('Escalas') },
           { value: 'canvas', label: 'Canvas' },
-          { value: 'chart', label: 'Geral' },
-          { value: 'trading', label: 'Negociação' },
+          { value: 'chart', label: tr('Geral') },
+          { value: 'trading', label: tr('Negociação') },
           { value: 'replay', label: 'Replay' },
-          { value: 'data', label: 'Dados' },
+          { value: 'data', label: tr('Dados') },
         ]}
       />
       {(tab === 'symbol' || tab === 'canvas') && <PresetsMenu />}
@@ -52,17 +53,20 @@ export function SettingsDialog() {
       {tab === 'canvas' && <CanvasTab />}
       {tab === 'chart' && (
         <div className="divide-y divide-line">
-          <Row label="Tema">
+          <Row label={tr('Idioma')}>
+            <Segmented value={getLang()} onChange={(v: Lang) => setLang(v)} items={LANGS.map((l) => ({ value: l.id, label: l.label }))} />
+          </Row>
+          <Row label={tr('Tema')}>
             <Segmented
               value={s.theme}
               onChange={(v) => s.set({ theme: v })}
               items={[
-                { value: 'dark', label: 'Escuro' },
-                { value: 'light', label: 'Claro' },
+                { value: 'dark', label: tr('Escuro') },
+                { value: 'light', label: tr('Claro') },
               ]}
             />
           </Row>
-          <Row label="Fuso horário">
+          <Row label={tr('Fuso horário')}>
             <Select className="w-52" value={s.timezone} onChange={(e) => s.set({ timezone: e.target.value })}>
               {TIMEZONES.map((z) => (
                 <option key={z.value} value={z.value}>
@@ -71,41 +75,41 @@ export function SettingsDialog() {
               ))}
             </Select>
           </Row>
-          <Row label="Sons">
+          <Row label={tr('Sons')}>
             <Switch checked={s.sound} onChange={(v) => s.set({ sound: v })} />
           </Row>
-          <Row label="Lupa ao desenhar com o dedo">
+          <Row label={tr('Lupa ao desenhar com o dedo')}>
             <Switch checked={s.loupe} onChange={(v) => s.set({ loupe: v })} />
           </Row>
-          <Row label="Escala de preços automática (ajusta-se aos dados à vista)">
+          <Row label={tr('Escala de preços automática (ajusta-se aos dados à vista)')}>
             <Switch checked={s.autoFit} onChange={(v) => s.set({ autoFit: v })} />
           </Row>
-          <Row label="Selo de resultados das caixas de posição (acerto e R do backtest; toque no selo para ver a curva)">
+          <Row label={tr('Selo de resultados das caixas de posição (acerto e R do backtest; toque no selo para ver a curva)')}>
             <Switch checked={s.backtestChip} onChange={(v) => s.set({ backtestChip: v })} />
           </Row>
           <DataSaverRow />
-          <Row label="Lista de observação: atualização dos preços (mais lenta gasta bem menos dados)">
+          <Row label={tr('Lista de observação: atualização dos preços (mais lenta gasta bem menos dados)')}>
             <Select className="w-56" value={s.watchRefresh} onChange={(e) => s.set({ watchRefresh: Number(e.target.value) as 0 | 5 | 15 | 60 })} data-testid="watch-refresh">
-              <option value={0}>Tempo real (gasta mais dados)</option>
-              <option value={5}>A cada 5 segundos</option>
-              <option value={15}>A cada 15 segundos</option>
-              <option value={60}>A cada minuto</option>
+              <option value={0}>{tr('Tempo real (gasta mais dados)')}</option>
+              <option value={5}>{tr('A cada 5 segundos')}</option>
+              <option value={15}>{tr('A cada 15 segundos')}</option>
+              <option value={60}>{tr('A cada minuto')}</option>
             </Select>
           </Row>
-          <Row label="Histórico automático dos indicadores (carregam sozinhos mais velas para achar sinais; gasta dados)">
+          <Row label={tr('Histórico automático dos indicadores (carregam sozinhos mais velas para achar sinais; gasta dados)')}>
             <Select className="w-64" value={s.autoHistory} onChange={(e) => s.set({ autoHistory: e.target.value as 'ask' | 'always' | 'limit' })} data-testid="auto-history">
-              <option value="ask">Perguntar antes de passar das 5 000 velas</option>
-              <option value="always">Carregar sempre (até 20 000 velas)</option>
-              <option value="limit">Parar nas 5 000 velas</option>
+              <option value="ask">{tr('Perguntar antes de passar das 5 000 velas')}</option>
+              <option value="always">{tr('Carregar sempre (até 20 000 velas)')}</option>
+              <option value="limit">{tr('Parar nas 5 000 velas')}</option>
             </Select>
           </Row>
-          <Row label="Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)">
+          <Row label={tr('Barra do desenho junto ao rato (abre onde fizeste o último clique, ao terminar um desenho; não vale no modo contínuo)')}>
             <Switch checked={s.floatNearMouse} onChange={(v) => s.set({ floatNearMouse: v })} />
           </Row>
-          <Row label="Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)">
+          <Row label={tr('Barra do desenho também ao clicar num desenho antigo (abre junto ao clique)')}>
             <Switch checked={s.floatOnSelect} onChange={(v) => s.set({ floatOnSelect: v })} />
           </Row>
-          <Row label="Pivôs do íman de preço (Alt ou botão do telemóvel): sensibilidade">
+          <Row label={tr('Pivôs do íman de preço (Alt ou botão do telemóvel): sensibilidade')}>
             <Select className="w-64" value={s.pivotSensitivity} onChange={(e) => s.set({ pivotSensitivity: e.target.value as PivotSensitivity })} data-testid="pivot-sensitivity">
               {(Object.keys(PIVOT_SENSITIVITY) as PivotSensitivity[]).map((k) => (
                 <option key={k} value={k}>
@@ -114,29 +118,29 @@ export function SettingsDialog() {
               ))}
             </Select>
           </Row>
-          <Row label="Fora do replay, usar também os pivôs à frente do cursor (desligado: só o que já tinha acontecido até ao ponto onde desenhas)">
+          <Row label={tr('Fora do replay, usar também os pivôs à frente do cursor (desligado: só o que já tinha acontecido até ao ponto onde desenhas)')}>
             <Switch checked={s.pivotFuture} onChange={(v) => s.set({ pivotFuture: v })} />
           </Row>
-          <Row label="Ir para uma data no gráfico">
+          <Row label={tr('Ir para uma data no gráfico')}>
             <Button
               size="sm"
               onClick={() => {
                 useUi.getState().set({ settings: false, gotoDate: true });
               }}
             >
-              Abrir
+              {tr('Abrir')}
             </Button>
           </Row>
-          <Row label="Vibração ao rodar símbolo e intervalo">
+          <Row label={tr('Vibração ao rodar símbolo e intervalo')}>
             <Switch checked={s.haptics} onChange={(v) => s.set({ haptics: v })} />
           </Row>
-          <Row label="Posição da lupa">
+          <Row label={tr('Posição da lupa')}>
             <Select className="w-52" value={s.loupePos} onChange={(e) => s.set({ loupePos: e.target.value as LoupePos })} data-testid="loupe-pos">
-              <option value="top-right">Canto superior direito</option>
-              <option value="top-left">Canto superior esquerdo</option>
-              <option value="bottom-right">Canto inferior direito</option>
-              <option value="bottom-left">Canto inferior esquerdo</option>
-              <option value="follow">Junto ao dedo</option>
+              <option value="top-right">{tr('Canto superior direito')}</option>
+              <option value="top-left">{tr('Canto superior esquerdo')}</option>
+              <option value="bottom-right">{tr('Canto inferior direito')}</option>
+              <option value="bottom-left">{tr('Canto inferior esquerdo')}</option>
+              <option value="follow">{tr('Junto ao dedo')}</option>
             </Select>
           </Row>
           <div className="pt-3">
@@ -145,47 +149,47 @@ export function SettingsDialog() {
               variant="ghost"
               onClick={() => {
                 s.set({ chartStyle: null, appearance: DEFAULT_APPEARANCE, upColor: '#089981', downColor: '#f23645', showWatermark: true });
-                toast('Aparência reposta', { kind: 'success' });
+                toast(tr('Aparência reposta'), { kind: 'success' });
               }}
             >
-              Repor a aparência do gráfico
+              {tr('Repor a aparência do gráfico')}
             </Button>
           </div>
         </div>
       )}
       {tab === 'trading' && (
         <div className="divide-y divide-line">
-          <Row label="Saldo inicial da conta (USD)">
+          <Row label={tr('Saldo inicial da conta (USD)')}>
             <NumberInput className="w-32" value={t.initialBalance} min={10} step={1000} onChange={(v) => v !== undefined && s.setTrading({ initialBalance: v })} />
           </Row>
-          <Row label="Quantidade padrão (lotes)">
+          <Row label={tr('Quantidade padrão (lotes)')}>
             <NumberInput className="w-32" value={t.defaultQty} min={0.0001} step={0.01} onChange={(v) => v !== undefined && s.setTrading({ defaultQty: v })} />
           </Row>
-          <Row label="Risco padrão por operação (%)">
+          <Row label={tr('Risco padrão por operação (%)')}>
             <NumberInput className="w-32" value={t.defaultRiskPct} min={0.01} max={100} step={0.25} onChange={(v) => v !== undefined && s.setTrading({ defaultRiskPct: v })} />
           </Row>
-          <Row label="Spread (pips/pontos)">
+          <Row label={tr('Spread (pips/pontos)')}>
             <NumberInput className="w-32" value={t.spreadPoints} min={0} step={0.1} onChange={(v) => v !== undefined && s.setTrading({ spreadPoints: v })} />
           </Row>
-          <Row label="Deslizamento (pips/pontos)">
+          <Row label={tr('Deslizamento (pips/pontos)')}>
             <NumberInput className="w-32" value={t.slippagePoints} min={0} step={0.1} onChange={(v) => v !== undefined && s.setTrading({ slippagePoints: v })} />
           </Row>
-          <Row label="Comissão">
+          <Row label={tr('Comissão')}>
             <Select className="w-32" value={t.commission.type} onChange={(e) => s.setTrading({ commission: { ...t.commission, type: e.target.value as 'none' | 'percent' | 'perLot' } })}>
-              <option value="none">Nenhuma</option>
-              <option value="percent">% do valor</option>
-              <option value="perLot">$ por lote</option>
+              <option value="none">{tr('Nenhuma')}</option>
+              <option value="percent">{tr('% do valor')}</option>
+              <option value="perLot">{tr('$ por lote')}</option>
             </Select>
             {t.commission.type !== 'none' && <NumberInput className="w-24" value={t.commission.value} min={0} step={0.01} onChange={(v) => v !== undefined && s.setTrading({ commission: { ...t.commission, value: v } })} />}
           </Row>
           <div className="py-3" data-testid="lot-rules">
-            <div className="mb-1 text-[13px] font-medium">Lote por tipo de mercado</div>
-            <div className="mb-2 text-xs text-muted">Mínimo, passo (múltiplos permitidos) e máximo. As ordens e o cálculo do lote pelo risco respeitam estes valores.</div>
+            <div className="mb-1 text-[13px] font-medium">{tr('Lote por tipo de mercado')}</div>
+            <div className="mb-2 text-xs text-muted">{tr('Mínimo, passo (múltiplos permitidos) e máximo. As ordens e o cálculo do lote pelo risco respeitam estes valores.')}</div>
             <div className="grid grid-cols-[1fr_72px_72px_80px] items-center gap-x-2 gap-y-1.5 text-xs">
               <span />
-              <span className="text-muted">Mínimo</span>
-              <span className="text-muted">Passo</span>
-              <span className="text-muted">Máximo</span>
+              <span className="text-muted">{tr('Mínimo')}</span>
+              <span className="text-muted">{tr('Passo')}</span>
+              <span className="text-muted">{tr('Máximo')}</span>
               {(Object.keys(DEFAULT_LOT_RULES) as AssetClass[]).map((cls) => {
                 const r = s.lotRules[cls];
                 const patch = (p: Partial<typeof r>) => s.set({ lotRules: { ...s.lotRules, [cls]: { ...r, ...p } } });
@@ -200,7 +204,7 @@ export function SettingsDialog() {
               })}
             </div>
             <Button size="sm" variant="ghost" className="mt-2" onClick={() => s.set({ lotRules: DEFAULT_LOT_RULES })}>
-              Repor regras de lote
+              {tr('Repor regras de lote')}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 pt-3">
@@ -208,30 +212,29 @@ export function SettingsDialog() {
               size="sm"
               variant="outline"
               onClick={() => {
-                if (!confirm('Repor a conta demo em tempo real? As operações dessa conta serão apagadas.')) return;
+                if (!confirm(tr('Repor a conta demo em tempo real? As operações dessa conta serão apagadas.'))) return;
                 useTrading.getState().resetAccount('live', t.initialBalance);
-                toast('Conta demo reposta', { kind: 'success' });
+                toast(tr('Conta demo reposta'), { kind: 'success' });
               }}
             >
-              Repor conta demo (tempo real)
+              {tr('Repor conta demo (tempo real)')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => s.setTrading(DEFAULT_TRADING)}>
-              Valores padrão
+              {tr('Valores padrão')}
             </Button>
           </div>
         </div>
       )}
       {tab === 'replay' && (
         <div className="divide-y divide-line">
-          <Row label="Execução de ordens com dados finos (mais preciso)">
+          <Row label={tr('Execução de ordens com dados finos (mais preciso)')}>
             <Switch checked={s.replayIntrabar} onChange={(v) => s.set({ replayIntrabar: v })} />
           </Row>
-          <Row label="Pausar quando uma ordem executa">
+          <Row label={tr('Pausar quando uma ordem executa')}>
             <Switch checked={pauseOnFill} onChange={(v) => useReplay.setState({ pauseOnFill: v })} />
           </Row>
           <p className="pt-3 text-xs leading-relaxed text-muted">
-            Com dados finos, o SL/TP é verificado com velas mais pequenas dentro de cada passo (ex.: 1m dentro de 1h), como um “bar magnifier”. Desligue para um replay mais rápido em
-            ligações lentas.
+            {tr('Com dados finos, o SL/TP é verificado com velas mais pequenas dentro de cada passo (ex.: 1m dentro de 1h), como um “bar magnifier”. Desligue para um replay mais rápido em ligações lentas.')}
           </p>
         </div>
       )}
@@ -240,8 +243,7 @@ export function SettingsDialog() {
           <DataUsage />
           <LegalFooter className="rounded-lg bg-sunken p-3" />
           <p className="text-xs leading-relaxed text-muted">
-            Fontes: <b>Deriv</b> (índices sintéticos, forex, metais e índices — WebSocket público), <b>Binance</b> (cripto) e <b>Yahoo Finance</b> (ações, índices e futuros). As velas descarregadas ficam guardadas neste dispositivo
-            (só o que já fechou), para não as descarregar outra vez; “Limpar cache de dados” apaga-as.
+            {tr('Fontes:')} <b>Deriv</b> {tr('(índices sintéticos, forex, metais e índices — WebSocket público),')} <b>Binance</b> {tr('(cripto) e')} <b>Yahoo Finance</b> {tr('(ações, índices e futuros). As velas descarregadas ficam guardadas neste dispositivo (só o que já fechou), para não as descarregar outra vez; “Limpar cache de dados” apaga-as.')}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -249,23 +251,23 @@ export function SettingsDialog() {
               onClick={() => {
                 dataFeed().clear();
                 void clearBarCache();
-                toast('Cache de dados limpa', { kind: 'success', body: 'Os gráficos vão voltar a descarregar os dados.' });
+                toast(tr('Cache de dados limpa'), { kind: 'success', body: tr('Os gráficos vão voltar a descarregar os dados.') });
               }}
             >
-              Limpar cache de dados
+              {tr('Limpar cache de dados')}
             </Button>
             <Button
               size="sm"
               variant="danger"
               onClick={() => {
-                if (!confirm('Apagar TODOS os dados locais (layout, desenhos, sessões, estratégias)? Os dados na nuvem mantêm-se.')) return;
+                if (!confirm(tr('Apagar TODOS os dados locais (layout, desenhos, sessões, estratégias)? Os dados na nuvem mantêm-se.'))) return;
                 Object.keys(localStorage)
                   .filter((k) => k.startsWith('rx-'))
                   .forEach((k) => localStorage.removeItem(k));
                 location.reload();
               }}
             >
-              Apagar dados locais
+              {tr('Apagar dados locais')}
             </Button>
           </div>
         </div>
@@ -278,13 +280,13 @@ export function SettingsDialog() {
 function DataSaverRow() {
   const s = useSettings();
   const reason = useSaverReason();
-  const why = reason === 'manual' ? 'ligada' : reason === 'browser' ? 'ligada (o navegador pede poupança de dados)' : reason === 'slow' ? 'ligada (ligação lenta)' : 'desligada';
+  const why = reason === 'manual' ? tr('ligada') : reason === 'browser' ? tr('ligada (o navegador pede poupança de dados)') : reason === 'slow' ? tr('ligada (ligação lenta)') : tr('desligada');
   return (
-    <Row label={`Poupança de dados — agora ${why}. Quando ligada: lista de observação a cada 15 s ou mais, histórico automático dos indicadores até 5 000 velas sem perguntar, e o tempo real pára 10 s depois de a app ir para segundo plano`}>
+    <Row label={tr('Poupança de dados — agora {0}. Quando ligada: lista de observação a cada 15 s ou mais, histórico automático dos indicadores até 5 000 velas sem perguntar, e o tempo real pára 10 s depois de a app ir para segundo plano', why)}>
       <Select className="w-44" value={s.dataSaver} onChange={(e) => s.set({ dataSaver: e.target.value as DataSaverSetting })} data-testid="data-saver">
-        <option value="auto">Automática</option>
-        <option value="on">Ligada</option>
-        <option value="off">Desligada</option>
+        <option value="auto">{tr('Automática')}</option>
+        <option value="on">{tr('Ligada')}</option>
+        <option value="off">{tr('Desligada')}</option>
       </Select>
     </Row>
   );
@@ -294,21 +296,21 @@ function DataSaverRow() {
 function DataUsage() {
   const m = useDataMeter();
   const rows: { label: string; hint: string; get: (c: typeof m.session) => number }[] = [
-    { label: 'Histórico', hint: 'velas descarregadas ao abrir, mudar de símbolo/intervalo ou procurar mais passado', get: (c) => c.history },
-    { label: 'Tempo real', hint: 'preços e velas a chegar em direto (gráfico e lista de observação)', get: (c) => c.live },
-    { label: 'Outros', hint: 'notícias e calendário', get: (c) => c.other },
+    { label: tr('Histórico'), hint: tr('velas descarregadas ao abrir, mudar de símbolo/intervalo ou procurar mais passado'), get: (c) => c.history },
+    { label: tr('Tempo real'), hint: tr('preços e velas a chegar em direto (gráfico e lista de observação)'), get: (c) => c.live },
+    { label: tr('Outros'), hint: tr('notícias e calendário'), get: (c) => c.other },
   ];
   const cols: { id: string; title: string; c: typeof m.session }[] = [
-    { id: 'session', title: 'Esta sessão', c: m.session },
-    { id: 'today', title: 'Hoje', c: m.today },
-    { id: 'month', title: 'Este mês', c: m.monthly },
+    { id: 'session', title: tr('Esta sessão'), c: m.session },
+    { id: 'today', title: tr('Hoje'), c: m.today },
+    { id: 'month', title: tr('Este mês'), c: m.monthly },
   ];
   return (
     <section className="rounded-lg border border-line p-3" data-testid="data-usage">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold">Consumo de dados</h3>
+        <h3 className="text-[13px] font-semibold">{tr('Consumo de dados')}</h3>
         <button type="button" className="text-xs text-muted hover:text-text" onClick={() => resetDataMeter('all')} data-testid="data-usage-reset">
-          Repor contadores
+          {tr('Repor contadores')}
         </button>
       </div>
       <table className="w-full text-[12px]">
@@ -344,7 +346,7 @@ function DataUsage() {
         </tbody>
       </table>
       <p className="mt-2 text-[11px] leading-snug text-muted">
-        Valores aproximados do que a app recebeu (texto das respostas, sem a compressão da rede). Não inclui o carregamento da própria app (cerca de 400 KB na primeira vez e depois fica guardada) nem a sincronização da conta.
+        {tr('Valores aproximados do que a app recebeu (texto das respostas, sem a compressão da rede). Não inclui o carregamento da própria app (cerca de 400 KB na primeira vez e depois fica guardada) nem a sincronização da conta.')}
       </p>
     </section>
   );
@@ -368,8 +370,8 @@ function UpDown({ label, up, down, autoUp, autoDown, onUp, onDown, show, onShow 
   return (
     <Row label={label}>
       {onShow && <Switch checked={!!show} onChange={onShow} />}
-      <ColorPicker label={`${label} — alta`} value={up ?? autoUp} isAuto={up === null} onReset={() => onUp(null)} onChange={onUp} />
-      <ColorPicker label={`${label} — baixa`} value={down ?? autoDown} isAuto={down === null} onReset={() => onDown(null)} onChange={onDown} />
+      <ColorPicker label={tr('{0} — alta', label)} value={up ?? autoUp} isAuto={up === null} onReset={() => onUp(null)} onChange={onUp} />
+      <ColorPicker label={tr('{0} — baixa', label)} value={down ?? autoDown} isAuto={down === null} onReset={() => onDown(null)} onChange={onDown} />
     </Row>
   );
 }
@@ -385,17 +387,17 @@ function PresetsMenu() {
     const st = useSettings.getState();
     const patch = presetPatch(p, st.theme === 'dark');
     st.set({ chartStyle: id, upColor: patch.upColor, downColor: patch.downColor, appearance: { ...st.appearance, ...patch.appearance } });
-    toast(`Estilo “${p.name}” aplicado`, { kind: 'success' });
+    toast(tr('Estilo “{0}” aplicado', p.name), { kind: 'success' });
   };
   return (
     <div className="mb-3 rounded-md border border-line" data-testid="chart-presets">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-hover">
-        <span>Estilos pré-definidos</span>
+        <span>{tr('Estilos pré-definidos')}</span>
         <span className="text-xs text-muted">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
         <>
-          <p className="px-3 pt-2 text-[11px] text-muted">Cada estilo tem versão clara e escura: o botão sol/lua do topo troca entre elas.</p>
+          <p className="px-3 pt-2 text-[11px] text-muted">{tr('Cada estilo tem versão clara e escura: o botão sol/lua do topo troca entre elas.')}</p>
           <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto p-2 sm:grid-cols-5">
             {CHART_PRESETS.map((p) => {
               const c = dark ? p.dark : p.light;
@@ -457,26 +459,26 @@ function SymbolTab() {
   const down = a.bodyDown ?? s.downColor;
   return (
     <div className="divide-y divide-line" data-testid="settings-symbol">
-      <Section title="Velas" />
-      <Row label="Cores base (alta / baixa)">
-        <ColorPicker label="Alta" value={s.upColor} onChange={(c) => s.set({ upColor: c })} />
-        <ColorPicker label="Baixa" value={s.downColor} onChange={(c) => s.set({ downColor: c })} />
+      <Section title={tr('Velas')} />
+      <Row label={tr('Cores base (alta / baixa)')}>
+        <ColorPicker label={tr('Alta')} value={s.upColor} onChange={(c) => s.set({ upColor: c })} />
+        <ColorPicker label={tr('Baixa')} value={s.downColor} onChange={(c) => s.set({ downColor: c })} />
       </Row>
-      <Row label="Gradiente no corpo (cor de cima → cor de baixo)">
+      <Row label={tr('Gradiente no corpo (cor de cima → cor de baixo)')}>
         <Switch checked={a.gradient} onChange={(v) => set({ gradient: v })} />
         {a.gradient && (
           <>
-            <ColorPicker label="Alta — cor de baixo" value={a.bodyUp2 ?? shade(up, -0.22)} isAuto={a.bodyUp2 === null} onReset={() => set({ bodyUp2: null })} onChange={(c) => set({ bodyUp2: c })} />
-            <ColorPicker label="Baixa — cor de baixo" value={a.bodyDown2 ?? shade(down, -0.22)} isAuto={a.bodyDown2 === null} onReset={() => set({ bodyDown2: null })} onChange={(c) => set({ bodyDown2: c })} />
+            <ColorPicker label={tr('Alta — cor de baixo')} value={a.bodyUp2 ?? shade(up, -0.22)} isAuto={a.bodyUp2 === null} onReset={() => set({ bodyUp2: null })} onChange={(c) => set({ bodyUp2: c })} />
+            <ColorPicker label={tr('Baixa — cor de baixo')} value={a.bodyDown2 ?? shade(down, -0.22)} isAuto={a.bodyDown2 === null} onReset={() => set({ bodyDown2: null })} onChange={(c) => set({ bodyDown2: c })} />
           </>
         )}
       </Row>
-      <UpDown label="Corpo" up={a.bodyUp} down={a.bodyDown} autoUp={s.upColor} autoDown={s.downColor} onUp={(c) => set({ bodyUp: c })} onDown={(c) => set({ bodyDown: c })} show={a.showBody} onShow={(v) => set({ showBody: v })} />
-      <UpDown label="Borda" up={a.borderUp} down={a.borderDown} autoUp={up} autoDown={down} onUp={(c) => set({ borderUp: c })} onDown={(c) => set({ borderDown: c })} show={a.showBorder} onShow={(v) => set({ showBorder: v })} />
-      <UpDown label="Pavio" up={a.wickUp} down={a.wickDown} autoUp={up} autoDown={down} onUp={(c) => set({ wickUp: c })} onDown={(c) => set({ wickDown: c })} show={a.showWick} onShow={(v) => set({ showWick: v })} />
-      <Section title="Linha e área" />
-      <Row label="Cor e espessura">
-        <ColorPicker label="Cor da linha" value={a.lineColor} onChange={(c) => set({ lineColor: c })} />
+      <UpDown label={tr('Corpo')} up={a.bodyUp} down={a.bodyDown} autoUp={s.upColor} autoDown={s.downColor} onUp={(c) => set({ bodyUp: c })} onDown={(c) => set({ bodyDown: c })} show={a.showBody} onShow={(v) => set({ showBody: v })} />
+      <UpDown label={tr('Borda')} up={a.borderUp} down={a.borderDown} autoUp={up} autoDown={down} onUp={(c) => set({ borderUp: c })} onDown={(c) => set({ borderDown: c })} show={a.showBorder} onShow={(v) => set({ showBorder: v })} />
+      <UpDown label={tr('Pavio')} up={a.wickUp} down={a.wickDown} autoUp={up} autoDown={down} onUp={(c) => set({ wickUp: c })} onDown={(c) => set({ wickDown: c })} show={a.showWick} onShow={(v) => set({ showWick: v })} />
+      <Section title={tr('Linha e área')} />
+      <Row label={tr('Cor e espessura')}>
+        <ColorPicker label={tr('Cor da linha')} value={a.lineColor} onChange={(c) => set({ lineColor: c })} />
         <Select className="w-20" value={a.lineWidth} onChange={(e) => set({ lineWidth: Number(e.target.value) as Appearance['lineWidth'] })}>
           {[1, 2, 3, 4].map((w) => (
             <option key={w} value={w}>
@@ -493,24 +495,24 @@ function ScalesTab() {
   const { a, set } = useLook();
   return (
     <div className="divide-y divide-line" data-testid="settings-scales">
-      <Row label="Escala de preços">
+      <Row label={tr('Escala de preços')}>
         <Select className="w-44" value={a.scaleMode} onChange={(e) => set({ scaleMode: e.target.value as Appearance['scaleMode'] })}>
-          <option value="normal">Normal</option>
-          <option value="log">Logarítmica</option>
-          <option value="percent">Percentagem</option>
-          <option value="indexed">Indexada a 100</option>
+          <option value="normal">{tr('Normal')}</option>
+          <option value="log">{tr('Logarítmica')}</option>
+          <option value="percent">{tr('Percentagem')}</option>
+          <option value="indexed">{tr('Indexada a 100')}</option>
         </Select>
       </Row>
-      <Row label="Etiqueta do último preço">
+      <Row label={tr('Etiqueta do último preço')}>
         <Switch checked={a.lastValueLabel} onChange={(v) => set({ lastValueLabel: v })} />
       </Row>
-      <Row label="Linha do último preço">
+      <Row label={tr('Linha do último preço')}>
         <Switch checked={a.priceLine} onChange={(v) => set({ priceLine: v })} />
       </Row>
-      <Row label="Contagem até ao fecho da vela">
+      <Row label={tr('Contagem até ao fecho da vela')}>
         <Switch checked={a.countdown} onChange={(v) => set({ countdown: v })} />
       </Row>
-      <Row label="Tamanho do texto das escalas">
+      <Row label={tr('Tamanho do texto das escalas')}>
         <Select className="w-20" value={a.fontSize} onChange={(e) => set({ fontSize: Number(e.target.value) })}>
           {[10, 11, 12, 13, 14, 16].map((f) => (
             <option key={f} value={f}>
@@ -529,37 +531,37 @@ function CanvasTab() {
   const d = themeDefaults(dark);
   return (
     <div className="divide-y divide-line" data-testid="settings-canvas">
-      <Row label="Fundo">
+      <Row label={tr('Fundo')}>
         <Select className="w-32" value={a.background2 ? 'gradient' : 'solid'} onChange={(e) => set({ background2: e.target.value === 'gradient' ? (a.background2 ?? (dark ? '#1e222d' : '#e3effd')) : null })}>
-          <option value="solid">Cor única</option>
-          <option value="gradient">Gradiente</option>
+          <option value="solid">{tr('Cor única')}</option>
+          <option value="gradient">{tr('Gradiente')}</option>
         </Select>
-        <ColorPicker label="Fundo (cima)" value={a.background ?? d.background} isAuto={a.background === null} onReset={() => set({ background: null })} onChange={(c) => set({ background: c })} />
-        {a.background2 && <ColorPicker label="Fundo (baixo)" value={a.background2} onChange={(c) => set({ background2: c })} />}
+        <ColorPicker label={tr('Fundo (cima)')} value={a.background ?? d.background} isAuto={a.background === null} onReset={() => set({ background: null })} onChange={(c) => set({ background: c })} />
+        {a.background2 && <ColorPicker label={tr('Fundo (baixo)')} value={a.background2} onChange={(c) => set({ background2: c })} />}
       </Row>
-      <Row label="Linhas verticais da grelha">
+      <Row label={tr('Linhas verticais da grelha')}>
         <Switch checked={a.gridVertVisible} onChange={(v) => set({ gridVertVisible: v })} />
-        <ColorPicker label="Grelha vertical" value={a.gridVert ?? d.grid} isAuto={a.gridVert === null} onReset={() => set({ gridVert: null })} onChange={(c) => set({ gridVert: c })} />
+        <ColorPicker label={tr('Grelha vertical')} value={a.gridVert ?? d.grid} isAuto={a.gridVert === null} onReset={() => set({ gridVert: null })} onChange={(c) => set({ gridVert: c })} />
       </Row>
-      <Row label="Linhas horizontais da grelha">
+      <Row label={tr('Linhas horizontais da grelha')}>
         <Switch checked={a.gridHorzVisible} onChange={(v) => set({ gridHorzVisible: v })} />
-        <ColorPicker label="Grelha horizontal" value={a.gridHorz ?? d.grid} isAuto={a.gridHorz === null} onReset={() => set({ gridHorz: null })} onChange={(c) => set({ gridHorz: c })} />
+        <ColorPicker label={tr('Grelha horizontal')} value={a.gridHorz ?? d.grid} isAuto={a.gridHorz === null} onReset={() => set({ gridHorz: null })} onChange={(c) => set({ gridHorz: c })} />
       </Row>
-      <Row label="Mira (crosshair)">
+      <Row label={tr('Mira (crosshair)')}>
         <Select className="w-32" value={a.crosshairStyle} onChange={(e) => set({ crosshairStyle: Number(e.target.value) as Appearance['crosshairStyle'] })}>
-          <option value={0}>Contínua</option>
-          <option value={1}>Pontilhada</option>
-          <option value={2}>Tracejada</option>
-          <option value={3}>Tracejado largo</option>
+          <option value={0}>{tr('Contínua')}</option>
+          <option value={1}>{tr('Pontilhada')}</option>
+          <option value={2}>{tr('Tracejada')}</option>
+          <option value={3}>{tr('Tracejado largo')}</option>
         </Select>
-        <ColorPicker label="Cor da mira" value={a.crosshair ?? d.crosshair} isAuto={a.crosshair === null} onReset={() => set({ crosshair: null })} onChange={(c) => set({ crosshair: c })} />
+        <ColorPicker label={tr('Cor da mira')} value={a.crosshair ?? d.crosshair} isAuto={a.crosshair === null} onReset={() => set({ crosshair: null })} onChange={(c) => set({ crosshair: c })} />
       </Row>
-      <Row label="Texto das escalas">
-        <ColorPicker label="Cor do texto" value={a.textColor ?? d.text} isAuto={a.textColor === null} onReset={() => set({ textColor: null })} onChange={(c) => set({ textColor: c })} />
+      <Row label={tr('Texto das escalas')}>
+        <ColorPicker label={tr('Cor do texto')} value={a.textColor ?? d.text} isAuto={a.textColor === null} onReset={() => set({ textColor: null })} onChange={(c) => set({ textColor: c })} />
       </Row>
-      <Row label="Marca de água com o símbolo">
+      <Row label={tr('Marca de água com o símbolo')}>
         <Switch checked={s.showWatermark} onChange={(v) => s.set({ showWatermark: v })} />
-        <ColorPicker label="Cor da marca de água" value={a.watermarkColor ?? d.watermark} isAuto={a.watermarkColor === null} onReset={() => set({ watermarkColor: null })} onChange={(c) => set({ watermarkColor: c })} />
+        <ColorPicker label={tr('Cor da marca de água')} value={a.watermarkColor ?? d.watermark} isAuto={a.watermarkColor === null} onReset={() => set({ watermarkColor: null })} onChange={(c) => set({ watermarkColor: c })} />
       </Row>
     </div>
   );

@@ -12,6 +12,7 @@ import type { Drawing } from './drawings/types';
 import { labelBox, toolDef, type Viewport } from './drawings/tools';
 import { autoColor, resolveAuto, shownColor } from './drawings/auto';
 import type { Order, Position } from '@/core/trading/engine';
+import { tr } from '@/i18n';
 
 export interface TradeRegion {
   kind: 'close' | 'line';
@@ -296,7 +297,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
           // data da barra escolhida, do lado onde cabe
           const right = pick.x < mediaSize.width - 190;
           labelBox(ctx, [`✂ ${pick.label}`], right ? pick.x + 8 : pick.x - 8, 18, { bg: '#2962ff', fg: '#fff', align: right ? 'left' : 'right', valign: 'top', font: FONT });
-        } else labelBox(ctx, ['✂ Clique para começar o replay aqui'], pick.x + 8, 18, { bg: '#2962ff', fg: '#fff', align: 'left', valign: 'top', font: FONT });
+        } else labelBox(ctx, [tr('✂ Clique para começar o replay aqui')], pick.x + 8, 18, { bg: '#2962ff', fg: '#fff', align: 'left', valign: 'top', font: FONT });
         if (pick.handle) {
           // pega para arrastar, a meio da altura
           const cy = mediaSize.height / 2;
@@ -363,7 +364,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
       const long = p.side === 'long';
       const pnl = t.pnl(p);
       const qty = p.qty >= 100 ? p.qty.toFixed(0) : +p.qty.toFixed(4);
-      lineAt(p.entryPrice, long ? '#2962ff' : '#f23645', [], [`${long ? 'COMPRA' : 'VENDA'} ${qty}  ${t.fmtMoney(pnl)}`], true, { type: 'position', id: p.id, field: 'entry' }, pnl >= 0 ? '#089981' : '#f23645');
+      lineAt(p.entryPrice, long ? '#2962ff' : '#f23645', [], [`${long ? tr('COMPRA') : tr('VENDA')} ${qty}  ${t.fmtMoney(pnl)}`], true, { type: 'position', id: p.id, field: 'entry' }, pnl >= 0 ? '#089981' : '#f23645');
       const sl = drag?.id === p.id && drag.field === 'sl' ? drag.price : p.sl;
       const tp = drag?.id === p.id && drag.field === 'tp' ? drag.price : p.tp;
       if (sl !== undefined) lineAt(sl, '#f23645', [5, 4], [`SL ${vp.fmtPrice(sl)}  ${t.fmtMoney(t.pnlAt(p, sl))}`], true, { type: 'position', id: p.id, field: 'sl' }, '#f23645');
@@ -377,7 +378,7 @@ class OverlayRenderer implements IPrimitivePaneRenderer {
     for (const o of t.orders) {
       const price = drag?.id === o.id && drag.field === 'price' ? drag.price : o.price;
       const long = o.side === 'long';
-      const kind = `${long ? 'COMPRA' : 'VENDA'} ${o.type === 'limit' ? 'LIMITE' : 'STOP'}`;
+      const kind = `${long ? tr('COMPRA') : tr('VENDA')} ${o.type === 'limit' ? tr('LIMITE') : 'STOP'}`;
       lineAt(price, long ? '#2962ff' : '#f23645', [2, 3], [`${kind} ${o.qty >= 100 ? o.qty.toFixed(0) : +o.qty.toFixed(4)} @ ${vp.fmtPrice(price)}`], true, { type: 'order', id: o.id, field: 'price' }, long ? '#2962ff' : '#e65100');
       const osl = drag?.id === o.id && drag.field === 'sl' ? drag.price : o.sl;
       const otp = drag?.id === o.id && drag.field === 'tp' ? drag.price : o.tp;

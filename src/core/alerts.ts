@@ -6,6 +6,7 @@
 import type { Bar, PricePoint } from './types';
 import type { ParamValue } from './indicators/registry';
 import { getIndicator } from './indicators/registry';
+import { tr } from '@/i18n';
 
 export interface IndicatorRef {
   type: string;
@@ -61,22 +62,22 @@ export interface Alert {
 }
 
 export const CONDITION_LABEL: Record<AlertCondition, string> = {
-  cross: 'Cruza',
-  crossUp: 'Cruza para cima',
-  crossDown: 'Cruza para baixo',
-  greater: 'Maior que',
-  less: 'Menor que',
-  enter: 'Entra no canal',
-  exit: 'Sai do canal',
-  inside: 'Dentro do canal',
-  outside: 'Fora do canal',
+  cross: tr('Cruza'),
+  crossUp: tr('Cruza para cima'),
+  crossDown: tr('Cruza para baixo'),
+  greater: tr('Maior que'),
+  less: tr('Menor que'),
+  enter: tr('Entra no canal'),
+  exit: tr('Sai do canal'),
+  inside: tr('Dentro do canal'),
+  outside: tr('Fora do canal'),
 };
 
 export const TRIGGER_LABEL: Record<AlertTrigger, string> = {
-  once: 'Só uma vez',
-  perBar: 'Uma vez por barra',
-  perBarClose: 'Uma vez por barra, no fecho',
-  every: 'Sempre que acontecer',
+  once: tr('Só uma vez'),
+  perBar: tr('Uma vez por barra'),
+  perBarClose: tr('Uma vez por barra, no fecho'),
+  every: tr('Sempre que acontecer'),
 };
 
 export const LINE_CONDITIONS: AlertCondition[] = ['cross', 'crossUp', 'crossDown', 'greater', 'less'];
@@ -237,7 +238,7 @@ export function describe(a: Alert, fmt: (v: number) => string, symbolName: strin
       tgt = a.target.label;
       break;
     default:
-      tgt = 'Preço';
+      tgt = tr('Preço');
   }
   return `${src} ${CONDITION_LABEL[a.condition].toLowerCase()} ${tgt}`;
 }

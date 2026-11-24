@@ -3,6 +3,7 @@ import type { AssetClass, Bar, SymbolInfo } from '../types';
 import { DAY, parseTf, tfSeconds, type Timeframe } from '../timeframes';
 import { fetchJson, nowSec, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
 import { registerSymbol } from '../symbols';
+import { tr } from '@/i18n';
 
 /** Ações, índices, futuros e ETFs através do Yahoo Finance (via rota /api/market/yahoo do próprio site). */
 
@@ -79,7 +80,7 @@ export const yahooProvider: Provider = {
       period2: String(args.to),
     });
     const res = await fetchJson<ChartResponse>(`/api/market/yahoo?${params}`, 25000).catch((e) => {
-      throw new ProviderError(`Yahoo Finance indisponível: ${(e as Error).message}`, 'yahoo');
+      throw new ProviderError(tr('Yahoo Finance indisponível: {0}', (e as Error).message), 'yahoo');
     });
     if (res.error) throw new ProviderError(res.error, 'yahoo', false);
     const bars = res.bars.filter((b) => b.time < args.to && b.time >= from);

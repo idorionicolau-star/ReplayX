@@ -30,6 +30,9 @@ export const viewport: Viewport = {
 // aplica o tema antes de pintar (evita flash)
 const themeScript = `try{var s=JSON.parse(localStorage.getItem('rx-settings')||'{}');var t=(s.state&&s.state.theme)||'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}`;
 
+// idioma antes de pintar: o guardado ou, na primeira visita, o do navegador (inglês → en, o resto → pt)
+const langScript = `try{var l=localStorage.getItem('rx-lang');if(l!=='pt'&&l!=='en'){var n=(navigator.languages&&navigator.languages[0])||navigator.language||'';l=/^en\\b/i.test(n)?'en':'pt'}document.documentElement.lang=l;if(l==='en')document.title='ReplayX — Bar Replay, backtesting and strategies'}catch(e){}`;
+
 // a animação de abertura só corre uma vez por sessão (e não em testes automáticos)
 const splashScript = `try{if(navigator.webdriver||sessionStorage.getItem('rx-splash'))document.documentElement.classList.add('no-splash')}catch(e){}`;
 
@@ -37,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt" data-theme="dark" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript + splashScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeScript + langScript + splashScript }} />
       </head>
       <body>
         {children}

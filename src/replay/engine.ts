@@ -15,6 +15,7 @@ import { useAlerts } from '@/store/alerts';
 import { uid } from '@/lib/uid';
 import { isPro, openUpgrade, replayTfAllowed } from '@/lib/billing';
 import { FREE_LIMITS, freeReplayTfOk } from '@/core/plans';
+import { tr } from '@/i18n';
 
 /**
  * Motor do Bar Replay.
@@ -81,7 +82,7 @@ export const SPEEDS: { ms: number; label: string }[] = [
   { ms: 200, label: '5x' },
   { ms: 100, label: '10x' },
   { ms: 50, label: '20x' },
-  { ms: 0, label: 'Máx.' },
+  { ms: 0, label: tr('Máx.') },
 ];
 
 const MAX_SNAPSHOTS = 2000;
@@ -318,9 +319,9 @@ class ReplayEngine {
     this.pause();
     const snap = this.snapshots.pop();
     if (snap) {
-      const tr = useTrading.getState();
-      tr.setAccount('replay', snap.account);
-      tr.setExecs('replay', tr.execs.replay.slice(0, snap.execCount));
+      const trs = useTrading.getState();
+      trs.setAccount('replay', snap.account);
+      trs.setExecs('replay', trs.execs.replay.slice(0, snap.execCount));
       await this.moveTo(snap.cursor);
       return;
     }
@@ -342,10 +343,10 @@ class ReplayEngine {
 
   /** Dados finos para executar ordens dentro do passo. */
   private async processTrading(c0: number, c1: number): Promise<Fill[]> {
-    const tr = useTrading.getState();
-    const acc = tr.replay;
+    const trs = useTrading.getState();
+    const acc = trs.replay;
     const symbols = new Set<string>([...acc.positions.map((p) => p.symbolId), ...acc.orders.map((o) => o.symbolId)]);
-    this.snapshots.push({ cursor: c0, account: cloneAccount(acc), execCount: tr.execs.replay.length });
+    this.snapshots.push({ cursor: c0, account: cloneAccount(acc), execCount: trs.execs.replay.length });
     if (this.snapshots.length > MAX_SNAPSHOTS) this.snapshots.shift();
     if (!symbols.size) return [];
     const next = cloneAccount(acc);
@@ -380,8 +381,8 @@ class ReplayEngine {
       for (const b of path) fills.push(...processBar(next, symbolId, b, spec));
     }
     if (fills.length || next.positions.length) {
-      tr.setAccount('replay', next);
-      if (fills.length) tr.addExecs('replay', fills);
+      trs.setAccount('replay', next);
+      if (fills.length) trs.addExecs('replay', fills);
     }
     // repõe os dados finos à frente em segundo plano, antes de o próximo passo precisar deles
     this.prefetchFine(c1, c1 - c0);
@@ -489,7 +490,7 @@ class ReplayEngine {
     useReplay.setState({ stepTf: tf });
   }
 
-  /** Salta para uma data. Para a frente executa as ordens pelo caminho; para trás recomeça a sessão. */
+  /** Salta para uma data. Para a frente executa as ordens pelo caminho; para trsás recomeça a sessão. */
   async jumpTo(target: number, opts: { restart?: boolean } = {}) {
     const st = this.state;
     if (!st.active || st.cursor === null) return this.start(target);
@@ -514,15 +515,15 @@ class ReplayEngine {
   /** Ordem manual durante o replay (ao preço do cursor). */
   placeOrder(o: { symbolId: string; side: Side; type: OrderType; qty: number; price?: number; sl?: number; tp?: number; trail?: number }): { ok: boolean; message?: string } {
     const st = this.state;
-    if (!st.active || st.cursor === null) return { ok: false, message: 'O replay não está ativo.' };
+    if (!st.active || st.cursor === null) return { ok: false, message: tr('O replay não está ativo.') };
     const mid = st.prices[o.symbolId];
-    if (mid === undefined) return { ok: false, message: 'Ainda sem preço para este símbolo.' };
-    const tr = useTrading.getState();
-    const acc = cloneAccount(tr.replay);
+    if (mid === undefined) return { ok: false, message: tr('Ainda sem preço para este símbolo.') };
+    const trs = useTrading.getState();
+    const acc = cloneAccount(trs.replay);
     const r = placeOrder(acc, o, mid, st.cursor, specFor(resolveSymbol(o.symbolId)));
-    tr.setAccount('replay', acc);
+    trs.setAccount('replay', acc);
     if (r.fill) {
-      tr.addExecs('replay', [r.fill]);
+      trs.addExecs('replay', [r.fill]);
       this.listeners.forEach((l) => l([r.fill!]));
     }
     return { ok: true };
@@ -547,17 +548,17 @@ class ReplayEngine {
     if (!st.active || st.cursor === null || st.start === null) return null;
     const ws = useWorkspace.getState();
     const cfg = ws.charts[ws.active];
-    const tr = useTrading.getState();
-    const id = tr.saveSession({
-      id: tr.sessionId ?? undefined,
+    const trs = useTrading.getState();
+    const id = trs.saveSession({
+      id: trs.sessionId ?? undefined,
       name: name ?? `${resolveSymbol(cfg.symbolId).name} · ${new Date(st.start * 1000).toISOString().slice(0, 10)}`,
       symbolId: cfg.symbolId,
       tf: cfg.tf,
       start: st.start,
       cursor: st.cursor,
-      account: tr.replay,
+      account: trs.replay,
     });
-    tr.setSessionId(id);
+    trs.setSessionId(id);
     return id;
   }
 

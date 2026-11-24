@@ -1,4 +1,5 @@
 import type { SeriesMarker, Time, UTCTimestamp } from 'lightweight-charts';
+import { tr } from '@/i18n';
 
 export interface ExecLike {
   time: number;
@@ -52,7 +53,7 @@ export function compactExecMarkers(execs: readonly ExecLike[], barTimeOf: (t: nu
     } else {
       color = g.pnl >= 0 ? UP : DOWN;
       const reason = g.reasons.size === 1 ? [...g.reasons][0] : '';
-      const tag = reason && reason !== 'Fecho' ? `${reason} ` : '';
+      const tag = reason && reason !== 'Fecho' && reason !== tr('Fecho') ? `${reason} ` : '';
       text = g.hasPnl ? `${tag}${compactMoney(g.pnl)}${g.n > 1 ? ` ×${g.n}` : ''}` : tag.trim();
     }
     out.push({ time: g.time as UTCTimestamp, position: g.buy ? 'belowBar' : 'aboveBar', shape: g.buy ? 'arrowUp' : 'arrowDown', color, text });

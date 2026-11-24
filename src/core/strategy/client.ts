@@ -1,4 +1,5 @@
 import type { RunnerRequest, RunnerResponse } from './runner';
+import { tr } from '@/i18n';
 
 /** Cliente do worker de estratégias, com fallback para o thread principal. */
 
@@ -47,11 +48,11 @@ function spawn(): Worker | null {
       pending.delete(m.id);
       if (p.timer) clearTimeout(p.timer);
       if (m.type === 'result') p.resolve(m.data as RunnerResponse);
-      else p.reject(new RunError(m.message ?? 'Erro', m.line));
+      else p.reject(new RunError(m.message ?? tr('Erro'), m.line));
     };
     worker.onerror = (e) => {
       // falha ao carregar o worker: rejeita tudo e passa a usar o thread principal
-      const err = new RunError(e.message || 'Falha no worker');
+      const err = new RunError(e.message || tr('Falha no worker'));
       for (const [id, p] of pending) {
         if (p.timer) clearTimeout(p.timer);
         p.reject(err);
@@ -68,7 +69,7 @@ function spawn(): Worker | null {
 }
 
 /** Mata o worker (ex.: script em ciclo infinito) e rejeita os pedidos pendentes. */
-function restart(reason = 'Cancelado') {
+function restart(reason = tr('Cancelado')) {
   worker?.terminate();
   worker = null;
   for (const [id, p] of pending) {
@@ -95,7 +96,7 @@ export async function runStrategy<T extends RunnerResponse>(req: RunnerRequest, 
       p.timer = setTimeout(() => {
         pending.delete(id);
         restart();
-        reject(new RunError(`O script demorou mais de ${Math.round(opts.timeoutMs! / 1000)} s (ciclo infinito?) e foi parado.`));
+        reject(new RunError(tr('O script demorou mais de {0} s (ciclo infinito?) e foi parado.', Math.round(opts.timeoutMs! / 1000))));
       }, opts.timeoutMs);
     }
     opts.signal?.addEventListener('abort', () => {

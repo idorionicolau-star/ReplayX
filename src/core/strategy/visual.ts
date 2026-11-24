@@ -3,6 +3,7 @@ import { getIndicator, defaultParams, type ParamValue } from '../indicators/regi
 import * as ta from '../indicators/ta';
 import type { Source } from '../indicators/ta';
 import type { StrategyProgram } from './types';
+import { tr } from '@/i18n';
 
 /** Estratégias construídas visualmente com blocos "SE … ENTÃO …". */
 
@@ -19,14 +20,14 @@ export interface VOperand {
 export type VOp = 'crossAbove' | 'crossBelow' | 'gt' | 'lt' | 'gte' | 'lte' | 'rising' | 'falling';
 
 export const OP_LABEL: Record<VOp, string> = {
-  crossAbove: 'cruza para cima',
-  crossBelow: 'cruza para baixo',
-  gt: 'é maior que',
-  lt: 'é menor que',
-  gte: 'é maior ou igual a',
-  lte: 'é menor ou igual a',
-  rising: 'está a subir há',
-  falling: 'está a descer há',
+  crossAbove: tr('cruza para cima'),
+  crossBelow: tr('cruza para baixo'),
+  gt: tr('é maior que'),
+  lt: tr('é menor que'),
+  gte: tr('é maior ou igual a'),
+  lte: tr('é menor ou igual a'),
+  rising: tr('está a subir há'),
+  falling: tr('está a descer há'),
 };
 
 export interface VCondition {
@@ -85,7 +86,7 @@ export function rules(...groups: VCondition[][]): VRules {
   return { groups: groups.map((c) => ({ id: vid(), conditions: c })) };
 }
 
-export function emptyStrategy(name = 'Nova estratégia'): VisualStrategy {
+export function emptyStrategy(name = tr('Nova estratégia')): VisualStrategy {
   return {
     id: vid(),
     name,
@@ -110,34 +111,34 @@ function withIndicators(s: VisualStrategy, list: [string, string, Record<string,
 }
 
 export function templates(): VisualStrategy[] {
-  const a = withIndicators({ ...emptyStrategy('Cruzamento EMA 9/21') }, [
+  const a = withIndicators({ ...emptyStrategy(tr('Cruzamento EMA 9/21')) }, [
     ['A', 'ema', { length: 9 }],
     ['B', 'ema', { length: 21 }],
   ]);
-  a.description = 'Compra quando a EMA rápida cruza acima da lenta; vende no cruzamento inverso.';
+  a.description = tr('Compra quando a EMA rápida cruza acima da lenta; vende no cruzamento inverso.');
   a.long.entry = rules([cond(ind('A', 'ma'), 'crossAbove', ind('B', 'ma'))]);
   a.short.entry = rules([cond(ind('A', 'ma'), 'crossBelow', ind('B', 'ma'))]);
 
-  const b = withIndicators({ ...emptyStrategy('RSI reversão 30/70') }, [
+  const b = withIndicators({ ...emptyStrategy(tr('RSI reversão 30/70')) }, [
     ['A', 'rsi', { length: 14 }],
     ['B', 'ema', { length: 200 }],
   ]);
-  b.description = 'Compra quando o RSI sai da sobrevenda acima da EMA 200; vende ao sair da sobrecompra abaixo dela.';
+  b.description = tr('Compra quando o RSI sai da sobrevenda acima da EMA 200; vende ao sair da sobrecompra abaixo dela.');
   b.long.entry = rules([cond(ind('A', 'rsi'), 'crossAbove', val(30)), cond(price('close'), 'gt', ind('B', 'ma'))]);
   b.short.entry = rules([cond(ind('A', 'rsi'), 'crossBelow', val(70)), cond(price('close'), 'lt', ind('B', 'ma'))]);
   b.stopLoss = { type: 'atr', value: 2, atrLen: 14, lookback: 10 };
   b.takeProfit = { type: 'rr', value: 1.5 };
 
-  const c = withIndicators({ ...emptyStrategy('Rompimento Donchian (Turtle)') }, [['A', 'donchian', { length: 20 }]]);
-  c.description = 'Entra no rompimento do máximo/mínimo de 20 barras, com trailing stop de ATR.';
+  const c = withIndicators({ ...emptyStrategy(tr('Rompimento Donchian (Turtle)')) }, [['A', 'donchian', { length: 20 }]]);
+  c.description = tr('Entra no rompimento do máximo/mínimo de 20 barras, com trailing stop de ATR.');
   c.long.entry = rules([cond(price('close'), 'gt', ind('A', 'upper', 1))]);
   c.short.entry = rules([cond(price('close'), 'lt', ind('A', 'lower', 1))]);
   c.stopLoss = { type: 'atr', value: 2, atrLen: 20, lookback: 10 };
   c.takeProfit = { type: 'none', value: 2 };
   c.trailing = { type: 'atr', value: 3 };
 
-  const d = withIndicators({ ...emptyStrategy('Bollinger reversão à média') }, [['A', 'bb', { length: 20, mult: 2 }]]);
-  d.description = 'Compra quando o preço volta para dentro da banda inferior; sai na média.';
+  const d = withIndicators({ ...emptyStrategy(tr('Bollinger reversão à média')) }, [['A', 'bb', { length: 20, mult: 2 }]]);
+  d.description = tr('Compra quando o preço volta para dentro da banda inferior; sai na média.');
   d.long.entry = rules([cond(price('close'), 'crossAbove', ind('A', 'lower'))]);
   d.long.exit = rules([cond(price('close'), 'gte', ind('A', 'basis'))]);
   d.short.entry = rules([cond(price('close'), 'crossBelow', ind('A', 'upper'))]);
@@ -145,16 +146,16 @@ export function templates(): VisualStrategy[] {
   d.exitOnOpposite = true;
   d.takeProfit = { type: 'none', value: 2 };
 
-  const e = withIndicators({ ...emptyStrategy('MACD com filtro de tendência') }, [
+  const e = withIndicators({ ...emptyStrategy(tr('MACD com filtro de tendência')) }, [
     ['A', 'macd', {}],
     ['B', 'ema', { length: 200 }],
   ]);
-  e.description = 'Cruzamentos do MACD apenas a favor da EMA 200.';
+  e.description = tr('Cruzamentos do MACD apenas a favor da EMA 200.');
   e.long.entry = rules([cond(ind('A', 'macd'), 'crossAbove', ind('A', 'signal')), cond(price('close'), 'gt', ind('B', 'ma'))]);
   e.short.entry = rules([cond(ind('A', 'macd'), 'crossBelow', ind('A', 'signal')), cond(price('close'), 'lt', ind('B', 'ma'))]);
 
   const f = withIndicators({ ...emptyStrategy('Supertrend') }, [['A', 'supertrend', { length: 10, mult: 3 }]]);
-  f.description = 'Segue a tendência: compra quando o preço passa acima do Supertrend.';
+  f.description = tr('Segue a tendência: compra quando o preço passa acima do Supertrend.');
   f.long.entry = rules([cond(price('close'), 'crossAbove', ind('A', 'line'))]);
   f.short.entry = rules([cond(price('close'), 'crossBelow', ind('A', 'line'))]);
   f.stopLoss = { type: 'none', value: 1.5, atrLen: 14, lookback: 10 };
@@ -400,12 +401,12 @@ export function listParams(s: VisualStrategy): ParamSpec[] {
   });
   if (s.stopLoss.type !== 'none' && s.stopLoss.type !== 'swing')
     out.push({ path: 'stopLoss.value', label: 'Stop loss', value: s.stopLoss.value, min: +(s.stopLoss.value / 2).toFixed(3), max: +(s.stopLoss.value * 2).toFixed(3), step: s.stopLoss.type === 'points' ? Math.max(0.0001, +(s.stopLoss.value / 10).toPrecision(2)) : 0.25, integer: false });
-  if (s.stopLoss.type === 'swing') out.push({ path: 'stopLoss.lookback', label: 'Stop: barras do swing', value: s.stopLoss.lookback, min: 3, max: 40, step: 1, integer: true });
+  if (s.stopLoss.type === 'swing') out.push({ path: 'stopLoss.lookback', label: tr('Stop: barras do swing'), value: s.stopLoss.lookback, min: 3, max: 40, step: 1, integer: true });
   if (s.takeProfit.type !== 'none')
     out.push({ path: 'takeProfit.value', label: 'Take profit', value: s.takeProfit.value, min: +(s.takeProfit.value / 2).toFixed(3), max: +(s.takeProfit.value * 2).toFixed(3), step: 0.25, integer: false });
   if (s.trailing.type !== 'none')
     out.push({ path: 'trailing.value', label: 'Trailing stop', value: s.trailing.value, min: +(s.trailing.value / 2).toFixed(3), max: +(s.trailing.value * 2).toFixed(3), step: 0.25, integer: false });
-  if (s.maxBarsInTrade > 0) out.push({ path: 'maxBarsInTrade', label: 'Máx. barras na operação', value: s.maxBarsInTrade, min: Math.max(1, Math.round(s.maxBarsInTrade / 2)), max: s.maxBarsInTrade * 2, step: 1, integer: true });
+  if (s.maxBarsInTrade > 0) out.push({ path: 'maxBarsInTrade', label: tr('Máx. barras na operação'), value: s.maxBarsInTrade, min: Math.max(1, Math.round(s.maxBarsInTrade / 2)), max: s.maxBarsInTrade * 2, step: 1, integer: true });
   (['long', 'short'] as const).forEach((side) =>
     (['entry', 'exit'] as const).forEach((kind) =>
       s[side][kind].groups.forEach((g, gi) =>
@@ -416,7 +417,7 @@ export function listParams(s: VisualStrategy): ParamSpec[] {
             const v = o.value;
             out.push({
               path: `${side}.${kind}.groups.${gi}.conditions.${ci}.${lr}.value`,
-              label: `${side === 'long' ? 'Compra' : 'Venda'} ${kind === 'entry' ? 'entrada' : 'saída'}: ${operandLabel(c.left, s)} ${OP_LABEL[c.op]} ${v}`,
+              label: `${side === 'long' ? tr('Compra') : tr('Venda')} ${kind === 'entry' ? tr('entrada') : tr('saída')}: ${operandLabel(c.left, s)} ${OP_LABEL[c.op]} ${v}`,
               value: v,
               min: v === 0 ? -10 : +(v * 0.7).toFixed(4),
               max: v === 0 ? 10 : +(v * 1.3).toFixed(4),
@@ -544,6 +545,6 @@ export function describeOperand(o: VOperand, s: VisualStrategy): string {
 /** Valores de um indicador embutido (usado também pelos scripts). */
 export function indicatorValues(bars: readonly Bar[], type: string, params: Record<string, ParamValue>): Record<string, number[]> {
   const def = getIndicator(type);
-  if (!def) throw new Error(`Indicador desconhecido: ${type}`);
+  if (!def) throw new Error(tr('Indicador desconhecido: {0}', type));
   return def.compute(bars, { ...defaultParams(def), ...params }).values;
 }

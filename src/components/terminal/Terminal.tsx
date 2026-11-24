@@ -42,6 +42,7 @@ import { cn } from '@/components/ui/cn';
 import type { ToolId } from '@/chart/drawings/types';
 import { useCompact } from '@/lib/compact';
 import { CompactMenu } from './CompactMenu';
+import { tr } from '@/i18n';
 
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
@@ -280,8 +281,8 @@ function HideBottomButton({ hidden }: { hidden: boolean }) {
   return (
     <button
       type="button"
-      aria-label={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
-      title={hidden ? 'Mostrar as barras de baixo' : 'Esconder as barras de baixo'}
+      aria-label={hidden ? tr('Mostrar as barras de baixo') : tr('Esconder as barras de baixo')}
+      title={hidden ? tr('Mostrar as barras de baixo') : tr('Esconder as barras de baixo')}
       onClick={() => useSettings.getState().set({ hideBottomBars: !hidden })}
       className="absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elev/90 text-muted shadow-sm active:bg-hover sm:hidden"
       data-testid="toggle-bottom"

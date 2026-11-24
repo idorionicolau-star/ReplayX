@@ -7,6 +7,7 @@ import { useDrawings } from '@/store/drawings';
 import { useSettings } from '@/store/settings';
 import { fmtDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 const signed = (v: number, d = 2) => `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 const EMPTY: never[] = [];
@@ -23,7 +24,7 @@ function Curve({ curve }: { curve: number[] }) {
   const pts = curve.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   const up = curve[curve.length - 1] >= 0;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-20 w-full" role="img" aria-label="Curva de R acumulado" data-testid="bt-curve">
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-20 w-full" role="img" aria-label={tr('Curva de R acumulado')} data-testid="bt-curve">
       <line x1="0" x2={W} y1={y(0)} y2={y(0)} stroke="currentColor" strokeOpacity=".25" strokeDasharray="3 3" />
       {curve.length > 1 && <polyline points={pts} fill="none" stroke={up ? '#089981' : '#f23645'} strokeWidth="1.6" strokeLinejoin="round" />}
     </svg>
@@ -67,7 +68,7 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Resultado das caixas de posição (backtest): toque para ver o resumo e a curva"
+        title={tr('Resultado das caixas de posição (backtest): toque para ver o resumo e a curva')}
         className="flex h-7 items-center gap-1.5 rounded-full border border-line bg-elev/90 px-2.5 text-[11px] font-semibold shadow-sm active:bg-hover"
         data-testid="backtest-chip"
       >
@@ -79,34 +80,34 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
             <span className="text-muted tnum">{closed}</span>
           </>
         ) : (
-          <span className="text-muted">{stats.boxes} {stats.boxes === 1 ? 'caixa' : 'caixas'}</span>
+          <span className="text-muted">{stats.boxes} {stats.boxes === 1 ? tr('caixa') : tr('caixas')}</span>
         )}
       </button>
       {open && (
         <div className="absolute top-9 right-0 max-h-[70vh] w-[300px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-lg border border-line bg-elev p-3 shadow-pop" data-testid="backtest-panel">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[13px] font-semibold">Backtest das caixas de posição</span>
-            <button type="button" aria-label="Fechar" onClick={() => setOpen(false)} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
+            <span className="text-[13px] font-semibold">{tr('Backtest das caixas de posição')}</span>
+            <button type="button" aria-label={tr('Fechar')} onClick={() => setOpen(false)} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
               <X size={15} />
             </button>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             <Kpi label="Trades" value={`${closed}  (${stats.wins}G / ${stats.losses}P)`} />
-            <Kpi label="Acerto" value={stats.hitRate === null ? '—' : `${(stats.hitRate * 100).toFixed(1)}%`} tone={stats.hitRate === null ? undefined : stats.hitRate >= 0.5 ? 'up' : 'down'} />
-            <Kpi label="R total" value={closed ? `${signed(stats.totalR)}R` : '—'} tone={stats.totalR > 0 ? 'up' : stats.totalR < 0 ? 'down' : undefined} />
-            <Kpi label="R médio" value={stats.avgR === null ? '—' : `${signed(stats.avgR)}R`} tone={stats.avgR === null ? undefined : stats.avgR > 0 ? 'up' : 'down'} />
-            <Kpi label="Fator de lucro" value={stats.profitFactor === null ? '—' : stats.profitFactor.toFixed(2)} />
+            <Kpi label={tr('Acerto')} value={stats.hitRate === null ? '—' : `${(stats.hitRate * 100).toFixed(1)}%`} tone={stats.hitRate === null ? undefined : stats.hitRate >= 0.5 ? 'up' : 'down'} />
+            <Kpi label={tr('R total')} value={closed ? `${signed(stats.totalR)}R` : '—'} tone={stats.totalR > 0 ? 'up' : stats.totalR < 0 ? 'down' : undefined} />
+            <Kpi label={tr('R médio')} value={stats.avgR === null ? '—' : `${signed(stats.avgR)}R`} tone={stats.avgR === null ? undefined : stats.avgR > 0 ? 'up' : 'down'} />
+            <Kpi label={tr('Fator de lucro')} value={stats.profitFactor === null ? '—' : stats.profitFactor.toFixed(2)} />
             <Kpi label="Drawdown" value={closed ? `${stats.maxDrawdownR.toFixed(2)}R` : '—'} />
-            <Kpi label="Perdas seguidas" value={closed ? String(stats.maxLossStreak) : '—'} />
-            <Kpi label="À espera" value={String(stats.pending)} />
-            <Kpi label="Sem entrada" value={String(stats.missed)} />
+            <Kpi label={tr('Perdas seguidas')} value={closed ? String(stats.maxLossStreak) : '—'} />
+            <Kpi label={tr('À espera')} value={String(stats.pending)} />
+            <Kpi label={tr('Sem entrada')} value={String(stats.missed)} />
           </div>
-          {stats.open > 0 && <div className="mt-1.5 text-[11px] text-muted">{stats.open} {stats.open === 1 ? 'caixa aberta' : 'caixas abertas'} (entrou, ainda sem alvo nem stop).</div>}
-          <div className="mt-2 text-[11px] text-muted">R acumulado</div>
+          {stats.open > 0 && <div className="mt-1.5 text-[11px] text-muted">{stats.open} {stats.open === 1 ? tr('caixa aberta') : tr('caixas abertas')} {tr('(entrou, ainda sem alvo nem stop).')}</div>}
+          <div className="mt-2 text-[11px] text-muted">{tr('R acumulado')}</div>
           <Curve curve={stats.curve} />
           {closed > 0 && (
             <>
-              <div className="mt-1 mb-1 text-[11px] text-muted">Últimos trades</div>
+              <div className="mt-1 mb-1 text-[11px] text-muted">{tr('Últimos trades')}</div>
               <ul className="space-y-0.5 text-[12px]" data-testid="backtest-trades">
                 {stats.trades
                   .slice(-8)
@@ -114,14 +115,14 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
                   .map((t) => (
                     <li key={t.id} className="flex items-center justify-between rounded px-1.5 py-0.5 hover:bg-hover">
                       <span className="text-muted tnum">{fmtDateTime(t.endTime, tz)}</span>
-                      <span>{t.long ? 'Longa' : 'Curta'}</span>
+                      <span>{t.long ? tr('Longa') : tr('Curta')}</span>
                       <span className={cn('font-semibold tnum', t.win ? 'text-up' : 'text-down')}>{signed(t.r)}R</span>
                     </li>
                   ))}
               </ul>
             </>
           )}
-          <p className="mt-2 text-[10px] leading-snug text-faint">Conta só as caixas em que o preço tocou na entrada e depois chegou ao alvo (+RR) ou ao stop (−1R); se a mesma vela toca nos dois, conta o stop. Vale para este símbolo e para as velas até à margem direita de cada caixa.</p>
+          <p className="mt-2 text-[10px] leading-snug text-faint">{tr('Conta só as caixas em que o preço tocou na entrada e depois chegou ao alvo (+RR) ou ao stop (−1R); se a mesma vela toca nos dois, conta o stop. Vale para este símbolo e para as velas até à margem direita de cada caixa.')}</p>
         </div>
       )}
     </div>

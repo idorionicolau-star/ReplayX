@@ -8,6 +8,7 @@ import { ANGLE_TOOLS, lineAngle, normDeg, setLineAngle, type Geo } from '@/chart
 import type { ChartController } from '@/chart/controller';
 import { Popover } from '@/components/ui/Popover';
 import { IconButton } from '@/components/ui/Button';
+import { tr } from '@/i18n';
 
 function geoOf(c: ChartController): Geo {
   return {
@@ -41,13 +42,13 @@ export function AngleMenu({ symbolId, d, ctrl }: { symbolId: string; d: Drawing;
 
   return (
     <>
-      <IconButton ref={ref} size="sm" label="Ângulo" active={open} onClick={() => setOpen((o) => !o)} data-testid="angle-menu">
+      <IconButton ref={ref} size="sm" label={tr('Ângulo')} active={open} onClick={() => setOpen((o) => !o)} data-testid="angle-menu">
         <AngleIcon size={15} />
       </IconButton>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-start" className="p-2">
         <div className="flex w-[232px] flex-col gap-2 text-xs">
           <label className="flex items-center gap-2">
-            <span className="w-12 text-muted">Ângulo</span>
+            <span className="w-12 text-muted">{tr('Ângulo')}</span>
             <input
               type="number"
               step={1}
@@ -85,7 +86,7 @@ export function AngleMenu({ symbolId, d, ctrl }: { symbolId: string; d: Drawing;
               <RotateCw size={13} /> −15°
             </button>
           </div>
-          <div className="text-[11px] text-faint">Dica: ao arrastar uma ponta, Shift (ou a bússola) encaixa de 15 em 15°.</div>
+          <div className="text-[11px] text-faint">{tr('Dica: ao arrastar uma ponta, Shift (ou a bússola) encaixa de 15 em 15°.')}</div>
         </div>
       </Popover>
     </>

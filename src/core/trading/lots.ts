@@ -1,5 +1,6 @@
 import type { AssetClass } from '@/core/types';
 import { pnlFor, qtyForRisk, type ContractSpec, type Side } from './engine';
+import { tr } from '@/i18n';
 
 /** Regra de lote de um tipo de mercado: mínimo, passo (múltiplos permitidos) e máximo. */
 export interface LotRule {
@@ -26,13 +27,13 @@ export const DEFAULT_LOT_RULES: LotRules = {
 
 export const LOT_CLASS_LABEL: Record<AssetClass, string> = {
   forex: 'Forex',
-  commodities: 'Metais e matérias-primas',
-  synthetic: 'Índices sintéticos',
-  crypto: 'Cripto',
-  indices: 'Índices',
-  stocks: 'Ações',
-  futures: 'Futuros',
-  demo: 'Demonstração',
+  commodities: tr('Metais e matérias-primas'),
+  synthetic: tr('Índices sintéticos'),
+  crypto: tr('Cripto'),
+  indices: tr('Índices'),
+  stocks: tr('Ações'),
+  futures: tr('Futuros'),
+  demo: tr('Demonstração'),
 };
 
 export function lotRule(assetClass: AssetClass, rules: Partial<LotRules> = DEFAULT_LOT_RULES): LotRule {

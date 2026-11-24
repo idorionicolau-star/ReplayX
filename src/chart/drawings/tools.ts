@@ -5,6 +5,7 @@ import { fmtDuration } from '@/lib/format';
 import { AUTO } from './auto';
 import { positionOutcome } from './positionOutcome';
 import { volumeProfile, type VpResult } from '@/core/volumeProfile';
+import { tr } from '@/i18n';
 
 export interface Viewport {
   width: number;
@@ -245,7 +246,7 @@ function textBounds(d: Drawing, p: Pt): { x: number; y: number; w: number; h: nu
   const size = s.fontSize ?? 14;
   const ctx = mctx();
   const lines = (s.text || 'Texto').split('\n');
-  const w = ctx ? textSize(ctx, s.text || 'Texto', fontOf(s)).w : lines.reduce((a, l) => Math.max(a, l.length * size * 0.55), 0);
+  const w = ctx ? textSize(ctx, s.text || tr('Texto'), fontOf(s)).w : lines.reduce((a, l) => Math.max(a, l.length * size * 0.55), 0);
   return { x: p.x, y: p.y - size - 4, w: w + 8, h: lines.length * (size + 4) + 4 };
 }
 
@@ -283,7 +284,7 @@ function trendFamily(id: ToolId, label: string, extras: Partial<DrawingStyle>, o
           ctx,
           [
             `${diff >= 0 ? '+' : ''}${vp.fmtPrice(diff)} (${pctChange(p0.price, p1.price).toFixed(2)}%)`,
-            `${Math.round(bars)} barras, ${fmtDuration(Math.abs(p1.time - p0.time))}`,
+            tr('{0} barras, {1}', Math.round(bars), fmtDuration(Math.abs(p1.time - p0.time))),
             `∠ ${angle.toFixed(1)}°`,
           ],
           b.x + 10,
@@ -306,7 +307,7 @@ function trendFamily(id: ToolId, label: string, extras: Partial<DrawingStyle>, o
 
 const hline: ToolDef = {
   id: 'hline',
-  label: 'Linha horizontal',
+  label: tr('Linha horizontal'),
   group: 'lines',
   shortcut: 'Alt+H',
   points: 1,
@@ -334,7 +335,7 @@ const hline: ToolDef = {
 
 const hray: ToolDef = {
   id: 'hray',
-  label: 'Raio horizontal',
+  label: tr('Raio horizontal'),
   group: 'lines',
   points: 1,
   style: { color: BLUE, width: 1, dash: 0 },
@@ -355,7 +356,7 @@ const hray: ToolDef = {
 
 const vline: ToolDef = {
   id: 'vline',
-  label: 'Linha vertical',
+  label: tr('Linha vertical'),
   group: 'lines',
   shortcut: 'Alt+V',
   points: 1,
@@ -381,7 +382,7 @@ const vline: ToolDef = {
 
 const crossline: ToolDef = {
   id: 'crossline',
-  label: 'Linha cruzada',
+  label: tr('Linha cruzada'),
   group: 'lines',
   points: 1,
   style: { color: BLUE, width: 1, dash: 0 },
@@ -402,7 +403,7 @@ const crossline: ToolDef = {
 
 const channel: ToolDef = {
   id: 'channel',
-  label: 'Canal paralelo',
+  label: tr('Canal paralelo'),
   group: 'lines',
   points: 3,
   style: { color: BLUE, width: 2, dash: 0, fill: 'rgba(120,123,134,0.08)', extendRight: false },
@@ -459,7 +460,7 @@ const channel: ToolDef = {
 
 const fib: ToolDef = {
   id: 'fib',
-  label: 'Retração de Fibonacci',
+  label: tr('Retração de Fibonacci'),
   group: 'fib',
   shortcut: 'Alt+F',
   points: 2,
@@ -524,7 +525,7 @@ const fib: ToolDef = {
 
 const fibext: ToolDef = {
   id: 'fibext',
-  label: 'Extensão de Fibonacci',
+  label: tr('Extensão de Fibonacci'),
   group: 'fib',
   points: 3,
   style: { color: '#787b86', width: 1, dash: 0, levels: DEFAULT_FIBEXT_LEVELS, showLabel: true, fill: 'on' },
@@ -580,7 +581,7 @@ const fibext: ToolDef = {
 
 const pitchfork: ToolDef = {
   id: 'pitchfork',
-  label: 'Forquilha de Andrews',
+  label: tr('Forquilha de Andrews'),
   group: 'fib',
   points: 3,
   style: { color: AUTO, width: 1, dash: 0, fill: 'rgba(120,123,134,0.08)' },
@@ -633,7 +634,7 @@ const pitchfork: ToolDef = {
 
 const rect: ToolDef = {
   id: 'rect',
-  label: 'Retângulo',
+  label: tr('Retângulo'),
   group: 'shapes',
   shortcut: 'Alt+Shift+R',
   points: 2,
@@ -689,7 +690,7 @@ const rect: ToolDef = {
 
 const ellipse: ToolDef = {
   id: 'ellipse',
-  label: 'Elipse',
+  label: tr('Elipse'),
   group: 'shapes',
   points: 2,
   style: { color: AUTO, width: 1, dash: 0, fill: NEUTRAL_FILL },
@@ -717,7 +718,7 @@ const ellipse: ToolDef = {
 
 const triangle: ToolDef = {
   id: 'triangle',
-  label: 'Triângulo',
+  label: tr('Triângulo'),
   group: 'shapes',
   points: 3,
   style: { color: AUTO, width: 1, dash: 0, fill: NEUTRAL_FILL },
@@ -745,7 +746,7 @@ const triangle: ToolDef = {
 
 const path: ToolDef = {
   id: 'path',
-  label: 'Caminho',
+  label: tr('Caminho'),
   group: 'shapes',
   points: -1,
   style: { color: BLUE, width: 2, dash: 0 },
@@ -768,7 +769,7 @@ const path: ToolDef = {
 
 const brush: ToolDef = {
   id: 'brush',
-  label: 'Pincel',
+  label: tr('Pincel'),
   group: 'shapes',
   points: 0,
   style: { color: AUTO, width: 2, dash: 0 },
@@ -809,11 +810,11 @@ const brush: ToolDef = {
 
 const text: ToolDef = {
   id: 'text',
-  label: 'Texto',
+  label: tr('Texto'),
   group: 'text',
   shortcut: 'Alt+T',
   points: 1,
-  style: { color: BLUE, width: 1, dash: 0, text: 'Texto', textColor: AUTO, fontSize: 14 },
+  style: { color: BLUE, width: 1, dash: 0, text: tr('Texto'), textColor: AUTO, fontSize: 14 },
   render(ctx, d, vp, sel) {
     const p = xy(d, 0, vp);
     if (!p) return;
@@ -845,10 +846,10 @@ const text: ToolDef = {
 
 const note: ToolDef = {
   id: 'note',
-  label: 'Nota (balão)',
+  label: tr('Nota (balão)'),
   group: 'text',
   points: 1,
-  style: { color: '#363a45', width: 1, dash: 0, text: 'Nota', textColor: '#ffffff', fontSize: 13, fill: '#363a45' },
+  style: { color: '#363a45', width: 1, dash: 0, text: tr('Nota'), textColor: '#ffffff', fontSize: 13, fill: '#363a45' },
   render(ctx, d, vp, sel) {
     const p = xy(d, 0, vp);
     if (!p) return;
@@ -877,7 +878,7 @@ const note: ToolDef = {
 
 const pricelabel: ToolDef = {
   id: 'pricelabel',
-  label: 'Etiqueta de preço',
+  label: tr('Etiqueta de preço'),
   group: 'text',
   points: 1,
   style: { color: AUTO, width: 1, dash: 0 },
@@ -903,7 +904,7 @@ function arrowMark(id: 'arrowup' | 'arrowdown'): ToolDef {
   const up = id === 'arrowup';
   return {
     id,
-    label: up ? 'Seta para cima' : 'Seta para baixo',
+    label: up ? tr('Seta para cima') : tr('Seta para baixo'),
     group: 'text',
     points: 1,
     style: { color: up ? '#089981' : '#f23645', width: 1, dash: 0, text: '' },
@@ -961,7 +962,7 @@ function positionTool(id: 'long' | 'short'): ToolDef {
   const d0 = long ? 1 : -1;
   return {
     id,
-    label: long ? 'Posição longa' : 'Posição curta',
+    label: long ? tr('Posição longa') : tr('Posição curta'),
     group: 'measure',
     points: 1,
     style: { color: long ? '#089981' : '#f23645', width: 1, dash: 0 },
@@ -1016,7 +1017,7 @@ function positionTool(id: 'long' | 'short'): ToolDef {
           line(ctx, { x: a0, y: ye }, { x: a1, y: yl });
         }
       }
-      const prefix = outcome === 'tp' ? '✔ Alvo atingido · ' : outcome === 'sl' ? '✖ Stop atingido · ' : res.status === 'pending' ? '⏳ À espera da entrada · ' : res.status === 'missed' ? '⊘ Sem entrada (o preço foi ao alvo/stop sem a tocar) · ' : '';
+      const prefix = outcome === 'tp' ? tr('✔ Alvo atingido · ') : outcome === 'sl' ? tr('✖ Stop atingido · ') : res.status === 'pending' ? tr('⏳ À espera da entrada · ') : res.status === 'missed' ? tr('⊘ Sem entrada (o preço foi ao alvo/stop sem a tocar) · ') : '';
 
       ctx.setLineDash([]);
       ctx.strokeStyle = calm ? 'rgba(120,123,134,0.45)' : '#787b86';
@@ -1036,11 +1037,11 @@ function positionTool(id: 'long' | 'short'): ToolDef {
       const font = '11px -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif';
       // as descrições (alvo, stop e resultado) só aparecem com a caixa selecionada ou com o rato por cima
       if (sel) {
-        labelBox(ctx, [`Alvo: ${vp.fmtPrice(data.target)} (${pctChange(entry, data.target).toFixed(2)}%) +${rewardAmt.toFixed(2)}`], left + w / 2, long ? Math.min(yt, ye) - 4 : Math.max(yt, ye) + 4, { bg: '#089981', fg, valign: long ? 'bottom' : 'top', font });
+        labelBox(ctx, [tr('Alvo: {0} ({1}%) +{2}', vp.fmtPrice(data.target), pctChange(entry, data.target).toFixed(2), rewardAmt.toFixed(2))], left + w / 2, long ? Math.min(yt, ye) - 4 : Math.max(yt, ye) + 4, { bg: '#089981', fg, valign: long ? 'bottom' : 'top', font });
         labelBox(ctx, [`Stop: ${vp.fmtPrice(data.stop)} (${pctChange(entry, data.stop).toFixed(2)}%) -${riskAmt.toFixed(2)}`], left + w / 2, long ? Math.max(ys, ye) + 4 : Math.min(ys, ye) - 4, { bg: '#f23645', fg, valign: long ? 'top' : 'bottom', font });
         labelBox(
           ctx,
-          [`${prefix}${sz ? `${sz.label} · ` : ''}R:R ${rr.toFixed(2)} · Lote ${qtyText}${sz?.minExceeds ? ' ⚠' : ''}`],
+          [tr('{0}{1}R:R {2} · Lote {3}{4}', prefix, sz ? `${sz.label} · ` : '', rr.toFixed(2), qtyText, sz?.minExceeds ? ' ⚠' : '')],
           left + w / 2,
           ye,
           { bg: long ? 'rgba(8,153,129,0.95)' : 'rgba(242,54,69,0.95)', fg, font },
@@ -1123,7 +1124,7 @@ function rangeTool(id: 'pricerange' | 'daterange' | 'measure', label: string): T
       const p1 = d.points[1];
       const lines: string[] = [];
       if (id !== 'daterange') lines.push(`${p1.price - p0.price >= 0 ? '+' : ''}${vp.fmtPrice(p1.price - p0.price)} (${pctChange(p0.price, p1.price).toFixed(2)}%)`);
-      if (id !== 'pricerange') lines.push(`${Math.round(vp.barsBetween(p0.time, p1.time))} barras, ${fmtDuration(Math.abs(p1.time - p0.time))}`);
+      if (id !== 'pricerange') lines.push(tr('{0} barras, {1}', Math.round(vp.barsBetween(p0.time, p1.time)), fmtDuration(Math.abs(p1.time - p0.time))));
       const below = b.y >= a.y;
       labelBox(ctx, lines, mx, below ? Math.max(a.y, b.y) + 6 : Math.min(a.y, b.y) - 6, { bg: color, fg: '#ffffff', valign: below ? 'top' : 'bottom' });
       ctx.restore();
@@ -1172,7 +1173,7 @@ function vpOf(d: Drawing, vp: Viewport): VpResult | null {
 
 const vpFixed: ToolDef = {
   id: 'vpfixed',
-  label: 'Perfil de volume (intervalo fixo)',
+  label: tr('Perfil de volume (intervalo fixo)'),
   group: 'measure',
   points: 2,
   style: { color: '#f23645', width: 1, dash: 1, fill: 'rgba(120,123,134,0.06)' },
@@ -1221,7 +1222,7 @@ const vpFixed: ToolDef = {
     stroke(ctx, { ...d.style, color: '#787b86', dash: 1 });
     if (yVah !== null) line(ctx, { x: xa, y: yVah }, { x: xb, y: yVah });
     if (yVal !== null) line(ctx, { x: xa, y: yVal }, { x: xb, y: yVal });
-    if (res.mode === 'tempo') labelBox(ctx, ['sem volume: tempo em cada preço'], xa, Math.min(yHi, yLo) - 4, { bg: 'rgba(120,123,134,0.9)', fg: '#ffffff', align: 'left', valign: 'bottom' });
+    if (res.mode === 'tempo') labelBox(ctx, [tr('sem volume: tempo em cada preço')], xa, Math.min(yHi, yLo) - 4, { bg: 'rgba(120,123,134,0.9)', fg: '#ffffff', align: 'left', valign: 'bottom' });
     ctx.restore();
   },
   hit(d, vp, p) {
@@ -1254,11 +1255,11 @@ const vpFixed: ToolDef = {
 };
 
 export const TOOLS: ToolDef[] = [
-  trendFamily('trendline', 'Linha de tendência', {}, {}),
-  trendFamily('ray', 'Raio', { extendRight: true }),
-  trendFamily('infoline', 'Linha de informação', {}, { info: true }),
-  trendFamily('extended', 'Linha prolongada', { extendLeft: true, extendRight: true }),
-  trendFamily('arrowline', 'Seta', {}, { arrow: true }),
+  trendFamily('trendline', tr('Linha de tendência'), {}, {}),
+  trendFamily('ray', tr('Raio'), { extendRight: true }),
+  trendFamily('infoline', tr('Linha de informação'), {}, { info: true }),
+  trendFamily('extended', tr('Linha prolongada'), { extendLeft: true, extendRight: true }),
+  trendFamily('arrowline', tr('Seta'), {}, { arrow: true }),
   hline,
   hray,
   vline,
@@ -1279,9 +1280,9 @@ export const TOOLS: ToolDef[] = [
   arrowMark('arrowdown'),
   positionTool('long'),
   positionTool('short'),
-  rangeTool('pricerange', 'Intervalo de preço'),
-  rangeTool('daterange', 'Intervalo de datas'),
-  rangeTool('measure', 'Medir (data e preço)'),
+  rangeTool('pricerange', tr('Intervalo de preço')),
+  rangeTool('daterange', tr('Intervalo de datas')),
+  rangeTool('measure', tr('Medir (data e preço)')),
   vpFixed,
 ];
 
@@ -1294,9 +1295,9 @@ export function toolDef(id: ToolId): ToolDef | undefined {
 }
 
 export const TOOL_GROUPS: { id: ToolGroup; label: string; tools: ToolId[] }[] = [
-  { id: 'lines', label: 'Linhas', tools: ['trendline', 'ray', 'infoline', 'extended', 'arrowline', 'hline', 'hray', 'vline', 'crossline', 'channel'] },
-  { id: 'fib', label: 'Fibonacci e Gann', tools: ['fib', 'fibext', 'pitchfork'] },
-  { id: 'shapes', label: 'Formas', tools: ['rect', 'ellipse', 'triangle', 'path', 'brush'] },
-  { id: 'text', label: 'Texto e marcas', tools: ['text', 'note', 'pricelabel', 'arrowup', 'arrowdown'] },
-  { id: 'measure', label: 'Previsão e medição', tools: ['long', 'short', 'pricerange', 'daterange', 'measure', 'vpfixed'] },
+  { id: 'lines', label: tr('Linhas'), tools: ['trendline', 'ray', 'infoline', 'extended', 'arrowline', 'hline', 'hray', 'vline', 'crossline', 'channel'] },
+  { id: 'fib', label: tr('Fibonacci e Gann'), tools: ['fib', 'fibext', 'pitchfork'] },
+  { id: 'shapes', label: tr('Formas'), tools: ['rect', 'ellipse', 'triangle', 'path', 'brush'] },
+  { id: 'text', label: tr('Texto e marcas'), tools: ['text', 'note', 'pricelabel', 'arrowup', 'arrowdown'] },
+  { id: 'measure', label: tr('Previsão e medição'), tools: ['long', 'short', 'pricerange', 'daterange', 'measure', 'vpfixed'] },
 ];

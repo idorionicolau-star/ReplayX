@@ -1,3 +1,4 @@
+import { tr } from '@/i18n';
 /**
  * Níveis do íman do desenho. 'weak' e 'strong' são os que já existiam (guardados nas definições de quem já os escolheu);
  * os três do meio ficam entre eles.
@@ -14,11 +15,11 @@ export interface MagnetLevel {
 }
 
 export const MAGNET_LEVELS: readonly MagnetLevel[] = [
-  { id: 'weak', level: 1, label: 'Íman 1 · fraco (perto do preço)', reachPx: 14 },
-  { id: 'light', level: 2, label: 'Íman 2 · leve', reachPx: 28 },
-  { id: 'medium', level: 3, label: 'Íman 3 · médio', reachPx: 48 },
-  { id: 'firm', level: 4, label: 'Íman 4 · firme', reachPx: 80 },
-  { id: 'strong', level: 5, label: 'Íman 5 · forte (sempre OHLC)', reachPx: Infinity },
+  { id: 'weak', level: 1, label: tr('Íman 1 · fraco (perto do preço)'), reachPx: 14 },
+  { id: 'light', level: 2, label: tr('Íman 2 · leve'), reachPx: 28 },
+  { id: 'medium', level: 3, label: tr('Íman 3 · médio'), reachPx: 48 },
+  { id: 'firm', level: 4, label: tr('Íman 4 · firme'), reachPx: 80 },
+  { id: 'strong', level: 5, label: tr('Íman 5 · forte (sempre OHLC)'), reachPx: Infinity },
 ];
 
 export function magnetLevel(m: Magnet): MagnetLevel | null {
@@ -33,7 +34,7 @@ export function nextMagnet(m: Magnet): Magnet {
 }
 
 export function magnetTitle(m: Magnet): string {
-  return m === 'off' ? 'Íman desligado' : magnetLevel(m)?.label ?? 'Íman';
+  return m === 'off' ? tr('Íman desligado') : magnetLevel(m)?.label ?? tr('Íman');
 }
 
 /**

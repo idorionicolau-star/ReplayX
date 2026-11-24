@@ -15,6 +15,7 @@ import { MenuItem, MenuList, MenuSeparator } from '@/components/ui/Menu';
 import { IconButton } from '@/components/ui/Button';
 import { fmtPrice } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 function Row({ id, active, fresh, onPick, onRemove }: { id: string; active: boolean; fresh?: boolean; onPick: () => void; onRemove: () => void }) {
   const sym = resolveSymbol(id);
@@ -60,7 +61,7 @@ function Row({ id, active, fresh, onPick, onRemove }: { id: string; active: bool
       <div className={cn('w-[58px] text-right text-xs tnum', ch === undefined ? 'text-faint' : ch >= 0 ? 'text-up' : 'text-down')}>{ch === undefined ? '—' : `${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%`}</div>
       <button
         type="button"
-        aria-label="Remover"
+        aria-label={tr('Remover')}
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
@@ -112,7 +113,7 @@ export function Watchlist() {
           <span className="truncate">{current?.name}</span>
           <ChevronDown size={14} />
         </button>
-        <IconButton size="sm" label="Adicionar símbolo" onClick={() => useUi.getState().openSymbolSearch('', undefined, 'watchlist')}>
+        <IconButton size="sm" label={tr('Adicionar símbolo')} onClick={() => useUi.getState().openSymbolSearch('', undefined, 'watchlist')}>
           <Plus size={16} />
         </IconButton>
         <Popover anchor={ref} open={open} onClose={() => setOpen(false)}>
@@ -123,18 +124,18 @@ export function Watchlist() {
             <MenuSeparator />
             <MenuItem
               icon={<Plus size={15} />}
-              label="Nova lista"
+              label={tr('Nova lista')}
               onClick={() => {
-                const name = prompt('Nome da nova lista');
+                const name = prompt(tr('Nome da nova lista'));
                 if (name?.trim()) useWorkspace.getState().addWatchlist(name.trim());
                 setOpen(false);
               }}
             />
             <MenuItem
               icon={<Pencil size={15} />}
-              label="Mudar o nome"
+              label={tr('Mudar o nome')}
               onClick={() => {
-                const name = prompt('Novo nome', current?.name);
+                const name = prompt(tr('Novo nome'), current?.name);
                 if (name?.trim() && current) useWorkspace.getState().renameWatchlist(current.id, name.trim());
                 setOpen(false);
               }}
@@ -142,10 +143,10 @@ export function Watchlist() {
             {lists.length > 1 && (
               <MenuItem
                 icon={<Trash2 size={15} />}
-                label="Apagar lista"
+                label={tr('Apagar lista')}
                 danger
                 onClick={() => {
-                  if (current && confirm(`Apagar a lista "${current.name}"?`)) useWorkspace.getState().deleteWatchlist(current.id);
+                  if (current && confirm(tr('Apagar a lista "{0}"?', current.name))) useWorkspace.getState().deleteWatchlist(current.id);
                   setOpen(false);
                 }}
               />
@@ -154,14 +155,14 @@ export function Watchlist() {
         </Popover>
       </div>
       <div className="flex h-7 shrink-0 items-center gap-2 border-b border-line px-3 text-[11px] text-muted">
-        <span className="flex-1 pl-6">Símbolo</span>
-        <span className="w-[86px] text-right">Último</span>
-        <span className="w-[58px] text-right">Var. %</span>
+        <span className="flex-1 pl-6">{tr('Símbolo')}</span>
+        <span className="w-[86px] text-right">{tr('Último')}</span>
+        <span className="w-[58px] text-right">{tr('Var. %')}</span>
         <span className="w-[18px]" />
       </div>
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
         {current?.symbols.map((id) => <Row key={id} id={id} active={id === activeSymbol} fresh={id === fresh} onPick={() => setSymbol(id)} onRemove={() => remove(id)} />)}
-        {!current?.symbols.length && <div className="px-4 py-8 text-center text-xs text-muted">Lista vazia. Use + para adicionar símbolos.</div>}
+        {!current?.symbols.length && <div className="px-4 py-8 text-center text-xs text-muted">{tr('Lista vazia. Use + para adicionar símbolos.')}</div>}
       </div>
     </div>
   );

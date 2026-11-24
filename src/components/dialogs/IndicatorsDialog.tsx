@@ -11,7 +11,9 @@ import { Dialog } from '@/components/ui/Dialog';
 import { cn } from '@/components/ui/cn';
 import { uid } from '@/lib/uid';
 import { toast } from '@/components/ui/Toast';
+import { tr } from '@/i18n';
 
+/** Categorias (em português: são também os valores de `category`); traduzidas só ao mostrar. */
 const CATS = ['Favoritos', 'Todos', 'Médias móveis', 'Tendência', 'Osciladores', 'Volatilidade', 'Volume', 'Outros', 'Os meus scripts'] as const;
 
 const EMPTY: never[] = [];
@@ -45,7 +47,7 @@ export function IndicatorsDialog() {
   const scriptList = scripts.filter((s) => (!q || s.name.toLowerCase().includes(q.toLowerCase())) && /indicator\s*\(/.test(s.code));
 
   return (
-    <Dialog open={open} onClose={close} title="Indicadores" width={760} bodyClassName="p-0">
+    <Dialog open={open} onClose={close} title={tr('Indicadores')} width={760} bodyClassName="p-0">
       <div className="flex h-[min(560px,70vh)] flex-col sm:flex-row">
         <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-line p-2 sm:w-48 sm:flex-col sm:border-r sm:border-b-0">
           {CATS.map((c) => (
@@ -55,14 +57,14 @@ export function IndicatorsDialog() {
               onClick={() => setCat(c)}
               className={cn('h-8 shrink-0 rounded-md px-3 text-left text-[13px] whitespace-nowrap', cat === c ? 'bg-accent-soft text-accent' : 'hover:bg-hover')}
             >
-              {c}
+              {tr(c)}
             </button>
           ))}
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex h-11 items-center gap-2 border-b border-line px-3">
             <Search size={16} className="text-muted" />
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar indicador" className="h-full flex-1 bg-transparent outline-none placeholder:text-faint" />
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Procurar indicador')} className="h-full flex-1 bg-transparent outline-none placeholder:text-faint" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto py-1">
             {cat !== 'Os meus scripts' &&
@@ -89,8 +91,8 @@ export function IndicatorsDialog() {
                     <span
                       role="button"
                       tabIndex={0}
-                      aria-label={favs.includes(d.id) ? 'Tirar dos favoritos' : 'Adicionar aos favoritos'}
-                      title={favs.includes(d.id) ? 'Tirar dos favoritos' : 'Adicionar aos favoritos'}
+                      aria-label={favs.includes(d.id) ? tr('Tirar dos favoritos') : tr('Adicionar aos favoritos')}
+                      title={favs.includes(d.id) ? tr('Tirar dos favoritos') : tr('Adicionar aos favoritos')}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleFavoriteIndicator(d.id);
@@ -103,10 +105,10 @@ export function IndicatorsDialog() {
                   </button>
                 );
               })}
-            {cat === 'Favoritos' && !q && !list.length && <div className="px-4 py-8 text-center text-xs text-muted">Toque na estrela ☆ de um indicador para o pôr nos favoritos.</div>}
+            {cat === 'Favoritos' && !q && !list.length && <div className="px-4 py-8 text-center text-xs text-muted">{tr('Toque na estrela ☆ de um indicador para o pôr nos favoritos.')}</div>}
             {(cat === 'Os meus scripts' || (cat === 'Todos' && q)) && (
               <>
-                {cat === 'Os meus scripts' && !scriptList.length && <div className="px-4 py-8 text-center text-xs text-muted">Ainda não tem scripts de indicador. Crie um no separador “Scripts” em baixo.</div>}
+                {cat === 'Os meus scripts' && !scriptList.length && <div className="px-4 py-8 text-center text-xs text-muted">{tr('Ainda não tem scripts de indicador. Crie um no separador “Scripts” em baixo.')}</div>}
                 {scriptList.map((s) => (
                   <button
                     key={s.id}

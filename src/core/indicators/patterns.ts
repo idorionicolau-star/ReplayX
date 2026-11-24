@@ -2,6 +2,7 @@ import type { Bar } from '../types';
 import { findPivots, type Pivot } from './apocalypse';
 import type { DrawData, DrawLine, DrawText } from '../../chart/layer';
 import type { IndicatorMarker } from './registry';
+import { tr } from '@/i18n';
 
 /**
  * Padrões gráficos: ombro-cabeça-ombro (normal e invertido) e triângulos (ascendente, descendente, simétrico).
@@ -14,11 +15,11 @@ import type { IndicatorMarker } from './registry';
 export type PatternKind = 'hs-top' | 'hs-bottom' | 'tri-asc' | 'tri-desc' | 'tri-sym';
 
 export const PATTERN_NAMES: Record<PatternKind, string> = {
-  'hs-top': 'Ombro-cabeça-ombro',
-  'hs-bottom': 'Ombro-cabeça-ombro invertido',
-  'tri-asc': 'Triângulo ascendente',
-  'tri-desc': 'Triângulo descendente',
-  'tri-sym': 'Triângulo simétrico',
+  'hs-top': tr('Ombro-cabeça-ombro'),
+  'hs-bottom': tr('Ombro-cabeça-ombro invertido'),
+  'tri-asc': tr('Triângulo ascendente'),
+  'tri-desc': tr('Triângulo descendente'),
+  'tri-sym': tr('Triângulo simétrico'),
 };
 
 export interface PatOptions {
@@ -195,7 +196,7 @@ function scanHsTop(bars: readonly Bar[], atr: readonly number[], o: PatOptions):
     const sig: PatSignal = {
       kind: 'hs-top',
       dir: -1,
-      points: [pt(c.h1, 'Ombro E'), pt(c.l1), pt(c.h2, 'Cabeça'), pt(c.l2), pt(c.h3, 'Ombro D')],
+      points: [pt(c.h1, tr('Ombro E')), pt(c.l1), pt(c.h2, tr('Cabeça')), pt(c.l2), pt(c.h3, tr('Ombro D'))],
       lines: [
         { from: pt(c.h1), to: pt(c.l1), role: 'forma' },
         { from: pt(c.l1), to: pt(c.h2), role: 'forma' },
@@ -220,7 +221,7 @@ function scanHsTop(bars: readonly Bar[], atr: readonly number[], o: PatOptions):
     const pt = (p: Pivot, label?: string): PatPoint => ({ idx: p.idx, price: p.price, label });
     pending.push({
       kind: 'hs-top',
-      points: [pt(pend.h1, 'Ombro E'), pt(pend.l1), pt(pend.h2, 'Cabeça'), pt(pend.l2), pt(pend.h3, 'Ombro D')],
+      points: [pt(pend.h1, tr('Ombro E')), pt(pend.l1), pt(pend.h2, tr('Cabeça')), pt(pend.l2), pt(pend.h3, tr('Ombro D'))],
       lines: [{ from: pt(pend.l1), to: { idx: last, price: pend.neck(last) }, role: 'pescoço' }],
     });
   }
@@ -374,9 +375,9 @@ export function scanPatterns(bars: readonly Bar[], atr: readonly number[], o: Pa
     for (const p of m.pending) pending.push({ kind: 'hs-bottom', points: p.points.map(negPt), lines: p.lines.map(negLine) });
   }
   if (o.tri) {
-    const tr = scanTriangles(bars, atr, o);
-    signals.push(...tr.signals);
-    pending.push(...tr.pending);
+    const tri = scanTriangles(bars, atr, o);
+    signals.push(...tri.signals);
+    pending.push(...tri.pending);
   }
   signals.sort((a, b) => a.idx - b.idx);
   return { signals, pending };
@@ -418,13 +419,13 @@ export function drawPatterns(bars: readonly Bar[], r: PatResult, goal?: { target
     texts.push({ i: mid(s.idx, end), p: s.stop, text: 'Stop', color: STOP, size: 10, pos: buy ? 'below' : 'above', bold: false });
     lines.push({ i1: s.idx, p1: s.entry, i2: end, p2: s.entry, color: ENTRY, width: 1 });
     lines.push({ i1: s.idx, p1: s.target, i2: end, p2: s.target, color: TARGET, width: 1, dash: true });
-    texts.push({ i: mid(s.idx, end), p: s.target, text: 'Alvo', color: TARGET, size: 10, pos: buy ? 'above' : 'below', bold: false });
-    const side = s.expected === null ? '' : s.expected ? ' · a favor' : ' · contra';
-    markers.push({ index: s.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? BUY : SELL, text: `${buy ? 'COMPRA' : 'VENDA'} (${PATTERN_NAMES[s.kind]}${side})` });
+    texts.push({ i: mid(s.idx, end), p: s.target, text: tr('Alvo'), color: TARGET, size: 10, pos: buy ? 'above' : 'below', bold: false });
+    const side = s.expected === null ? '' : s.expected ? tr(' · a favor') : tr(' · contra');
+    markers.push({ index: s.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? BUY : SELL, text: `${buy ? tr('COMPRA') : tr('VENDA')} (${PATTERN_NAMES[s.kind]}${side})` });
     if (s.exit) {
       const rr = patSignalR(s);
       const ok = s.exit.result === 'alvo';
-      texts.push({ i: s.exit.idx, p: ok ? s.target : s.stop, text: ok ? `✓ alvo +${(rr ?? 0).toFixed(1)}R` : '✗ stop -1R', color: ok ? TARGET : STOP, size: 10, pos: ok === buy ? 'above' : 'below' });
+      texts.push({ i: s.exit.idx, p: ok ? s.target : s.stop, text: ok ? tr('✓ alvo +{0}R', (rr ?? 0).toFixed(1)) : '✗ stop -1R', color: ok ? TARGET : STOP, size: 10, pos: ok === buy ? 'above' : 'below' });
     }
   }
 
@@ -434,11 +435,11 @@ export function drawPatterns(bars: readonly Bar[], r: PatResult, goal?: { target
       lines.push({ i1: l.from.idx, p1: l.from.price, i2: l.to.idx, p2: l.to.price, color, width: 1, dash: true });
     }
     const top = p.points.reduce((a, b) => (b.price > a.price ? b : a));
-    texts.push({ i: top.idx, p: top.price, text: `${PATTERN_NAMES[p.kind]} a formar-se`, color: FORM, size: 10, pos: 'above' });
+    texts.push({ i: top.idx, p: top.price, text: tr('{0} a formar-se', PATTERN_NAMES[p.kind]), color: FORM, size: 10, pos: 'above' });
   }
 
   // placar honesto por tipo de padrão
-  const panel: { text: string; color?: string }[] = [{ text: `Padrões gráficos: ${r.signals.length} sinais`, color: '#d1d4dc' }];
+  const panel: { text: string; color?: string }[] = [{ text: tr('Padrões gráficos: {0} sinais', r.signals.length), color: '#d1d4dc' }];
   const kinds = Object.keys(PATTERN_NAMES) as PatternKind[];
   for (const k of kinds) {
     const mine = r.signals.filter((s) => s.kind === k);
@@ -447,11 +448,11 @@ export function drawPatterns(bars: readonly Bar[], r: PatResult, goal?: { target
     const wins = closed.filter((s) => s.exit!.result === 'alvo').length;
     const rs = closed.map(patSignalR).filter((v): v is number => v !== null);
     const sum = rs.reduce((a, b) => a + b, 0);
-    panel.push({ text: `${PATTERN_NAMES[k]}: ${mine.length} · ${wins} alvos · ${closed.length - wins} stops · soma ${sum >= 0 ? '+' : ''}${sum.toFixed(1)}R`, color: sum >= 0 ? TARGET : STOP });
+    panel.push({ text: tr('{0}: {1} · {2} alvos · {3} stops · soma {4}{5}R', PATTERN_NAMES[k], mine.length, wins, closed.length - wins, sum >= 0 ? '+' : '', sum.toFixed(1)), color: sum >= 0 ? TARGET : STOP });
   }
   if (goal && r.signals.length < goal.target) {
-    panel.push({ text: goal.historyDone ? `o histórico acabou: ${r.signals.length} de ${goal.target} sinais` : `a carregar mais passado… ${r.signals.length}/${goal.target} sinais`, color: '#d1d4dc' });
+    panel.push({ text: goal.historyDone ? tr('o histórico acabou: {0} de {1} sinais', r.signals.length, goal.target) : tr('a carregar mais passado… {0}/{1} sinais', r.signals.length, goal.target), color: '#d1d4dc' });
   }
-  if (r.pending.length) panel.push({ text: `${r.pending.length} padrão(ões) a formar-se`, color: '#d1d4dc' });
+  if (r.pending.length) panel.push({ text: tr('{0} padrão(ões) a formar-se', r.pending.length), color: '#d1d4dc' });
   return { draw: { lines, texts, panel: { lines: panel, corner: 'bl' } }, markers };
 }
