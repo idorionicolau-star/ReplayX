@@ -500,28 +500,52 @@ export class ChartController {
     return tfSeconds(this.tf);
   }
 
+  /**
+   * No replay: velas que ainda não apareceram mas já estão carregadas (depois do cursor). Servem só para posicionar o que
+   * está à frente do cursor (desenhos, caixa de posição) onde ficará quando as velas aparecerem — sem isto, esses objetos
+   * eram posicionados como se não houvesse fins de semana e saltavam centenas de velas ao cruzar um.
+   */
+  private ahead: number[] = [];
+
+  /** Tempo da posição `i` da linha do tempo (as velas à vista e, a seguir, as já carregadas à frente do cursor). */
+  private mapAt(i: number): number {
+    const n = this.times.length;
+    return i < n ? this.times[i] : this.ahead[i - n];
+  }
+
   timeToLogical(t: number): number | null {
     const times = this.times;
     const n = times.length;
     if (!n) return null;
+    const m = n + this.ahead.length;
     const sec = this.tfSec;
+    const lastT = this.mapAt(m - 1);
     if (t <= times[0]) return (t - times[0]) / sec;
-    if (t >= times[n - 1]) return n - 1 + (t - times[n - 1]) / sec;
-    const i = upperBound(this.bars, t) - 1;
-    const span = times[i + 1] - times[i];
-    return i + Math.min(1, (t - times[i]) / Math.min(span, sec));
+    if (t >= lastT) return m - 1 + (t - lastT) / sec;
+    // última posição com tempo <= t
+    let lo = 0;
+    let hi = m - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >>> 1;
+      if (this.mapAt(mid) <= t) lo = mid;
+      else hi = mid - 1;
+    }
+    const a = this.mapAt(lo);
+    const span = this.mapAt(lo + 1) - a;
+    return lo + Math.min(1, (t - a) / Math.min(span, sec));
   }
 
   logicalToTime(l: number): number | null {
     const times = this.times;
     const n = times.length;
     if (!n) return null;
+    const m = n + this.ahead.length;
     const sec = this.tfSec;
     if (l <= 0) return Math.round(times[0] + l * sec);
-    if (l >= n - 1) return Math.round(times[n - 1] + (l - (n - 1)) * sec);
+    if (l >= m - 1) return Math.round(this.mapAt(m - 1) + (l - (m - 1)) * sec);
     const i = Math.floor(l);
     const f = l - i;
-    return Math.round(times[i] + f * Math.min(times[i + 1] - times[i], sec));
+    return Math.round(this.mapAt(i) + f * Math.min(this.mapAt(i + 1) - this.mapAt(i), sec));
   }
 
   /** O lightweight-charts só converte índices inteiros: interpolamos as posições entre barras. */
@@ -844,6 +868,7 @@ export class ChartController {
     const tf = this.tf;
     this.stopLive();
     this.cursor = null;
+    this.ahead = [];
     this.replayBars = [];
     this.setStatus({ state: 'loading' });
     try {
@@ -918,6 +943,7 @@ export class ChartController {
   /** Volta ao modo em tempo real. */
   async exitReplay() {
     this.cursor = null;
+    this.ahead = [];
     this.replayBars = [];
     if (this.symbol) await this.loadLive(false);
   }
@@ -1161,6 +1187,9 @@ export class ChartController {
       const p = dataFeed().peekPartial(this.symbol, tf, open, cursor);
       if (p) visible.push(p);
     }
+    // velas já carregadas à frente do cursor (a parcial, com o mesmo tempo da última à vista, não conta)
+    const lastVisible = visible.length ? visible[visible.length - 1].time : -Infinity;
+    this.ahead = bars.slice(k).filter((b) => b.time > lastVisible).map((b) => b.time);
     const old = this.bars;
     const sameStart = old.length && visible.length && old[0].time === visible[0].time;
     const ts = this.chart.timeScale();
