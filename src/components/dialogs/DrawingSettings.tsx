@@ -15,15 +15,16 @@ import { Checkbox, Input, NumberInput, Row, Select, Switch } from '@/components/
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { Tabs } from '@/components/ui/Tabs';
 import { fromInputDateTime, toInputDateTime } from '@/lib/format';
+import { tr } from '@/i18n';
 
 type Tab = 'style' | 'text' | 'coords' | 'levels' | 'visibility';
 
 const TF_GROUPS: { id: 'm' | 'h' | 'D' | 'W' | 'M'; label: string }[] = [
-  { id: 'm', label: 'Minutos' },
-  { id: 'h', label: 'Horas' },
-  { id: 'D', label: 'Dias' },
-  { id: 'W', label: 'Semanas' },
-  { id: 'M', label: 'Meses' },
+  { id: 'm', label: tr('Minutos') },
+  { id: 'h', label: tr('Horas') },
+  { id: 'D', label: tr('Dias') },
+  { id: 'W', label: tr('Semanas') },
+  { id: 'M', label: tr('Meses') },
 ];
 
 export function DrawingSettings() {
@@ -61,11 +62,11 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
   const isPos = d.type === 'long' || d.type === 'short';
   const hasText = ['text', 'note', 'trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowup', 'arrowdown', 'arrowline', 'infoline'].includes(d.type);
   const lineText = ['trendline', 'ray', 'extended', 'hline', 'hray', 'vline', 'rect', 'channel', 'arrowline', 'infoline'].includes(d.type);
-  const tabs: { value: typeof tab; label: string }[] = [{ value: 'style', label: 'Estilo' }];
-  if (hasText) tabs.push({ value: 'text', label: 'Texto' });
-  if (isFib) tabs.push({ value: 'levels', label: 'Níveis' });
-  tabs.push({ value: 'coords', label: isPos ? 'Valores' : 'Coordenadas' });
-  tabs.push({ value: 'visibility', label: 'Visibilidade' });
+  const tabs: { value: typeof tab; label: string }[] = [{ value: 'style', label: tr('Estilo') }];
+  if (hasText) tabs.push({ value: 'text', label: tr('Texto') });
+  if (isFib) tabs.push({ value: 'levels', label: tr('Níveis') });
+  tabs.push({ value: 'coords', label: isPos ? tr('Valores') : tr('Coordenadas') });
+  tabs.push({ value: 'visibility', label: tr('Visibilidade') });
   const visible = d.style.visibleOn ?? TF_GROUPS.map((g) => g.id);
   const levels: FibLevel[] = d.style.levels ?? DEFAULT_FIB_LEVELS;
   const setLevels = (lv: FibLevel[]) => setStyle({ levels: lv });
@@ -74,7 +75,7 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
     <Dialog
       open
       onClose={close}
-      title={def?.label ?? 'Desenho'}
+      title={def?.label ?? tr('Desenho')}
       width={460}
       footer={
         <>
@@ -91,7 +92,7 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
       {tab === 'style' && (
         <div className="divide-y divide-line">
           {!isPos && (
-            <Row label="Linha">
+            <Row label={tr('Linha')}>
               <ColorPicker value={d.style.color} isAuto={d.style.color === 'auto'} onReset={() => setStyle({ color: 'auto' })} onChange={(c) => setStyle({ color: c })} />
               <Select className="w-20" value={String(d.style.width)} onChange={(e) => setStyle({ width: Number(e.target.value) })}>
                 {[1, 2, 3, 4].map((w) => (
@@ -101,38 +102,38 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
                 ))}
               </Select>
               <Select className="w-32" value={String(d.style.dash)} onChange={(e) => setStyle({ dash: Number(e.target.value) as 0 | 1 | 2 })}>
-                <option value="0">Contínua</option>
-                <option value="1">Tracejada</option>
-                <option value="2">Pontilhada</option>
+                <option value="0">{tr('Contínua')}</option>
+                <option value="1">{tr('Tracejada')}</option>
+                <option value="2">{tr('Pontilhada')}</option>
               </Select>
             </Row>
           )}
           {d.style.fill !== undefined && !isFib && !isPos && (
-            <Row label="Preenchimento">
+            <Row label={tr('Preenchimento')}>
               <ColorPicker value={d.style.fill || 'rgba(41,98,255,0.15)'} onChange={(c) => setStyle({ fill: c })} withAlpha />
               <Switch checked={!!d.style.fill} onChange={(v) => setStyle({ fill: v ? 'rgba(41,98,255,0.15)' : '' })} />
             </Row>
           )}
           {isFib && (
-            <Row label="Fundo entre níveis">
+            <Row label={tr('Fundo entre níveis')}>
               <Switch checked={!!d.style.fill} onChange={(v) => setStyle({ fill: v ? 'on' : '' })} />
             </Row>
           )}
           {['trendline', 'ray', 'extended', 'infoline', 'arrowline', 'channel', 'rect', 'fib', 'fibext'].includes(d.type) && (
-            <Row label="Prolongar">
-              {d.type !== 'rect' && d.type !== 'fib' && d.type !== 'fibext' && <Checkbox checked={!!d.style.extendLeft} onChange={(v) => setStyle({ extendLeft: v })} label="Esquerda" />}
-              <Checkbox checked={!!d.style.extendRight} onChange={(v) => setStyle({ extendRight: v })} label="Direita" />
+            <Row label={tr('Prolongar')}>
+              {d.type !== 'rect' && d.type !== 'fib' && d.type !== 'fibext' && <Checkbox checked={!!d.style.extendLeft} onChange={(v) => setStyle({ extendLeft: v })} label={tr('Esquerda')} />}
+              <Checkbox checked={!!d.style.extendRight} onChange={(v) => setStyle({ extendRight: v })} label={tr('Direita')} />
             </Row>
           )}
           {['trendline', 'ray', 'extended', 'hline', 'hray', 'fib'].includes(d.type) && (
-            <Row label={d.type === 'fib' ? 'Mostrar preços' : d.type === 'hline' || d.type === 'hray' ? 'Etiqueta no eixo' : 'Estatísticas'}>
+            <Row label={d.type === 'fib' ? tr('Mostrar preços') : d.type === 'hline' || d.type === 'hray' ? tr('Etiqueta no eixo') : tr('Estatísticas')}>
               <Switch checked={d.style.showLabel !== false && (d.type === 'hline' || d.type === 'hray' || d.type === 'fib' || !!d.style.showLabel)} onChange={(v) => setStyle({ showLabel: v })} />
             </Row>
           )}
-          <Row label="Bloqueado">
+          <Row label={tr('Bloqueado')}>
             <Switch checked={!!d.locked} onChange={(v) => st.update(target.symbolId, d.id, { locked: v })} />
           </Row>
-          <Row label="Visível">
+          <Row label={tr('Visível')}>
             <Switch checked={!d.hidden} onChange={(v) => st.update(target.symbolId, d.id, { hidden: !v })} />
           </Row>
         </div>
@@ -144,11 +145,11 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
             value={d.style.text ?? ''}
             onChange={(e) => setStyle({ text: e.target.value })}
             rows={4}
-            placeholder="Escreva o texto…"
+            placeholder={tr('Escreva o texto…')}
             className="w-full resize-none rounded-md border border-line bg-input p-2.5 text-[13px] outline-none focus:border-accent"
           />
           <div className="flex flex-wrap items-center gap-3">
-            <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label="Cor do texto" />
+            <ColorPicker value={d.style.textColor ?? d.style.color} onChange={(c) => setStyle({ textColor: c })} label={tr('Cor do texto')} />
             <Select className="w-24" value={String(d.style.fontSize ?? 14)} onChange={(e) => setStyle({ fontSize: Number(e.target.value) })}>
               {[10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40].map((s) => (
                 <option key={s} value={s}>
@@ -156,44 +157,44 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
                 </option>
               ))}
             </Select>
-            <Checkbox checked={!!d.style.bold} onChange={(v) => setStyle({ bold: v })} label="Negrito" />
-            <Checkbox checked={!!d.style.italic} onChange={(v) => setStyle({ italic: v })} label="Itálico" />
+            <Checkbox checked={!!d.style.bold} onChange={(v) => setStyle({ bold: v })} label={tr('Negrito')} />
+            <Checkbox checked={!!d.style.italic} onChange={(v) => setStyle({ italic: v })} label={tr('Itálico')} />
             {(d.type === 'text' || d.type === 'note') && (
               <>
-                <span className="text-xs text-muted">Fundo</span>
+                <span className="text-xs text-muted">{tr('Fundo')}</span>
                 <ColorPicker value={d.style.fill || 'rgba(0,0,0,0)'} onChange={(c) => setStyle({ fill: c })} withAlpha />
               </>
             )}
           </div>
           {lineText && (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs text-muted">Posição</span>
+              <span className="text-xs text-muted">{tr('Posição')}</span>
               <Seg
                 value={d.style.textAlign ?? (d.type === 'hline' ? 'right' : d.type === 'hray' || d.type === 'vline' ? 'left' : 'center')}
                 onChange={(v) => setStyle({ textAlign: v })}
                 items={[
-                  { value: 'left', label: <AlignLeft size={13} />, title: 'Início' },
-                  { value: 'center', label: <AlignCenter size={13} />, title: 'Centro' },
-                  { value: 'right', label: <AlignRight size={13} />, title: 'Fim' },
+                  { value: 'left', label: <AlignLeft size={13} />, title: tr('Início') },
+                  { value: 'center', label: <AlignCenter size={13} />, title: tr('Centro') },
+                  { value: 'right', label: <AlignRight size={13} />, title: tr('Fim') },
                 ]}
               />
               <Seg
                 value={d.style.textVAlign ?? (d.type === 'rect' ? 'middle' : 'top')}
                 onChange={(v) => setStyle({ textVAlign: v })}
                 items={[
-                  { value: 'top', label: 'Cima', title: d.type === 'rect' ? 'Em cima' : 'Por cima da linha' },
-                  { value: 'middle', label: 'Meio', title: d.type === 'rect' ? 'Ao meio' : 'Sobre a linha' },
-                  { value: 'bottom', label: 'Baixo', title: d.type === 'rect' ? 'Em baixo' : 'Por baixo da linha' },
+                  { value: 'top', label: tr('Cima'), title: d.type === 'rect' ? tr('Em cima') : tr('Por cima da linha') },
+                  { value: 'middle', label: tr('Meio'), title: d.type === 'rect' ? tr('Ao meio') : tr('Sobre a linha') },
+                  { value: 'bottom', label: tr('Baixo'), title: d.type === 'rect' ? tr('Em baixo') : tr('Por baixo da linha') },
                 ]}
               />
             </div>
           )}
-          <p className="text-[11px] text-muted">Para voltar a usar este texto e estilo noutras linhas: “Modelo” → “Guardar como modelo…”.</p>
+          <p className="text-[11px] text-muted">{tr('Para voltar a usar este texto e estilo noutras linhas: “Modelo” → “Guardar como modelo…”.')}</p>
         </div>
       )}
       {tab === 'visibility' && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-muted">Mostrar este desenho nos intervalos:</p>
+          <p className="text-xs text-muted">{tr('Mostrar este desenho nos intervalos:')}</p>
           {TF_GROUPS.map((g) => (
             <Checkbox
               key={g.id}
@@ -214,13 +215,13 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
               <Checkbox checked={lv.visible} onChange={(v) => setLevels(levels.map((x, k) => (k === i ? { ...x, visible: v } : x)))} />
               <NumberInput className="w-24" value={lv.value} step={0.001} onChange={(v) => v !== undefined && setLevels(levels.map((x, k) => (k === i ? { ...x, value: v } : x)))} />
               <ColorPicker value={lv.color} onChange={(c) => setLevels(levels.map((x, k) => (k === i ? { ...x, color: c } : x)))} />
-              <button type="button" aria-label="Remover nível" className="rounded p-1 text-muted hover:text-down" onClick={() => setLevels(levels.filter((_, k) => k !== i))}>
+              <button type="button" aria-label={tr('Remover nível')} className="rounded p-1 text-muted hover:text-down" onClick={() => setLevels(levels.filter((_, k) => k !== i))}>
                 <Trash2 size={14} />
               </button>
             </div>
           ))}
           <Button size="sm" variant="ghost" className="self-start" onClick={() => setLevels([...levels, { value: 0.886, color: '#2962ff', visible: true }])}>
-            <Plus size={14} /> Adicionar nível
+            <Plus size={14} /> {tr('Adicionar nível')}
           </Button>
         </div>
       )}
@@ -228,7 +229,7 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
         <div className="divide-y divide-line">
           {!isPos &&
             d.points.slice(0, 6).map((p, i) => (
-              <Row key={i} label={`Ponto ${i + 1}`}>
+              <Row key={i} label={tr('Ponto {0}', i + 1)}>
                 <Input
                   type="datetime-local"
                   className="w-48"
@@ -244,19 +245,19 @@ function DrawingSettingsInner({ target }: { target: NonNullable<ReturnType<typeo
             ))}
           {isPos && d.data && (
             <>
-              <Row label="Entrada">
+              <Row label={tr('Entrada')}>
                 <NumberInput className="w-32" value={+d.points[0].price.toFixed(sym.precision)} step={Math.pow(10, -sym.precision)} onChange={(v) => v !== undefined && st.update(target.symbolId, d.id, { points: [{ ...d.points[0], price: v }, { ...d.points[1], price: v }] })} />
               </Row>
               <Row label="Stop">
                 <NumberInput className="w-32" value={+d.data.stop.toFixed(sym.precision)} step={Math.pow(10, -sym.precision)} onChange={(v) => v !== undefined && st.update(target.symbolId, d.id, { data: { ...d.data!, stop: v } })} />
               </Row>
-              <Row label="Alvo">
+              <Row label={tr('Alvo')}>
                 <NumberInput className="w-32" value={+d.data.target.toFixed(sym.precision)} step={Math.pow(10, -sym.precision)} onChange={(v) => v !== undefined && st.update(target.symbolId, d.id, { data: { ...d.data!, target: v } })} />
               </Row>
-              <Row label="Tamanho da conta">
+              <Row label={tr('Tamanho da conta')}>
                 <NumberInput className="w-32" value={d.data.account} step={100} min={1} onChange={(v) => v !== undefined && st.update(target.symbolId, d.id, { data: { ...d.data!, account: v } })} />
               </Row>
-              <Row label="Risco (%)">
+              <Row label={tr('Risco (%)')}>
                 <NumberInput className="w-32" value={d.data.riskPct} step={0.25} min={0.01} max={100} onChange={(v) => v !== undefined && st.update(target.symbolId, d.id, { data: { ...d.data!, riskPct: v } })} />
               </Row>
             </>

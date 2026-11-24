@@ -10,10 +10,11 @@ import { auth } from '@/lib/firebase';
 import { logout, useAuth } from '@/lib/auth';
 import { backtestsLeftToday, closeUpgrade, featureText, useBilling, usePlan } from '@/lib/billing';
 import { FREE_LIMITS, PLANS, PRO_BENEFITS, TRIAL_DAYS, type PlanId } from '@/core/plans';
+import { locale, tr } from '@/i18n';
 
 const PENDING_KEY = 'rx-pending-payment';
-const mzn = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
-const fmtDate = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }) : '—');
+const mzn = (n: number) => `${n.toLocaleString(locale())} MT`;
+const fmtDate = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString(locale(), { day: '2-digit', month: 'long', year: 'numeric' }) : '—');
 
 type PayState = { ref: string; status: 'pending' | 'paid' | 'failed' } | null;
 
@@ -75,7 +76,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
         if (j.status === 'paid') {
           writePending(null);
           setPay({ ref: payRef, status: 'paid' });
-          toast('Pagamento confirmado', { kind: 'success', body: 'O plano Pro já está ativo.' });
+          toast(tr('Pagamento confirmado'), { kind: 'success', body: tr('O plano Pro já está ativo.') });
           return;
         }
         if (j.status === 'failed') {
@@ -105,9 +106,9 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
         headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ planId: selected }),
       });
-      if (r.status === 404) throw new Error('Os pagamentos ainda não estão ativos neste servidor.');
+      if (r.status === 404) throw new Error(tr('Os pagamentos ainda não estão ativos neste servidor.'));
       const j = (await r.json().catch(() => ({}))) as { reference?: string; checkoutUrl?: string; error?: string };
-      if (!r.ok || !j.checkoutUrl || !j.reference) throw new Error(j.error || 'Não foi possível iniciar o pagamento.');
+      if (!r.ok || !j.checkoutUrl || !j.reference) throw new Error(j.error ? tr(j.error) : tr('Não foi possível iniciar o pagamento.'));
       writePending(j.reference);
       setPay({ ref: j.reference, status: 'pending' });
       if (win) win.location.href = j.checkoutUrl;
@@ -120,7 +121,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
     }
   };
 
-  const current = plan.reason === 'lifetime' ? 'Pro vitalício' : plan.reason === 'paid' ? `Pro até ${fmtDate(plan.endsAt)}` : plan.reason === 'trial' ? `Teste do Pro: falta${plan.daysLeft === 1 ? '' : 'm'} ${plan.daysLeft} dia${plan.daysLeft === 1 ? '' : 's'}` : 'Plano grátis';
+  const current = plan.reason === 'lifetime' ? tr('Pro vitalício') : plan.reason === 'paid' ? tr('Pro até {0}', fmtDate(plan.endsAt)) : plan.reason === 'trial' ? tr('Teste do Pro: falta{0} {1} dia{2}', plan.daysLeft === 1 ? '' : 'm', plan.daysLeft, plan.daysLeft === 1 ? '' : 's') : tr('Plano grátis');
 
   return (
     <Dialog
@@ -138,9 +139,9 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
 
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-sunken px-3 py-2 text-[13px]">
           <span>
-            Agora: <b>{current}</b>
+            {tr('Agora:')} <b>{current}</b>
           </span>
-          {plan.reason === 'free' && <span className="text-xs text-muted">Backtests restantes hoje: {backtestsLeftToday()} de {FREE_LIMITS.backtestsPerDay}</span>}
+          {plan.reason === 'free' && <span className="text-xs text-muted">{tr('Backtests restantes hoje:')} {backtestsLeftToday()} de {FREE_LIMITS.backtestsPerDay}</span>}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -151,7 +152,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
               </li>
             ))}
             <li className="pt-1 text-xs text-muted">
-              Grátis: replay a partir de {FREE_LIMITS.replayMinTf}, 1 gráfico, {FREE_LIMITS.indicatorsPerChart} indicadores por gráfico e {FREE_LIMITS.backtestsPerDay} backtests por dia. Contas novas têm {TRIAL_DAYS} dias de Pro grátis.
+              {tr('Grátis: replay a partir de')} {FREE_LIMITS.replayMinTf}{tr(', 1 gráfico,')} {FREE_LIMITS.indicatorsPerChart} {tr('indicadores por gráfico e')} {FREE_LIMITS.backtestsPerDay} {tr('backtests por dia. Contas novas têm')} {TRIAL_DAYS} {tr('dias de Pro grátis.')}
             </li>
           </ul>
 
@@ -166,7 +167,7 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
               >
                 <span>
                   <span className="block text-[13px] font-semibold">{p.label}</span>
-                  <span className="block text-xs text-muted">{p.months === 1 ? 'por mês' : `${p.months} meses · ${mzn(Math.round(p.amount / p.months))}/mês`}</span>
+                  <span className="block text-xs text-muted">{p.months === 1 ? tr('por mês') : tr('{0} meses · {1}/mês', p.months, mzn(Math.round(p.amount / p.months)))}</span>
                 </span>
                 <span className="text-right">
                   <span className="block text-[15px] font-bold tabular-nums">{mzn(p.amount)}</span>
@@ -179,17 +180,17 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
 
         {pay?.status === 'pending' && (
           <div className="flex items-center gap-2 rounded-lg bg-sunken px-3 py-2 text-[13px]">
-            <Loader2 size={15} className="animate-spin text-accent" /> À espera da confirmação do pagamento ({pay.ref}). Pode fechar esta janela; o plano ativa-se sozinho.
+            <Loader2 size={15} className="animate-spin text-accent" /> {tr('À espera da confirmação do pagamento (')}{pay.ref}{tr('). Pode fechar esta janela; o plano ativa-se sozinho.')}
           </div>
         )}
         {pay?.status === 'paid' && (
           <div className="flex items-center gap-2 rounded-lg bg-up/10 px-3 py-2 text-[13px] text-up">
-            <CheckCircle2 size={15} /> Pagamento confirmado. Obrigado!
+            <CheckCircle2 size={15} /> {tr('Pagamento confirmado. Obrigado!')}
           </div>
         )}
         {pay?.status === 'failed' && (
           <div className="flex items-center gap-2 rounded-lg bg-down/10 px-3 py-2 text-[13px] text-down">
-            <XCircle size={15} /> O pagamento não foi concluído. Pode tentar de novo.
+            <XCircle size={15} /> {tr('O pagamento não foi concluído. Pode tentar de novo.')}
           </div>
         )}
         {error && <div className="rounded-lg bg-down/10 px-3 py-2 text-[13px] text-down">{error}</div>}
@@ -205,25 +206,25 @@ function UpgradeDialogInner({ feature }: { feature: Parameters<typeof featureTex
               router.replace('/');
             }}
           >
-            Criar conta para assinar o Pro
+            {tr('Criar conta para assinar o Pro')}
           </Button>
         ) : (
           <Button variant="primary" size="lg" block disabled={busy} onClick={checkout} data-testid="pay-button">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
-            Pagar {mzn(PLANS.find((p) => p.id === selected)!.amount)} com M-Pesa ou cartão
+            {tr('Pagar')} {mzn(PLANS.find((p) => p.id === selected)!.amount)} {tr('com M-Pesa ou cartão')}
           </Button>
         )}
         <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted">
-          <ShieldCheck size={13} /> Pagamento seguro pela ZumboPay. Renovação manual: nada é cobrado sem confirmar.
+          <ShieldCheck size={13} /> {tr('Pagamento seguro pela ZumboPay. Renovação manual: nada é cobrado sem confirmar.')}
         </div>
         <div className="text-center text-[11px] text-muted">
-          Ao pagar aceita os{' '}
+          {tr('Ao pagar aceita os')}{' '}
           <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-            Termos
+            {tr('Termos')}
           </a>{' '}
-          (sem reembolso, exceto cobrança indevida) e o{' '}
+          {tr('(sem reembolso, exceto cobrança indevida) e o')}{' '}
           <a href="/aviso-de-risco" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-            Aviso de risco
+            {tr('Aviso de risco')}
           </a>
           .
         </div>

@@ -6,6 +6,7 @@ import { runScript, scriptToProgram, type ScriptRunResult } from './script';
 import { optimize, walkForwardEfficiency, walkForwardWindows, type Candidate, type OptimizeConfig, type WalkForwardConfig, type WalkForwardFold } from './optimizer';
 import type { BacktestResult, BacktestSettings, SpecData, StrategyProgram } from './types';
 import { computeStats, monteCarlo, type Stats } from '../trading/stats';
+import { tr } from '@/i18n';
 
 /** Pedidos tratados pelo worker de estratégias (ou no próprio thread, se não houver workers). */
 
@@ -61,7 +62,7 @@ function withParams(ref: StrategyRef, params: Record<string, number>): StrategyR
 export function buildProgram(ref: StrategyRef, bars: Bar[]): StrategyProgram {
   if (ref.kind === 'visual') return compileVisual(ref.strategy, bars);
   const { program, result } = scriptToProgram(ref.code, bars, ref.overrides);
-  if (!program) throw new Error(result.meta.kind === 'strategy' ? 'A estratégia não tem onBar(i => …)' : 'Este script é um indicador, não uma estratégia (use strategy(...) e onBar).');
+  if (!program) throw new Error(result.meta.kind === 'strategy' ? tr('A estratégia não tem onBar(i => …)') : tr('Este script é um indicador, não uma estratégia (use strategy(...) e onBar).'));
   return program;
 }
 
@@ -102,7 +103,7 @@ export async function handle(req: RunnerRequest, progress: (done: number, total:
         const w = windows[k];
         const isSettings: BacktestSettings = { ...req.settings, startTime: bars[w.is[0]].time, endTime: bars[w.is[1]].time };
         const isData: Dataset = { ...req.data, bars: bars.slice(0, w.is[1]) };
-        progress(k, windows.length, `Janela ${k + 1}/${windows.length}: a aprender`);
+        progress(k, windows.length, tr('Janela {0}/{1}: a aprender', k + 1, windows.length));
         const cands: Candidate[] = await optimize(
           (params) => backtestRef(withParams(req.strategy, params), isData, isSettings).stats,
           { ...req.config, maxRuns: perFold },

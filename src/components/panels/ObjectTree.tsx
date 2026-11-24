@@ -9,6 +9,7 @@ import { useStrategies } from '@/store/strategies';
 import { resolveSymbol } from '@/core/symbols';
 import { TOOL_ICONS } from '@/components/terminal/DrawingToolbar';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 const EMPTY: never[] = [];
 
@@ -25,28 +26,28 @@ export function ObjectTree() {
   const sym = resolveSymbol(cfg.symbolId);
   return (
     <div className="h-full overflow-y-auto">
-      <div className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Indicadores ({cfg.indicators.length})</div>
+      <div className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">{tr('Indicadores (')}{cfg.indicators.length})</div>
       {cfg.indicators.map((i) => {
         const def = getIndicator(i.type);
         const label = def ? instanceLabel(def, i.params) : scripts.find((s) => `script:${s.id}` === i.type)?.name ?? 'Script';
         return (
           <div key={i.uid} className="group flex h-8 items-center gap-2 px-3 text-[13px] hover:bg-hover">
             <span className={cn('flex-1 truncate', i.hidden && 'text-faint')}>{label}</span>
-            <button type="button" aria-label="Definições" className="hidden rounded p-1 text-muted group-hover:block hover:text-text" onClick={() => useUi.getState().set({ indicatorSettings: { chart: active, uid: i.uid } })}>
+            <button type="button" aria-label={tr('Definições')} className="hidden rounded p-1 text-muted group-hover:block hover:text-text" onClick={() => useUi.getState().set({ indicatorSettings: { chart: active, uid: i.uid } })}>
               <Settings2 size={14} />
             </button>
-            <button type="button" aria-label="Mostrar/ocultar" className="rounded p-1 text-muted hover:text-text" onClick={() => update(i.uid, { hidden: !i.hidden })}>
+            <button type="button" aria-label={tr('Mostrar/ocultar')} className="rounded p-1 text-muted hover:text-text" onClick={() => update(i.uid, { hidden: !i.hidden })}>
               {i.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
-            <button type="button" aria-label="Remover" className="rounded p-1 text-muted hover:text-down" onClick={() => remove(i.uid)}>
+            <button type="button" aria-label={tr('Remover')} className="rounded p-1 text-muted hover:text-down" onClick={() => remove(i.uid)}>
               <Trash2 size={14} />
             </button>
           </div>
         );
       })}
-      {!cfg.indicators.length && <div className="px-3 py-2 text-xs text-muted">Nenhum indicador.</div>}
+      {!cfg.indicators.length && <div className="px-3 py-2 text-xs text-muted">{tr('Nenhum indicador.')}</div>}
       <div className="px-3 pt-4 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">
-        Desenhos em {sym.name} ({drawings.length})
+        {tr('Desenhos em')} {sym.name} ({drawings.length})
       </div>
       {[...drawings].reverse().map((d) => {
         const Icon = TOOL_ICONS[d.type];
@@ -61,22 +62,22 @@ export function ObjectTree() {
               {toolDef(d.type)?.label}
               {d.style.text ? ` · ${d.style.text.slice(0, 20)}` : ''}
             </span>
-            <button type="button" aria-label="Definições" className="hidden rounded p-1 text-muted group-hover:block hover:text-text" onClick={(e) => (e.stopPropagation(), useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))}>
+            <button type="button" aria-label={tr('Definições')} className="hidden rounded p-1 text-muted group-hover:block hover:text-text" onClick={(e) => (e.stopPropagation(), useUi.getState().set({ drawingSettings: { symbolId: cfg.symbolId, id: d.id } }))}>
               <Settings2 size={14} />
             </button>
-            <button type="button" aria-label="Bloquear" className="rounded p-1 text-muted hover:text-text" onClick={(e) => (e.stopPropagation(), st.update(cfg.symbolId, d.id, { locked: !d.locked }))}>
+            <button type="button" aria-label={tr('Bloquear')} className="rounded p-1 text-muted hover:text-text" onClick={(e) => (e.stopPropagation(), st.update(cfg.symbolId, d.id, { locked: !d.locked }))}>
               {d.locked ? <Lock size={14} /> : <LockOpen size={14} />}
             </button>
-            <button type="button" aria-label="Mostrar/ocultar" className="rounded p-1 text-muted hover:text-text" onClick={(e) => (e.stopPropagation(), st.update(cfg.symbolId, d.id, { hidden: !d.hidden }))}>
+            <button type="button" aria-label={tr('Mostrar/ocultar')} className="rounded p-1 text-muted hover:text-text" onClick={(e) => (e.stopPropagation(), st.update(cfg.symbolId, d.id, { hidden: !d.hidden }))}>
               {d.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
-            <button type="button" aria-label="Remover" className="rounded p-1 text-muted hover:text-down" onClick={(e) => (e.stopPropagation(), st.remove(cfg.symbolId, d.id))}>
+            <button type="button" aria-label={tr('Remover')} className="rounded p-1 text-muted hover:text-down" onClick={(e) => (e.stopPropagation(), st.remove(cfg.symbolId, d.id))}>
               <Trash2 size={14} />
             </button>
           </div>
         );
       })}
-      {!drawings.length && <div className="px-3 py-2 text-xs text-muted">Ainda sem desenhos neste símbolo. Os desenhos aparecem em todos os timeframes.</div>}
+      {!drawings.length && <div className="px-3 py-2 text-xs text-muted">{tr('Ainda sem desenhos neste símbolo. Os desenhos aparecem em todos os timeframes.')}</div>}
     </div>
   );
 }

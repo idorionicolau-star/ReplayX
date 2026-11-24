@@ -33,6 +33,7 @@ import { useScriptIndicators } from './useScriptIndicators';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/components/ui/cn';
+import { locale, tr } from '@/i18n';
 
 export function ChartPane({ index }: { index: number }) {
   const cfg = useWorkspace((s) => s.charts[index]);
@@ -257,7 +258,7 @@ export function ChartPane({ index }: { index: number }) {
         position: buy ? 'belowBar' : 'aboveBar',
         shape: buy ? 'arrowUp' : 'arrowDown',
         color: f.kind === 'exit' ? '#9c27b0' : buy ? '#2962ff' : '#f23645',
-        text: f.kind === 'entry' ? (f.side === 'long' ? 'Long' : 'Short') : f.pnl !== undefined ? fmtMoney(f.pnl) : 'Saída',
+        text: f.kind === 'entry' ? (f.side === 'long' ? 'Long' : 'Short') : f.pnl !== undefined ? fmtMoney(f.pnl) : tr('Saída'),
       };
     });
     ctrl.setStrategyMarkers(markers.slice(-1500));
@@ -272,7 +273,7 @@ export function ChartPane({ index }: { index: number }) {
           .getState()
           .alerts.filter((a) => a.symbolId === symbolId && a.active && a.source.kind === 'price')
           .flatMap((a) => {
-            const name = a.name || 'Alerta';
+            const name = a.name || tr('Alerta');
             if (a.target.kind === 'value') return [{ price: a.target.value, label: `${name} ${a.target.value.toFixed(symbol.precision)}` }];
             if (a.target.kind === 'range')
               return [
@@ -356,14 +357,14 @@ export function ChartPane({ index }: { index: number }) {
       {ctrl && historyAsk && (
         <div className="absolute bottom-16 left-1/2 z-30 w-[min(420px,calc(100%-16px))] -translate-x-1/2 rounded-lg border border-line bg-elev p-3 shadow-pop" data-testid="history-ask" onPointerDown={(e) => e.stopPropagation()}>
           <p className="text-[12px] leading-snug">
-            Os indicadores querem carregar mais histórico (até cerca de <b>{historyAsk.mb} MB</b>, mais {historyAsk.extra.toLocaleString('pt-PT')} velas) para procurar sinais no passado. Já tens {historyAsk.loaded.toLocaleString('pt-PT')}.
+            {tr('Os indicadores querem carregar mais histórico (até cerca de')} <b>{historyAsk.mb} MB</b>{tr(', mais')} {historyAsk.extra.toLocaleString(locale())} {tr('velas) para procurar sinais no passado. Já tens')} {historyAsk.loaded.toLocaleString(locale())}.
           </p>
           <div className="mt-2 flex justify-end gap-2">
             <button type="button" className="h-8 rounded-md px-3 text-xs text-muted hover:bg-hover" onClick={() => ctrl.answerHistory(false)} data-testid="history-no">
-              Agora não
+              {tr('Agora não')}
             </button>
             <button type="button" className="h-8 rounded-md bg-accent px-3 text-xs font-semibold text-on-accent hover:bg-accent-hover" onClick={() => ctrl.answerHistory(true)} data-testid="history-yes">
-              Carregar
+              {tr('Carregar')}
             </button>
           </div>
         </div>
@@ -375,7 +376,7 @@ export function ChartPane({ index }: { index: number }) {
       {status.state === 'loading' && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <div className="flex items-center gap-2 rounded-lg border border-line bg-elev/95 px-3 py-2 text-xs text-muted shadow-pop">
-            <Spinner size={14} className="text-accent" /> A carregar {symbol.name}…
+            <Spinner size={14} className="text-accent" /> {tr('A carregar')} {symbol.name}…
           </div>
         </div>
       )}
@@ -383,17 +384,17 @@ export function ChartPane({ index }: { index: number }) {
         <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
           <div className="max-w-sm rounded-xl border border-line bg-elev p-4 text-center shadow-pop">
             <AlertTriangle size={22} className="mx-auto text-warn" />
-            <div className="mt-2 text-[13px] font-medium">Não foi possível mostrar {symbol.name}</div>
+            <div className="mt-2 text-[13px] font-medium">{tr('Não foi possível mostrar')} {symbol.name}</div>
             <div className="mt-1 text-xs break-words text-muted">{status.message}</div>
             <div className="mt-3 flex justify-center gap-2">
               <Button size="sm" variant="primary" onClick={() => ctrl?.reload()}>
-                <RefreshCw size={14} /> Tentar de novo
+                <RefreshCw size={14} /> {tr('Tentar de novo')}
               </Button>
               <Button size="sm" onClick={() => useUi.getState().openSymbolSearch('', index)}>
-                Outro símbolo
+                {tr('Outro símbolo')}
               </Button>
             </div>
-            {symbol.provider !== 'demo' && <div className="mt-3 text-[11px] text-muted">Sem internet? Experimente os símbolos “Simulado (offline)”.</div>}
+            {symbol.provider !== 'demo' && <div className="mt-3 text-[11px] text-muted">{tr('Sem internet? Experimente os símbolos “Simulado (offline)”.')}</div>}
           </div>
         </div>
       )}

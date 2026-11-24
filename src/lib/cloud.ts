@@ -9,6 +9,7 @@ import { useDrawings } from '@/store/drawings';
 import { useTrading } from '@/store/trading';
 import { useStrategies } from '@/store/strategies';
 import { useAlerts } from '@/store/alerts';
+import { tr } from '@/i18n';
 
 /**
  * Sincronização na nuvem (Firestore): cada utilizador tem os seus documentos em
@@ -64,7 +65,7 @@ async function push(e: Entry) {
   const data = e.pick(e.store.getState());
   const json = JSON.stringify(data);
   if (json.length > MAX_BYTES) {
-    useSync.setState({ state: 'error', message: `"${e.key}" é grande demais para a nuvem (fica só neste dispositivo).` });
+    useSync.setState({ state: 'error', message: tr('"{0}" é grande demais para a nuvem (fica só neste dispositivo).', e.key) });
     return;
   }
   useSync.setState({ state: 'syncing' });
@@ -80,8 +81,8 @@ function handleError(err: unknown) {
   const code = String((err as { code?: string })?.code ?? '');
   if (code === 'permission-denied') {
     denied = true;
-    useSync.setState({ state: 'error', message: 'A nuvem recusou o acesso (regras do Firestore). Os dados ficam guardados neste dispositivo.' });
-  } else useSync.setState({ state: 'error', message: 'Sem ligação à nuvem. Os dados ficam guardados neste dispositivo.' });
+    useSync.setState({ state: 'error', message: tr('A nuvem recusou o acesso (regras do Firestore). Os dados ficam guardados neste dispositivo.') });
+  } else useSync.setState({ state: 'error', message: tr('Sem ligação à nuvem. Os dados ficam guardados neste dispositivo.') });
 }
 
 function schedule(e: Entry) {

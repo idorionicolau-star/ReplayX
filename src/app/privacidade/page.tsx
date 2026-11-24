@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal/LegalLayout';
 import { Contact } from '@/components/legal/Contact';
+import { ByLang } from '@/components/legal/ByLang';
+import { PrivacyEn } from '@/components/legal/en/PrivacyEn';
 import { OPERATOR } from '@/lib/legal';
 
 export const metadata: Metadata = { title: 'Política de privacidade — ReplayX' };
@@ -8,6 +10,14 @@ export const metadata: Metadata = { title: 'Política de privacidade — ReplayX
 export default function Privacidade() {
   return (
     <LegalLayout title="Política de privacidade">
+      <ByLang pt={<Pt />} en={<PrivacyEn />} />
+    </LegalLayout>
+  );
+}
+
+function Pt() {
+  return (
+    <>
       <p>Explicamos que dados o ReplayX recolhe, para que servem e quais são os seus direitos. O responsável pelo tratamento dos dados é {OPERATOR}, titular do ReplayX.</p>
 
       <h2>1. Que dados recolhemos</h2>
@@ -82,6 +92,6 @@ export default function Privacidade() {
 
       <h2>10. Contacto</h2>
       <Contact />
-    </LegalLayout>
+    </>
   );
 }

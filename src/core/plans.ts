@@ -1,4 +1,5 @@
 import { tfSeconds } from './timeframes';
+import { tr } from '@/i18n';
 
 /** Planos do ReplayX Pro (MZN), pagos pela ZumboPay (M-Pesa e cartão). Preços num único sítio. */
 export type PlanId = 'mensal' | 'trimestral' | 'anual';
@@ -11,9 +12,9 @@ export interface Plan {
 }
 
 export const PLANS: Plan[] = [
-  { id: 'mensal', label: 'Mensal', months: 1, amount: 100 },
-  { id: 'trimestral', label: 'Trimestral', months: 3, amount: 270, note: 'Poupa 10%' },
-  { id: 'anual', label: 'Anual', months: 12, amount: 1000, note: 'Poupa 17%' },
+  { id: 'mensal', label: tr('Mensal'), months: 1, amount: 100 },
+  { id: 'trimestral', label: tr('Trimestral'), months: 3, amount: 270, note: tr('Poupa 10%') },
+  { id: 'anual', label: tr('Anual'), months: 12, amount: 1000, note: tr('Poupa 17%') },
 ];
 
 export const planById = (id: string): Plan | undefined => PLANS.find((p) => p.id === id);
@@ -21,7 +22,7 @@ export const planById = (id: string): Plan | undefined => PLANS.find((p) => p.id
 /** Dias de tolerância depois do fim do período pago. */
 export const GRACE_DAYS = 2;
 /** Dias de Pro grátis para contas novas (contados desde a criação da conta). */
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 30;
 
 /** Limites do plano grátis. */
 export const FREE_LIMITS = {
@@ -36,19 +37,19 @@ export const FREE_LIMITS = {
 export type ProFeature = 'layout' | 'replayTf' | 'indicators' | 'backtests' | 'optimizer';
 
 export const FEATURE_TEXT: Record<ProFeature, string> = {
-  layout: 'Vários gráficos ao mesmo tempo são do plano Pro.',
-  replayTf: `No plano grátis o replay funciona a partir de ${FREE_LIMITS.replayMinTf}. O Pro desbloqueia 1m, 5m e todos os intervalos.`,
-  indicators: `O plano grátis permite ${FREE_LIMITS.indicatorsPerChart} indicadores por gráfico.`,
-  backtests: `O plano grátis permite ${FREE_LIMITS.backtestsPerDay} backtests por dia.`,
-  optimizer: 'Otimizador, walk-forward e teste em vários mercados são do plano Pro.',
+  layout: tr('Vários gráficos ao mesmo tempo são do plano Pro.'),
+  replayTf: tr('No plano grátis o replay funciona a partir de {0}. O Pro desbloqueia 1m, 5m e todos os intervalos.', FREE_LIMITS.replayMinTf),
+  indicators: tr('O plano grátis permite {0} indicadores por gráfico.', FREE_LIMITS.indicatorsPerChart),
+  backtests: tr('O plano grátis permite {0} backtests por dia.', FREE_LIMITS.backtestsPerDay),
+  optimizer: tr('Otimizador, walk-forward e teste em vários mercados são do plano Pro.'),
 };
 
 export const PRO_BENEFITS = [
-  'Replay em todos os intervalos (1m, 5m…)',
-  'Até 4 gráficos sincronizados',
-  'Indicadores sem limite',
-  'Backtests sem limite',
-  'Otimizador, walk-forward e multi-mercado',
+  tr('Replay em todos os intervalos (1m, 5m…)'),
+  tr('Até 4 gráficos sincronizados'),
+  tr('Indicadores sem limite'),
+  tr('Backtests sem limite'),
+  tr('Otimizador, walk-forward e multi-mercado'),
 ];
 
 /** Dados de faturação do utilizador (escritos só pelo servidor em `replayx_users/{uid}`). */

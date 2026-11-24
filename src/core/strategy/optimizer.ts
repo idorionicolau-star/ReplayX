@@ -1,4 +1,5 @@
 import type { Stats } from '../trading/stats';
+import { tr } from '@/i18n';
 
 /**
  * Otimização de parâmetros ("aprender"): grelha, aleatória ou algoritmo genético,
@@ -17,13 +18,13 @@ export interface OptimizeRange {
 export type Objective = 'netProfit' | 'profitFactor' | 'sharpe' | 'winRate' | 'expectancy' | 'recovery' | 'netProfitDD';
 
 export const OBJECTIVE_LABEL: Record<Objective, string> = {
-  netProfit: 'Lucro líquido',
-  profitFactor: 'Fator de lucro',
+  netProfit: tr('Lucro líquido'),
+  profitFactor: tr('Fator de lucro'),
   sharpe: 'Sharpe',
-  winRate: 'Taxa de acerto',
-  expectancy: 'Expectativa por operação',
-  recovery: 'Fator de recuperação',
-  netProfitDD: 'Lucro / drawdown',
+  winRate: tr('Taxa de acerto'),
+  expectancy: tr('Expectativa por operação'),
+  recovery: tr('Fator de recuperação'),
+  netProfitDD: tr('Lucro / drawdown'),
 };
 
 export interface OptimizeConfig {

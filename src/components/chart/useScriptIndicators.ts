@@ -5,6 +5,7 @@ import type { IndicatorInstance } from '@/core/indicators/registry';
 import { useStrategies } from '@/store/strategies';
 import { runStrategy } from '@/core/strategy/client';
 import type { ScriptRunResult } from '@/core/strategy/script';
+import { tr } from '@/i18n';
 
 /** Corre (no worker) os scripts do utilizador adicionados ao gráfico como indicadores. */
 export function useScriptIndicators(ctrl: ChartController | null, indicators: IndicatorInstance[], barsVersion: number) {
@@ -30,7 +31,7 @@ export function useScriptIndicators(ctrl: ChartController | null, indicators: In
           const id = inst.type.slice(7);
           const sc = scripts.find((s) => s.id === id);
           if (!sc) {
-            ctrl.setScriptResult(inst.uid, { title: 'Script removido', overlay: true, plots: [], shapes: [], hlines: [], error: 'O script já não existe.' });
+            ctrl.setScriptResult(inst.uid, { title: tr('Script removido'), overlay: true, plots: [], shapes: [], hlines: [], error: tr('O script já não existe.') });
             continue;
           }
           try {

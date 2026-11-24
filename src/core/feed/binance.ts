@@ -3,6 +3,7 @@ import type { Bar, SymbolInfo } from '../types';
 import { parseTf, tfToString, type Timeframe } from '../timeframes';
 import { backoffDelay, fetchJson, ProviderError, type FetchArgs, type Provider, type Quote } from './provider';
 import { registerSymbol } from '../symbols';
+import { tr } from '@/i18n';
 
 const REST_BASES = ['https://data-api.binance.vision', 'https://api.binance.com', 'https://api1.binance.com'];
 const WS_BASES = ['wss://data-stream.binance.vision', 'wss://stream.binance.com:9443'];
@@ -31,7 +32,7 @@ async function rest<T>(path: string): Promise<T> {
       lastErr = e;
     }
   }
-  throw new ProviderError(`Binance indisponível: ${(lastErr as Error)?.message ?? lastErr}`, 'binance');
+  throw new ProviderError(tr('Binance indisponível: {0}', (lastErr as Error)?.message ?? lastErr), 'binance');
 }
 
 type Kline = [number, string, string, string, string, string, number, ...unknown[]];
@@ -139,7 +140,7 @@ export const binanceProvider: Provider = {
     if (args.from !== undefined) params.set('startTime', String(args.from * 1000));
     params.set('endTime', String(args.to * 1000 - 1));
     const raw = await rest<Kline[] | { code: number; msg: string }>(`/api/v3/klines?${params}`);
-    if (!Array.isArray(raw)) throw new ProviderError(raw.msg || 'Erro Binance', 'binance', false);
+    if (!Array.isArray(raw)) throw new ProviderError(raw.msg || tr('Erro Binance'), 'binance', false);
     const bars = raw.map(toBar).filter((b) => b.time < args.to && (args.from === undefined || b.time >= args.from));
     return bars;
   },
@@ -156,7 +157,7 @@ export const binanceProvider: Provider = {
   async quoteOnce(symbol) {
     const r = await rest<{ lastPrice?: string; openPrice?: string }>(`/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol.ticker)}&type=MINI`);
     const price = Number(r.lastPrice);
-    if (!Number.isFinite(price)) throw new ProviderError('Sem cotação', 'binance');
+    if (!Number.isFinite(price)) throw new ProviderError(tr('Sem cotação'), 'binance');
     const open = Number(r.openPrice);
     return { price, time: Math.floor(Date.now() / 1000), changePct: open > 0 ? ((price - open) / open) * 100 : undefined };
   },

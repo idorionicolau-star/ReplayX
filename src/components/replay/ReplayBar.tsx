@@ -21,6 +21,7 @@ import { MenuHeader, MenuItem, MenuList, MenuSeparator } from '@/components/ui/M
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 function Btn({ label, onClick, children, disabled, className, testid }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean; className?: string; testid?: string }) {
   return (
@@ -140,67 +141,67 @@ export function ReplayBar() {
           onPointerDown={onGrip}
           onDoubleClick={() => setSettings({ replayBarPos: null })}
           className="flex h-8 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-faint active:cursor-grabbing"
-          title="Arrastar a barra (duplo toque para a repor em baixo)"
+          title={tr('Arrastar a barra (duplo toque para a repor em baixo)')}
           data-testid="replay-grip"
         >
           <GripVertical size={15} />
         </span>
-        <button ref={selRef} type="button" onClick={() => setMenu(menu === 'select' ? null : 'select')} className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] hover:bg-hover" title="Escolher ponto de partida">
+        <button ref={selRef} type="button" onClick={() => setMenu(menu === 'select' ? null : 'select')} className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] hover:bg-hover" title={tr('Escolher ponto de partida')}>
           <MousePointerClick size={16} className="text-accent" />
-          <span className="hidden md:inline">Selecionar</span>
+          <span className="hidden md:inline">{tr('Selecionar')}</span>
           <ChevronDown size={13} />
         </button>
         <Popover anchor={selRef} open={menu === 'select'} onClose={() => setMenu(null)} placement="top-start">
           <MenuList className="w-[230px]">
-            <MenuItem icon={<MousePointerClick size={15} />} label="Selecionar barra no gráfico" onClick={() => (replay.enter(), setMenu(null))} />
-            <MenuItem icon={<CalendarDays size={15} />} label="Ir para data…" onClick={() => (useUi.getState().set({ gotoDate: true }), setMenu(null))} />
-            <MenuItem icon={<Shuffle size={15} />} label="Barra aleatória" onClick={() => (void replay.randomStart(), setMenu(null))} />
+            <MenuItem icon={<MousePointerClick size={15} />} label={tr('Selecionar barra no gráfico')} onClick={() => (replay.enter(), setMenu(null))} />
+            <MenuItem icon={<CalendarDays size={15} />} label={tr('Ir para data…')} onClick={() => (useUi.getState().set({ gotoDate: true }), setMenu(null))} />
+            <MenuItem icon={<Shuffle size={15} />} label={tr('Barra aleatória')} onClick={() => (void replay.randomStart(), setMenu(null))} />
             <MenuSeparator />
-            <MenuItem icon={<PauseCircle size={15} />} label="Pausar quando uma ordem executa" checked={st.pauseOnFill} onClick={() => useReplay.setState({ pauseOnFill: !st.pauseOnFill })} />
+            <MenuItem icon={<PauseCircle size={15} />} label={tr('Pausar quando uma ordem executa')} checked={st.pauseOnFill} onClick={() => useReplay.setState({ pauseOnFill: !st.pauseOnFill })} />
           </MenuList>
         </Popover>
         <span className="mx-0.5 h-5 w-px bg-line" />
-        <Btn label="Recuar uma barra (Shift+←)" onClick={() => void replay.stepBack()} testid="replay-back">
+        <Btn label={tr('Recuar uma barra (Shift+←)')} onClick={() => void replay.stepBack()} testid="replay-back">
           <SkipBack size={17} />
         </Btn>
-        <Btn label={st.playing ? 'Pausa (Shift+↓)' : 'Reproduzir (Shift+↓)'} onClick={() => replay.toggle()} className={cn('w-9', st.playing && 'text-accent')} testid="replay-play">
+        <Btn label={st.playing ? tr('Pausa (Shift+↓)') : tr('Reproduzir (Shift+↓)')} onClick={() => replay.toggle()} className={cn('w-9', st.playing && 'text-accent')} testid="replay-play">
           {slowBusy && st.playing ? <Spinner size={15} className="text-accent" /> : st.playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
         </Btn>
-        <Btn label="Avançar uma barra (Shift+→)" onClick={() => void replay.stepForward()} disabled={st.busy && !st.playing} testid="replay-forward">
+        <Btn label={tr('Avançar uma barra (Shift+→)')} onClick={() => void replay.stepForward()} disabled={st.busy && !st.playing} testid="replay-forward">
           {slowBusy && !st.playing ? <Spinner size={15} className="text-accent" /> : <SkipForward size={17} />}
         </Btn>
-        <button ref={speedRef} type="button" onClick={() => setMenu(menu === 'speed' ? null : 'speed')} className="flex h-8 items-center gap-1 rounded-md px-1.5 text-[13px] hover:bg-hover" title="Velocidade">
+        <button ref={speedRef} type="button" onClick={() => setMenu(menu === 'speed' ? null : 'speed')} className="flex h-8 items-center gap-1 rounded-md px-1.5 text-[13px] hover:bg-hover" title={tr('Velocidade')}>
           <Gauge size={15} className="text-muted" />
           {speed.label}
         </button>
         <Popover anchor={speedRef} open={menu === 'speed'} onClose={() => setMenu(null)} placement="top-start">
           <MenuList className="w-[180px]">
-            <MenuHeader>Velocidade</MenuHeader>
+            <MenuHeader>{tr('Velocidade')}</MenuHeader>
             {SPEEDS.map((s) => (
-              <MenuItem key={s.ms} label={s.label} hint={s.ms ? `${s.ms >= 1000 ? `${s.ms / 1000} s` : `${s.ms} ms`}/barra` : 'sem pausa'} active={s.ms === st.speedMs} onClick={() => (replay.setSpeed(s.ms), setMenu(null))} />
+              <MenuItem key={s.ms} label={s.label} hint={s.ms ? `${s.ms >= 1000 ? `${s.ms / 1000} s` : `${s.ms} ms`}/barra` : tr('sem pausa')} active={s.ms === st.speedMs} onClick={() => (replay.setSpeed(s.ms), setMenu(null))} />
             ))}
           </MenuList>
         </Popover>
-        <button ref={stepRef} type="button" onClick={() => setMenu(menu === 'step' ? null : 'step')} className="flex h-8 items-center gap-1 rounded-md px-1.5 text-[13px] hover:bg-hover" title="Intervalo de atualização: quanto avança cada passo">
+        <button ref={stepRef} type="button" onClick={() => setMenu(menu === 'step' ? null : 'step')} className="flex h-8 items-center gap-1 rounded-md px-1.5 text-[13px] hover:bg-hover" title={tr('Intervalo de atualização: quanto avança cada passo')}>
           <Clock3 size={15} className="text-muted" />
           {stepTf ? tfShort(stepTf) : tfShort(cfg.tf)}
-          {!stepTf && <span className="hidden text-[11px] text-muted lg:inline">(gráfico)</span>}
+          {!stepTf && <span className="hidden text-[11px] text-muted lg:inline">{tr('(gráfico)')}</span>}
         </button>
         <Popover anchor={stepRef} open={menu === 'step'} onClose={() => setMenu(null)} placement="top-start">
           <MenuList className="w-[230px]">
-            <MenuHeader>Intervalo de atualização</MenuHeader>
-            <MenuItem label="Igual ao gráfico" active={!stepTf} onClick={() => (replay.setStepTf(null), setMenu(null))} />
+            <MenuHeader>{tr('Intervalo de atualização')}</MenuHeader>
+            <MenuItem label={tr('Igual ao gráfico')} active={!stepTf} onClick={() => (replay.setStepTf(null), setMenu(null))} />
             {tfsFor(cfg.symbolId ? resolveSymbol(cfg.symbolId) : null).filter((t) => t !== '45m').map((t) => (
               <MenuItem key={t} label={tfLabel(t)} active={stepTf === t} onClick={() => (replay.setStepTf(t), setMenu(null))} />
             ))}
-            <div className="px-3 pt-1 pb-1 text-[11px] leading-snug text-muted">Ex.: gráfico de 4h com atualização de 15m mostra a vela de 4h a formar-se a cada 15 minutos.</div>
+            <div className="px-3 pt-1 pb-1 text-[11px] leading-snug text-muted">{tr('Ex.: gráfico de 4h com atualização de 15m mostra a vela de 4h a formar-se a cada 15 minutos.')}</div>
           </MenuList>
         </Popover>
         <span className="mx-0.5 h-5 w-px bg-line" />
-        <button type="button" onClick={() => useUi.getState().set({ gotoDate: true })} className="flex h-8 items-center rounded-md px-2 text-[12px] tnum hover:bg-hover" title="Data atual do replay — clique para saltar">
+        <button type="button" onClick={() => useUi.getState().set({ gotoDate: true })} className="flex h-8 items-center rounded-md px-2 text-[12px] tnum hover:bg-hover" title={tr('Data atual do replay — clique para saltar')}>
           {fmtDateTime(st.cursor, tz)}
         </button>
-        {st.ended && <span className="px-1 text-[11px] text-warn">Chegou ao tempo real</span>}
+        {st.ended && <span className="px-1 text-[11px] text-warn">{tr('Chegou ao tempo real')}</span>}
         {st.error && (
           <span className="max-w-[160px] truncate px-1 text-[11px] text-down" title={st.error}>
             {st.error}
@@ -208,16 +209,16 @@ export function ReplayBar() {
         )}
         <span className="mx-0.5 h-5 w-px bg-line" />
         <QtyStepper value={defaultQty} rule={lotRuleNow} onChange={(v) => setTrading({ defaultQty: v })} className="shrink-0" />
-        <button type="button" onClick={() => quick('long')} className="h-8 rounded-md bg-up px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Comprar ${fmtLotWith(defaultQty, lotRuleNow)} a mercado (lote mín. ${fmtLotWith(lotRuleNow.min, lotRuleNow)})`} data-testid="replay-buy">
-          Comprar
+        <button type="button" onClick={() => quick('long')} className="h-8 rounded-md bg-up px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={tr('Comprar {0} a mercado (lote mín. {1})', fmtLotWith(defaultQty, lotRuleNow), fmtLotWith(lotRuleNow.min, lotRuleNow))} data-testid="replay-buy">
+          {tr('Comprar')}
         </button>
-        <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={`Vender ${fmtLotWith(defaultQty, lotRuleNow)} a mercado (lote mín. ${fmtLotWith(lotRuleNow.min, lotRuleNow)})`} data-testid="replay-sell">
-          Vender
+        <button type="button" onClick={() => quick('short')} className="h-8 rounded-md bg-down px-2.5 text-[12px] font-semibold text-white hover:brightness-110" title={tr('Vender {0} a mercado (lote mín. {1})', fmtLotWith(defaultQty, lotRuleNow), fmtLotWith(lotRuleNow.min, lotRuleNow))} data-testid="replay-sell">
+          {tr('Vender')}
         </button>
-        <button type="button" onClick={() => createPosition(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title="Posição com stop e alvo para arrastar: arrasta a entrada, o SL e o TP e envia a ordem (limite, stop ou mercado)" data-testid="replay-order">
-          <ListPlus size={15} /> Ordem
+        <button type="button" onClick={() => createPosition(cfg.symbolId)} className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[12px] font-semibold hover:bg-hover" title={tr('Posição com stop e alvo para arrastar: arrasta a entrada, o SL e o TP e envia a ordem (limite, stop ou mercado)')} data-testid="replay-order">
+          <ListPlus size={15} /> {tr('Ordem')}
         </button>
-        <div className="flex flex-col px-2 leading-tight" title="Saldo da conta de replay">
+        <div className="flex flex-col px-2 leading-tight" title={tr('Saldo da conta de replay')}>
           <span className="text-[11px] text-muted tnum">{fmtMoney(acc.balance)}</span>
           <span className={cn('text-[11px] font-semibold tnum', open + realized >= 0 ? 'text-up' : 'text-down')}>
             {open + realized >= 0 ? '+' : ''}
@@ -225,15 +226,15 @@ export function ReplayBar() {
           </span>
         </div>
         <Btn
-          label="Guardar sessão de replay"
+          label={tr('Guardar sessão de replay')}
           onClick={() => {
             replay.saveCurrent();
-            toast('Sessão guardada', { kind: 'success', body: 'Pode continuá-la mais tarde no Diário.' });
+            toast(tr('Sessão guardada'), { kind: 'success', body: tr('Pode continuá-la mais tarde no Diário.') });
           }}
         >
           <Save size={16} />
         </Btn>
-        <Btn label="Sair do replay" onClick={() => replay.exit()} className="hover:text-down" testid="replay-exit">
+        <Btn label={tr('Sair do replay')} onClick={() => replay.exit()} className="hover:text-down" testid="replay-exit">
           <X size={17} />
         </Btn>
         <span className="sr-only">{sym.name}</span>

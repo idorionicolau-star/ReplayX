@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { LogoMark } from './Logo';
 import { SPLASH_TILES } from './SplashArt';
+import { useTr } from '@/i18n/react';
 
 /** As 12 cenas duas vezes: a grelha enche o ecrã todo, em telemóvel e em computador. */
 const TILES = [...SPLASH_TILES, ...SPLASH_TILES.map((t) => ({ ...t, id: `${t.id}-b` }))];
@@ -15,6 +16,7 @@ const TOTAL_MS = 3600;
  * marca e ao nome. Simples e curta; mostra-se uma vez por sessão (toque para saltar).
  */
 export function Splash() {
+  const tr = useTr();
   const path = usePathname();
   const [gone, setGone] = useState(false);
   const active = path === '/' || path === '/terminal';
@@ -42,7 +44,7 @@ export function Splash() {
           {TILES.map((t, i) => (
             <figure key={t.id} className="rx-tile" style={{ animationDelay: `${0.1 + ((i * 37) % 12) * 0.07}s` }}>
               {t.art}
-              <figcaption>{t.caption}</figcaption>
+              <figcaption>{tr(t.caption)}</figcaption>
             </figure>
           ))}
         </div>
@@ -69,7 +71,7 @@ export function Splash() {
             X
           </span>
         </div>
-        <div className="rx-tag">Treine no passado. Opere melhor no futuro.</div>
+        <div className="rx-tag">{tr('Treine no passado. Opere melhor no futuro.')}</div>
         <div className="rx-line">
           <span />
         </div>

@@ -13,6 +13,7 @@ import { useReplay } from '@/replay/engine';
 import { fmtPrice } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
 import { AssetIcon } from './AssetIcon';
+import { tr } from '@/i18n';
 
 function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
   const update = useWorkspace((s) => s.updateIndicator);
@@ -26,22 +27,22 @@ function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
   return (
     <div className="group pointer-events-auto flex h-[22px] w-fit max-w-full items-center gap-1.5 rounded px-1 hover:bg-elev/90">
       {/* tocar no nome abre as ações (no telemóvel não há "passar o rato") */}
-      <button ref={nameRef} type="button" aria-label={`Opções de ${ind.label}`} onClick={() => setMenu((o) => !o)} className={cn('truncate text-left', ind.hidden ? 'text-faint' : 'text-text')} data-testid="indicator-name">
+      <button ref={nameRef} type="button" aria-label={tr('Opções de {0}', ind.label)} onClick={() => setMenu((o) => !o)} className={cn('truncate text-left', ind.hidden ? 'text-faint' : 'text-text')} data-testid="indicator-name">
         {ind.label}
       </button>
       <Popover anchor={nameRef} open={menu} onClose={() => setMenu(false)} placement="bottom-start">
         <MenuList className="w-[220px]">
-          <MenuItem icon={ind.hidden ? <Eye size={15} /> : <EyeOff size={15} />} label={ind.hidden ? 'Mostrar' : 'Ocultar'} onClick={act(() => update(ind.uid, { hidden: !ind.hidden }, index))} />
-          <MenuItem icon={<Settings2 size={15} />} label="Definições…" onClick={act(() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } }))} />
+          <MenuItem icon={ind.hidden ? <Eye size={15} /> : <EyeOff size={15} />} label={ind.hidden ? tr('Mostrar') : tr('Ocultar')} onClick={act(() => update(ind.uid, { hidden: !ind.hidden }, index))} />
+          <MenuItem icon={<Settings2 size={15} />} label={tr('Definições…')} onClick={act(() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } }))} />
           <MenuItem
             icon={<Bell size={15} />}
-            label="Adicionar alerta…"
+            label={tr('Adicionar alerta…')}
             onClick={act(() => {
               const c = useWorkspace.getState().charts[index];
               if (c) useUi.getState().set({ alertDraft: { symbolId: c.symbolId, indicatorUid: ind.uid } });
             })}
           />
-          <MenuItem icon={<Trash2 size={15} />} label="Remover indicador" danger onClick={act(() => remove(ind.uid, index))} />
+          <MenuItem icon={<Trash2 size={15} />} label={tr('Remover indicador')} danger onClick={act(() => remove(ind.uid, index))} />
         </MenuList>
       </Popover>
       {ind.error ? (
@@ -57,13 +58,13 @@ function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
         ))
       )}
       <span className="hidden items-center gap-0.5 group-hover:flex">
-        <button type="button" aria-label="Mostrar/ocultar" className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => update(ind.uid, { hidden: !ind.hidden }, index)}>
+        <button type="button" aria-label={tr('Mostrar/ocultar')} className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => update(ind.uid, { hidden: !ind.hidden }, index)}>
           {ind.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
         <button
           type="button"
-          aria-label="Adicionar alerta"
-          title="Adicionar alerta"
+          aria-label={tr('Adicionar alerta')}
+          title={tr('Adicionar alerta')}
           className="rounded p-0.5 text-muted hover:bg-hover hover:text-text"
           onClick={() => {
             const c = useWorkspace.getState().charts[index];
@@ -72,10 +73,10 @@ function IndicatorRow({ ind, index }: { ind: LegendIndicator; index: number }) {
         >
           <Bell size={13} />
         </button>
-        <button type="button" aria-label="Definições" className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } })}>
+        <button type="button" aria-label={tr('Definições')} className="rounded p-0.5 text-muted hover:bg-hover hover:text-text" onClick={() => useUi.getState().set({ indicatorSettings: { chart: index, uid: ind.uid } })}>
           <Settings2 size={13} />
         </button>
-        <button type="button" aria-label="Remover" className="rounded p-0.5 text-muted hover:bg-hover hover:text-down" onClick={() => remove(ind.uid, index)}>
+        <button type="button" aria-label={tr('Remover')} className="rounded p-0.5 text-muted hover:bg-hover hover:text-down" onClick={() => remove(ind.uid, index)}>
           <X size={13} />
         </button>
       </span>
@@ -116,22 +117,22 @@ function LegendImpl({ index, symbol, tf, info, panes, ctrl, status }: { index: n
           {status.state === 'ready' && (
             <span className={cn('inline-flex items-center gap-1 rounded px-1.5 py-[1px] text-[10px] font-semibold', replayOn ? 'bg-accent/15 text-accent' : 'bg-up/15 text-up')}>
               <span className={cn('h-1.5 w-1.5 rounded-full', replayOn ? 'bg-accent' : 'animate-pulse-soft bg-up')} />
-              {replayOn ? 'REPLAY' : 'AO VIVO'}
+              {replayOn ? 'REPLAY' : tr('AO VIVO')}
             </span>
           )}
           {bar && (
             <span className="flex flex-wrap items-center gap-x-2 tnum">
               <span>
-                <span className="text-muted">A</span> <span className={color}>{fmtPrice(bar.open, prec)}</span>
+                <span className="text-muted">{tr('A')}</span> <span className={color}>{fmtPrice(bar.open, prec)}</span>
               </span>
               <span>
-                <span className="text-muted">M</span> <span className={color}>{fmtPrice(bar.high, prec)}</span>
+                <span className="text-muted">{tr('M')}</span> <span className={color}>{fmtPrice(bar.high, prec)}</span>
               </span>
               <span>
-                <span className="text-muted">m</span> <span className={color}>{fmtPrice(bar.low, prec)}</span>
+                <span className="text-muted">{tr('m')}</span> <span className={color}>{fmtPrice(bar.low, prec)}</span>
               </span>
               <span>
-                <span className="text-muted">F</span> <span className={color}>{fmtPrice(bar.close, prec)}</span>
+                <span className="text-muted">{tr('F')}</span> <span className={color}>{fmtPrice(bar.close, prec)}</span>
               </span>
               <span className={color}>
                 {change >= 0 ? '+' : ''}

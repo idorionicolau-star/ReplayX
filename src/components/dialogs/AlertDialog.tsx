@@ -34,6 +34,7 @@ import { cn } from '@/components/ui/cn';
 import { fmtPrice, fromInputDateTime, toInputDateTime } from '@/lib/format';
 import { currentPrice } from '@/trading/actions';
 import { notifyPermission, requestNotifyPermission } from '@/lib/notify';
+import { tr } from '@/i18n';
 
 type Draft = NonNullable<ReturnType<typeof useUi.getState>['alertDraft']>;
 
@@ -158,11 +159,11 @@ function AlertForm({ draft }: { draft: Draft }) {
     const s = source();
     const t = target();
     if (!s || !t) {
-      toast('Falta escolher o valor do alerta', { kind: 'error' });
+      toast(tr('Falta escolher o valor do alerta'), { kind: 'error' });
       return;
     }
     if (s.kind === 'price' && t.kind === 'price') {
-      toast('Escolha um alvo diferente do preço', { kind: 'error' });
+      toast(tr('Escolha um alvo diferente do preço'), { kind: 'error' });
       return;
     }
     const data: Omit<Alert, 'id' | 'createdAt' | 'active'> = {
@@ -181,7 +182,7 @@ function AlertForm({ draft }: { draft: Draft }) {
     if (editing) st.update(editing.id, { ...data, active: true, stopped: undefined, lastBar: undefined });
     else st.add(data);
     if (notify.push && perm === 'default') void requestNotifyPermission().then(setPerm);
-    toast(editing ? 'Alerta atualizado' : 'Alerta criado', { kind: 'success' });
+    toast(editing ? tr('Alerta atualizado') : tr('Alerta criado'), { kind: 'success' });
     close();
   };
 
@@ -193,25 +194,25 @@ function AlertForm({ draft }: { draft: Draft }) {
       onClose={close}
       title={
         <span className="flex items-center gap-2">
-          <BellRing size={17} className="text-warn" /> {editing ? 'Editar alerta' : 'Criar alerta'} · {sym.name}
+          <BellRing size={17} className="text-warn" /> {editing ? tr('Editar alerta') : tr('Criar alerta')} · {sym.name}
         </span>
       }
       width={480}
       footer={
         <>
           <Button variant="ghost" onClick={close}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button variant="primary" onClick={save} data-testid="alert-save">
-            {editing ? 'Guardar' : 'Criar alerta'}
+            {editing ? tr('Guardar') : tr('Criar alerta')}
           </Button>
         </>
       }
     >
       <div className="space-y-1.5" data-testid="alert-dialog">
-        <div className="text-[11px] font-semibold tracking-wide text-muted uppercase">Condição</div>
+        <div className="text-[11px] font-semibold tracking-wide text-muted uppercase">{tr('Condição')}</div>
         <Select value={srcKey} onChange={(e) => setSrcKey(e.target.value)} data-testid="alert-source">
-          <option value="price">Preço ({sym.name})</option>
+          <option value="price">{tr('Preço (')}{sym.name})</option>
           {editing?.source.kind === 'indicator' && <option value="cur-src">{editing.source.label}</option>}
           {indOpts.map((o) => (
             <option key={o.value} value={o.value}>
@@ -227,11 +228,11 @@ function AlertForm({ draft }: { draft: Draft }) {
           ))}
         </Select>
         <Select value={tgtKey} onChange={(e) => setTgtKey(e.target.value)} data-testid="alert-target">
-          <option value="value">Valor</option>
-          <option value="range">Canal entre dois valores</option>
-          {srcKey !== 'price' && <option value="price">Preço ({sym.name})</option>}
+          <option value="value">{tr('Valor')}</option>
+          <option value="range">{tr('Canal entre dois valores')}</option>
+          {srcKey !== 'price' && <option value="price">{tr('Preço (')}{sym.name})</option>}
           {drawOpts.length > 0 && (
-            <optgroup label="Desenhos">
+            <optgroup label={tr('Desenhos')}>
               {drawOpts.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -240,7 +241,7 @@ function AlertForm({ draft }: { draft: Draft }) {
             </optgroup>
           )}
           {(indOpts.length > 0 || editing?.target.kind === 'indicator') && (
-            <optgroup label="Indicadores">
+            <optgroup label={tr('Indicadores')}>
               {editing?.target.kind === 'indicator' && <option value="cur-tgt">{editing.target.label}</option>}
               {indOpts
                 .filter((o) => o.value !== srcKey)
@@ -255,14 +256,14 @@ function AlertForm({ draft }: { draft: Draft }) {
         {tgtKey === 'value' && <NumberInput value={value} step={srcKey === 'price' ? step : 0.1} onChange={setValue} />}
         {tgtKey === 'range' && (
           <div className="grid grid-cols-2 gap-2">
-            <NumberInput value={high} step={step} onChange={setHigh} placeholder="Limite de cima" />
-            <NumberInput value={low} step={step} onChange={setLow} placeholder="Limite de baixo" />
+            <NumberInput value={high} step={step} onChange={setHigh} placeholder={tr('Limite de cima')} />
+            <NumberInput value={low} step={step} onChange={setLow} placeholder={tr('Limite de baixo')} />
           </div>
         )}
-        {srcKey === 'price' && <div className="text-[11px] text-muted">Preço atual: {fmtPrice(currentPrice(symbolId), sym.precision)}</div>}
+        {srcKey === 'price' && <div className="text-[11px] text-muted">{tr('Preço atual:')} {fmtPrice(currentPrice(symbolId), sym.precision)}</div>}
 
         <div className="divide-y divide-line pt-1">
-          <Row label="Intervalo">
+          <Row label={tr('Intervalo')}>
             <Select className="w-40" value={tf} onChange={(e) => setTf(e.target.value)}>
               {tfOptions.map((t) => (
                 <option key={t} value={t}>
@@ -271,7 +272,7 @@ function AlertForm({ draft }: { draft: Draft }) {
               ))}
             </Select>
           </Row>
-          <Row label="Frequência">
+          <Row label={tr('Frequência')}>
             <Select className="w-52" value={trigger} onChange={(e) => setTrigger(e.target.value as AlertTrigger)} data-testid="alert-trigger">
               {(Object.keys(TRIGGER_LABEL) as AlertTrigger[]).map((t) => (
                 <option key={t} value={t}>
@@ -280,8 +281,8 @@ function AlertForm({ draft }: { draft: Draft }) {
               ))}
             </Select>
           </Row>
-          <Row label="Validade">
-            <Switch checked={expires === null} onChange={(v) => setExpires(v ? null : Math.floor(Date.now() / 1000) + 30 * 86400)} label="Sem fim" />
+          <Row label={tr('Validade')}>
+            <Switch checked={expires === null} onChange={(v) => setExpires(v ? null : Math.floor(Date.now() / 1000) + 30 * 86400)} label={tr('Sem fim')} />
             {expires !== null && (
               <input
                 type="datetime-local"
@@ -293,23 +294,23 @@ function AlertForm({ draft }: { draft: Draft }) {
           </Row>
         </div>
 
-        <div className="pt-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Nome e mensagem</div>
-        <Input placeholder="Nome do alerta (opcional)" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="pt-1 text-[11px] font-semibold tracking-wide text-muted uppercase">{tr('Nome e mensagem')}</div>
+        <Input placeholder={tr('Nome do alerta (opcional)')} value={name} onChange={(e) => setName(e.target.value)} />
         <textarea
-          placeholder="Mensagem (opcional). Pode usar {{ticker}}, {{close}}, {{value}}, {{time}}, {{interval}}"
+          placeholder={tr('Mensagem (opcional). Pode usar {{ticker}}, {{close}}, {{value}}, {{time}}, {{interval}}')}
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
           rows={2}
           className="w-full resize-none rounded-md border border-line bg-input px-2.5 py-1.5 text-[13px] outline-none placeholder:text-faint focus:border-accent"
         />
 
-        <div className="pt-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Avisar com</div>
+        <div className="pt-1 text-[11px] font-semibold tracking-wide text-muted uppercase">{tr('Avisar com')}</div>
         <div className="flex flex-wrap gap-2">
           {(
             [
-              ['popup', 'Janela no ecrã', Bell],
-              ['sound', 'Som', Volume2],
-              ['push', 'Notificação no telemóvel', Smartphone],
+              ['popup', tr('Janela no ecrã'), Bell],
+              ['sound', tr('Som'), Volume2],
+              ['push', tr('Notificação no telemóvel'), Smartphone],
             ] as const
           ).map(([k, label, Icon]) => (
             <button
@@ -326,9 +327,9 @@ function AlertForm({ draft }: { draft: Draft }) {
             </button>
           ))}
         </div>
-        {notify.push && perm === 'denied' && <div className="text-[11px] text-down">As notificações estão bloqueadas neste navegador. Ative-as nas definições do site.</div>}
-        {notify.push && perm === 'unsupported' && <div className="text-[11px] text-muted">Este navegador não suporta notificações. No iPhone, instale primeiro a app no ecrã principal.</div>}
-        <div className="pt-1 text-[11px] text-muted">Os alertas são verificados enquanto a app está aberta (no telemóvel, com a app no ecrã; o sistema pode pausá-la em segundo plano). Funcionam da mesma forma durante o replay.</div>
+        {notify.push && perm === 'denied' && <div className="text-[11px] text-down">{tr('As notificações estão bloqueadas neste navegador. Ative-as nas definições do site.')}</div>}
+        {notify.push && perm === 'unsupported' && <div className="text-[11px] text-muted">{tr('Este navegador não suporta notificações. No iPhone, instale primeiro a app no ecrã principal.')}</div>}
+        <div className="pt-1 text-[11px] text-muted">{tr('Os alertas são verificados enquanto a app está aberta (no telemóvel, com a app no ecrã; o sistema pode pausá-la em segundo plano). Funcionam da mesma forma durante o replay.')}</div>
       </div>
     </Dialog>
   );

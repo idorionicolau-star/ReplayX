@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from './cn';
+import { tr } from '@/i18n';
 
 interface DialogProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function Dialog({ open, onClose, title, children, footer, width = 480, cl
         {title !== undefined && (
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-line px-4">
             <div className="text-[15px] font-semibold">{title}</div>
-            <button type="button" aria-label="Fechar" onClick={onClose} className="rounded-md p-1.5 text-muted hover:bg-hover hover:text-text">
+            <button type="button" aria-label={tr('Fechar')} onClick={onClose} className="rounded-md p-1.5 text-muted hover:bg-hover hover:text-text">
               <X size={18} />
             </button>
           </div>

@@ -2,6 +2,7 @@ import type { Bar } from '../types';
 import { findPivots, type Pivot } from './apocalypse';
 import type { DrawData, DrawLine, DrawRect, DrawText } from '../../chart/layer';
 import type { IndicatorMarker } from './registry';
+import { tr } from '@/i18n';
 
 /**
  * Topo duplo e fundo duplo, com caixa, stop, entrada e saída.
@@ -417,24 +418,24 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 300
     lines.push({ i1: s.first.idx, p1: s.stop, i2: end, p2: s.stop, color: STOP, width: 1 });
     texts.push({ i: mid(s.first.idx, end), p: s.stop, text: 'Stop', color: STOP, size: 10, pos: buy ? 'below' : 'above', bold: false });
     lines.push({ i1: s.idx, p1: s.entry, i2: end, p2: s.entry, color: ENTRY, width: 1 });
-    texts.push({ i: mid(s.idx, end), p: s.entry, text: 'Entrada', color: ENTRY, size: 10, pos: buy ? 'above' : 'below', bold: false });
+    texts.push({ i: mid(s.idx, end), p: s.entry, text: tr('Entrada'), color: ENTRY, size: 10, pos: buy ? 'above' : 'below', bold: false });
     lines.push({ i1: s.targetFrom.idx, p1: s.target, i2: end, p2: s.target, color: TARGET, width: 1 });
-    texts.push({ i: mid(s.targetFrom.idx, end), p: s.target, text: 'Saída', color: TARGET, size: 10, pos: buy ? 'above' : 'below', bold: false });
-    markers.push({ index: s.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: col, text: `${buy ? 'COMPRA' : 'VENDA'} (${s.trigger})` });
+    texts.push({ i: mid(s.targetFrom.idx, end), p: s.target, text: tr('Saída'), color: TARGET, size: 10, pos: buy ? 'above' : 'below', bold: false });
+    markers.push({ index: s.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: col, text: `${buy ? tr('COMPRA') : tr('VENDA')} (${tr(s.trigger)})` });
     if (s.beIdx !== null) texts.push({ i: s.beIdx, p: s.beStop ?? s.entry, text: 'BE', color: ENTRY, size: 10, pos: buy ? 'below' : 'above', bold: false });
     if (s.exit?.result === 'be') {
-      texts.push({ i: s.exit.idx, p: s.beStop ?? s.entry, text: '= saiu no BE (cobre custos)', color: ENTRY, size: 10, pos: buy ? 'below' : 'above' });
+      texts.push({ i: s.exit.idx, p: s.beStop ?? s.entry, text: tr('= saiu no BE (cobre custos)'), color: ENTRY, size: 10, pos: buy ? 'below' : 'above' });
     } else if (s.exit) {
       const rr = signalR(s);
       const ok = s.exit.result === 'alvo';
-      texts.push({ i: s.exit.idx, p: ok ? s.target : s.stop, text: ok ? `✓ alvo ${rr !== null ? `+${rr.toFixed(1)}R` : ''}` : '✗ stop -1R', color: ok ? TARGET : STOP, size: 10, pos: ok === buy ? 'above' : 'below' });
+      texts.push({ i: s.exit.idx, p: ok ? s.target : s.stop, text: ok ? tr('✓ alvo {0}', rr !== null ? `+${rr.toFixed(1)}R` : '') : '✗ stop -1R', color: ok ? TARGET : STOP, size: 10, pos: ok === buy ? 'above' : 'below' });
     }
   }
 
   for (const p of r.pending) {
     const buy = p.dir === 1;
     rects.push({ i1: p.first.idx, i2: last, p1: p.boxHi, p2: p.boxLo, fill: buy ? 'rgba(41,98,255,0.08)' : 'rgba(242,54,69,0.08)', stroke: buy ? BUY : SELL, dash: true });
-    texts.push({ i: last, p: buy ? p.boxLo : p.boxHi, text: `${buy ? 'fundo' : 'topo'} duplo? à espera de confirmação`, color: buy ? BUY : SELL, size: 10, pos: buy ? 'below' : 'above', edge: 'right', bold: false });
+    texts.push({ i: last, p: buy ? p.boxLo : p.boxHi, text: tr('{0} duplo? à espera de confirmação', buy ? tr('fundo') : tr('topo')), color: buy ? BUY : SELL, size: 10, pos: buy ? 'below' : 'above', edge: 'right', bold: false });
   }
 
   // placar honesto: todos os sinais fechados no histórico carregado
@@ -446,24 +447,24 @@ export function drawDoubleTops(bars: readonly Bar[], r: DtResult, maxShown = 300
   const avgR = rs.length ? totalR / rs.length : 0;
   const lastSig = r.signals[r.signals.length - 1];
   const panel = [
-    { text: `Topo/fundo duplo: ${r.signals.length} sinais`, color: '#d1d4dc' },
+    { text: tr('Topo/fundo duplo: {0} sinais', r.signals.length), color: '#d1d4dc' },
     closed.length
-      ? { text: `${wins} alvos · ${closed.length - wins - bes} stops${bes ? ` · ${bes} no BE` : ''} (${Math.round((wins / closed.length) * 100)}%)`, color: '#d1d4dc' }
-      : { text: 'ainda sem sinais fechados', color: '#d1d4dc' },
+      ? { text: tr('{0} alvos · {1} stops{2} ({3}%)', wins, closed.length - wins - bes, bes ? ` · ${bes} no BE` : '', Math.round((wins / closed.length) * 100)), color: '#d1d4dc' }
+      : { text: tr('ainda sem sinais fechados'), color: '#d1d4dc' },
   ];
   if (closed.length) {
     const sign = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(v >= 10 || v <= -10 ? 1 : 2)}R`;
-    panel.push({ text: `soma ${sign(totalR)} · média ${sign(avgR)} por sinal`, color: totalR >= 0 ? TARGET : STOP });
+    panel.push({ text: tr('soma {0} · média {1} por sinal', sign(totalR), sign(avgR)), color: totalR >= 0 ? TARGET : STOP });
   }
   if (levelNote) panel.push({ text: levelNote, color: '#d1d4dc' });
   if (goal && r.signals.length < goal.target) {
     panel.push({
-      text: goal.historyDone ? `o histórico acabou: ${r.signals.length} de ${goal.target} sinais` : `a carregar mais passado… ${r.signals.length}/${goal.target} sinais`,
+      text: goal.historyDone ? tr('o histórico acabou: {0} de {1} sinais', r.signals.length, goal.target) : tr('a carregar mais passado… {0}/{1} sinais', r.signals.length, goal.target),
       color: '#d1d4dc',
     });
   }
-  if (r.pending.length) panel.push({ text: 'há uma zona à espera de confirmação', color: '#d1d4dc' });
-  else if (lastSig && !lastSig.exit) panel.push({ text: `${lastSig.dir === 1 ? 'compra' : 'venda'} em curso`, color: lastSig.dir === 1 ? BUY : SELL });
+  if (r.pending.length) panel.push({ text: tr('há uma zona à espera de confirmação'), color: '#d1d4dc' });
+  else if (lastSig && !lastSig.exit) panel.push({ text: tr('{0} em curso', lastSig.dir === 1 ? tr('compra') : tr('venda')), color: lastSig.dir === 1 ? BUY : SELL });
 
   return { draw: { rects, lines, texts, panel: { lines: panel, corner: 'bl' } }, markers };
 }

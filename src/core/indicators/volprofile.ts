@@ -1,6 +1,7 @@
 import type { Bar } from '../types';
 import type { DrawData, DrawLine, DrawRect, DrawText } from '../../chart/layer';
 import { volumeProfile, type VpResult } from '../volumeProfile';
+import { tr } from '@/i18n';
 
 export interface VpDrawOptions {
   rows: number;
@@ -68,13 +69,13 @@ export function drawVolumeProfile(bars: readonly Bar[], from: number, to: number
     texts.push({ i: lx, p: r.vah, text: `VAH ${fmt(r.vah)}`, color: VA, size: 10, pos: 'above' });
     texts.push({ i: lx, p: r.val, text: `VAL ${fmt(r.val)}`, color: VA, size: 10, pos: 'below' });
   }
-  const label = r.mode === 'volume' ? 'Perfil de volume' : 'Perfil de tempo (os dados não trazem volume)';
+  const label = r.mode === 'volume' ? tr('Perfil de volume') : tr('Perfil de tempo (os dados não trazem volume)');
   return {
     draw: {
       rects,
       lines,
       texts,
-      panel: { lines: [{ text: label, color: '#d1d4dc' }, { text: `${r.levels.length} linhas · ${r.to - r.from + 1} velas`, color: '#9598a1' }], corner: 'bl' },
+      panel: { lines: [{ text: label, color: '#d1d4dc' }, { text: tr('{0} linhas · {1} velas', r.levels.length, r.to - r.from + 1), color: '#9598a1' }], corner: 'bl' },
     },
     result: r,
   };

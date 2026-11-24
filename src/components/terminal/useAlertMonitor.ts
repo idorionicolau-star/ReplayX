@@ -26,6 +26,7 @@ import { toast } from '@/components/ui/Toast';
 import { playSound } from '@/lib/sound';
 import { notifyDevice } from '@/lib/notify';
 import { fmtDateTime, fmtPrice } from '@/lib/format';
+import { tr } from '@/i18n';
 
 /** Barras usadas no cálculo dos indicadores (chega para estabilizar médias e osciladores). */
 const CALC_BARS = 1000;
@@ -202,11 +203,11 @@ class Monitor {
 
   private async evaluate(a: Alert, price: number, now: number, replay: boolean) {
     if (a.expiresAt && !replay && now > a.expiresAt) {
-      useAlerts.getState().update(a.id, { active: false, stopped: 'Expirou' });
+      useAlerts.getState().update(a.id, { active: false, stopped: tr('Expirou') });
       return;
     }
     if (a.target.kind === 'drawing' && !this.drawingFor(a)) {
-      useAlerts.getState().update(a.id, { active: false, stopped: 'O desenho foi apagado' });
+      useAlerts.getState().update(a.id, { active: false, stopped: tr('O desenho foi apagado') });
       return;
     }
     const bars = needsBars(a) ? await this.barsFor(a, replay, now) : null;
@@ -252,15 +253,15 @@ class Monitor {
     const valueStr = CHANNEL_CONDITIONS.includes(a.condition) || s.r === undefined ? fmt(s.l) : fmt(s.r);
     const body = a.message
       ? fillMessage(a.message, { ticker: sym.name, close: fmt(price), value: valueStr, time: fmtDateTime(time, tz), interval: tfShort(a.tf) })
-      : `${describe(a, fmt, sym.name)} · preço ${fmt(price)}`;
-    const title = a.name || `Alerta: ${sym.name}`;
+      : tr('{0} · preço {1}', describe(a, fmt, sym.name), fmt(price));
+    const title = a.name || tr('Alerta: {0}', sym.name);
     st.logTrigger({ alertId: a.id, symbolId: a.symbolId, price, time, message: `${title} — ${body}`, replay });
     st.update(a.id, {
       triggeredAt: time,
       lastBar: bar,
       count: (fresh.count ?? 0) + 1,
       active: a.trigger !== 'once',
-      stopped: a.trigger === 'once' ? 'Disparou (só uma vez)' : undefined,
+      stopped: a.trigger === 'once' ? tr('Disparou (só uma vez)') : undefined,
     });
     if (a.notify.popup) st.pushPopup({ alertId: a.id, title, body, time, replay });
     else toast(`⏰ ${title}`, { kind: 'warning', body, duration: 8000 });

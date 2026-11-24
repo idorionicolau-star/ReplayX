@@ -8,6 +8,7 @@ import { focus } from './bus';
 import { uid } from '@/lib/uid';
 import { nearestPivot, priceSnapReach, type PivotSensitivity } from '@/core/priceSnap';
 import { magnetBarReach, magnetLevel, type Magnet } from '@/core/magnet';
+import { tr } from '@/i18n';
 
 export type TradeAction =
   | { type: 'close-position'; id: string }
@@ -505,7 +506,7 @@ export class Interaction {
       const newW = Math.min(maxW, Math.max(MIN_VISIBLE_BARS, wanted));
       if (newW !== wanted && Math.abs(newW - oldW) < Math.max(0.5, newW * 0.01)) {
         // já no limite do zoom: nada se mexe (antes o gráfico fugia para a esquerda) e avisa-se
-        this.flashLimit(wanted > newW ? 'Zoom mínimo' : 'Zoom máximo');
+        this.flashLimit(wanted > newW ? tr('Zoom mínimo') : tr('Zoom máximo'));
       } else {
         const frac = Math.min(1, Math.max(0, (this.pinch.cx - rect.left) / width));
         const anchor = r.from + frac * oldW;
@@ -514,7 +515,7 @@ export class Interaction {
         const from = anchor - frac * newW + shift;
         range = { from, to: from + newW };
         ts.setVisibleLogicalRange(range);
-        if (newW !== wanted) this.flashLimit(wanted > newW ? 'Zoom mínimo' : 'Zoom máximo');
+        if (newW !== wanted) this.flashLimit(wanted > newW ? tr('Zoom mínimo') : tr('Zoom máximo'));
       }
     }
     this.pinch = { ...now, range };
@@ -630,18 +631,18 @@ export class Interaction {
       return;
     }
 
-    const tr = this.hitTrade(p.x, p.y);
-    if (tr) {
+    const hitTr = this.hitTrade(p.x, p.y);
+    if (hitTr) {
       this.consume(e);
-      if (tr.kind === 'close') {
-        if (tr.target.type === 'order' && (tr.target.field === 'sl' || tr.target.field === 'tp')) this.cb.onTrade({ type: 'modify-order', id: tr.target.id, [tr.target.field]: null });
-        else if (tr.target.type === 'order') this.cb.onTrade({ type: 'cancel-order', id: tr.target.id });
-        else if (tr.target.field === 'entry') this.cb.onTrade({ type: 'close-position', id: tr.target.id });
-        else this.cb.onTrade({ type: 'modify-position', id: tr.target.id, [tr.target.field]: null });
+      if (hitTr.kind === 'close') {
+        if (hitTr.target.type === 'order' && (hitTr.target.field === 'sl' || hitTr.target.field === 'tp')) this.cb.onTrade({ type: 'modify-order', id: hitTr.target.id, [hitTr.target.field]: null });
+        else if (hitTr.target.type === 'order') this.cb.onTrade({ type: 'cancel-order', id: hitTr.target.id });
+        else if (hitTr.target.field === 'entry') this.cb.onTrade({ type: 'close-position', id: hitTr.target.id });
+        else this.cb.onTrade({ type: 'modify-position', id: hitTr.target.id, [hitTr.target.field]: null });
         return;
       }
       const price = this.c.ctxYToPrice(p.y) ?? 0;
-      this.mode = { kind: 'trade', region: tr, startY: p.y, moved: false, price };
+      this.mode = { kind: 'trade', region: hitTr, startY: p.y, moved: false, price };
       this.beginDrag();
       this.updateLoupe(e);
       return;
@@ -804,7 +805,7 @@ export class Interaction {
   private startCreation(def: ToolDef, x: number, y: number, aimed = false) {
     // dentro de um indicador só as ferramentas de linhas, caixas, texto e setas (as outras dependem do preço)
     if (this.c.paneCtx && !PANE_TOOLS.has(def.id)) {
-      this.c.hint = { x, y, text: 'Esta ferramenta só funciona no painel principal' };
+      this.c.hint = { x, y, text: tr('Esta ferramenta só funciona no painel principal') };
       this.c.redraw();
       setTimeout(() => {
         if (this.c.hint?.text.startsWith('Esta ferramenta')) {
@@ -1062,9 +1063,9 @@ export class Interaction {
       this.previewSnap(e, p);
       return;
     }
-    const tr = this.hitTrade(p.x, p.y);
-    if (tr) {
-      this.setCursor(tr.kind === 'close' ? 'pointer' : 'ns-resize');
+    const hitTr = this.hitTrade(p.x, p.y);
+    if (hitTr) {
+      this.setCursor(hitTr.kind === 'close' ? 'pointer' : 'ns-resize');
       return;
     }
     const hit = this.hitDrawing(p.x, p.y);

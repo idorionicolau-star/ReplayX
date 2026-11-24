@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal/LegalLayout';
 import { Contact } from '@/components/legal/Contact';
+import { ByLang } from '@/components/legal/ByLang';
+import { TermsEn } from '@/components/legal/en/TermsEn';
 import { OPERATOR } from '@/lib/legal';
 import { PLANS, TRIAL_DAYS, FREE_LIMITS } from '@/core/plans';
 
@@ -11,6 +13,14 @@ const mzn = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 export default function Termos() {
   return (
     <LegalLayout title="Termos de utilização">
+      <ByLang pt={<Pt />} en={<TermsEn />} />
+    </LegalLayout>
+  );
+}
+
+function Pt() {
+  return (
+    <>
       <p>
         Estes termos aplicam-se ao uso do ReplayX (“a plataforma”), disponibilizado e detido por {OPERATOR}, titular da plataforma e da marca ReplayX. Ao criar conta, entrar como convidado ou usar a plataforma, aceita estes termos, a{' '}
         <a href="/privacidade">Política de privacidade</a> e o <a href="/aviso-de-risco">Aviso de risco</a>.
@@ -98,6 +108,6 @@ export default function Termos() {
 
       <h2>12. Contacto</h2>
       <Contact />
-    </LegalLayout>
+    </>
   );
 }

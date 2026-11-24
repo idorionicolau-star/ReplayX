@@ -17,6 +17,7 @@ import { Popover } from '@/components/ui/Popover';
 import { cn } from '@/components/ui/cn';
 import { Drum } from '@/components/ui/Drum';
 import { useSymbolWheel, useTfWheel } from './useWheels';
+import { tr } from '@/i18n';
 
 /**
  * Faixa em baixo (telemóvel), como no TradingView: símbolo e intervalo à esquerda, atalhos à direita.
@@ -59,10 +60,10 @@ export function WheelPair({ height = 56, row = 19 }: { height?: number; row?: nu
     <>
       {symWheel.overlay}
       {tfWheel.overlay}
-      <button type="button" {...symWheel.bind} onClick={() => useUi.getState().openSymbolSearch('', active)} className="min-w-0 max-w-[46%] shrink-0 rounded-xl px-2 active:bg-hover" data-testid="mobile-symbol" title="Toque para procurar; carregue e arraste para cima/baixo para girar a lista">
+      <button type="button" {...symWheel.bind} onClick={() => useUi.getState().openSymbolSearch('', active)} className="min-w-0 max-w-[46%] shrink-0 rounded-xl px-2 active:bg-hover" data-testid="mobile-symbol" title={tr('Toque para procurar; carregue e arraste para cima/baixo para girar a lista')}>
         <WheelFace items={symWheel.items} pos={symWheel.pos} dragging={symWheel.dragging} width={120} height={height} row={row} render={(it, c) => (c ? <><AssetIcon symbol={resolveSymbol(it.id)} size={16} /><span className="truncate">{it.label}</span></> : <span className="truncate">{it.label}</span>)} />
       </button>
-      <button ref={tfRef} type="button" {...tfWheel.bind} onClick={() => setTfOpen((o) => !o)} className="shrink-0 rounded-xl px-2 text-accent active:bg-hover" data-testid="mobile-tf" title="Toque para escolher; carregue e arraste para cima/baixo para girar os intervalos">
+      <button ref={tfRef} type="button" {...tfWheel.bind} onClick={() => setTfOpen((o) => !o)} className="shrink-0 rounded-xl px-2 text-accent active:bg-hover" data-testid="mobile-tf" title={tr('Toque para escolher; carregue e arraste para cima/baixo para girar os intervalos')}>
         <WheelFace items={tfWheel.items} pos={tfWheel.pos} dragging={tfWheel.dragging} width={52} height={height} row={row} render={(it) => it.hint ?? it.label} />
       </button>
       <Popover anchor={tfRef} open={tfOpen} onClose={() => setTfOpen(false)} placement="top-start" className="p-2">
@@ -100,7 +101,7 @@ export function MobileStrip() {
     <div className="flex h-[62px] shrink-0 items-center gap-1 border-t border-line bg-panel px-1.5 no-select sm:hidden" data-testid="mobile-strip">
       <WheelPair />
       <span className="flex-1" />
-      <button type="button" aria-label="Indicadores" onClick={() => useUi.getState().set({ indicators: true })} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
+      <button type="button" aria-label={tr('Indicadores')} onClick={() => useUi.getState().set({ indicators: true })} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
         <FunctionSquare size={19} />
       </button>
       <button type="button" aria-label="Bar Replay" onClick={() => (replayActive ? replay.exit() : replay.enter())} className={cn('flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover', replayActive && 'bg-accent text-on-accent')}>
@@ -108,8 +109,8 @@ export function MobileStrip() {
       </button>
       <button
         type="button"
-        aria-label={autoFit ? 'Escala automática: ligada' : 'Escala automática: desligada'}
-        title="Escala de preços automática: desligada quando muda a escala à mão; toque para ligar e ajustar"
+        aria-label={autoFit ? tr('Escala automática: ligada') : tr('Escala automática: desligada')}
+        title={tr('Escala de preços automática: desligada quando muda a escala à mão; toque para ligar e ajustar')}
         data-testid="mobile-auto"
         onClick={() => {
           setSettings({ autoFit: !autoFit });
@@ -119,7 +120,7 @@ export function MobileStrip() {
       >
         Auto
       </button>
-      <button type="button" aria-label="Desfazer" onClick={() => undo(cfg.symbolId)} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
+      <button type="button" aria-label={tr('Desfazer')} onClick={() => undo(cfg.symbolId)} className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-hover">
         <Undo2 size={19} />
       </button>
     </div>

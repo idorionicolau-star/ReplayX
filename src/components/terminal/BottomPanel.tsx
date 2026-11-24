@@ -8,13 +8,14 @@ import { Optimizer } from '@/components/strategy/Optimizer';
 import { Journal } from '@/components/panels/Journal';
 import { Resizer } from './Resizer';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 export const BOTTOM_TABS: { id: BottomTab; label: string; icon: typeof Code2 }[] = [
-  { id: 'journal', label: 'Diário', icon: NotebookPen },
-  { id: 'tester', label: 'Testador de estratégias', icon: FlaskConical },
-  { id: 'visual', label: 'Construtor visual', icon: Blocks },
+  { id: 'journal', label: tr('Diário'), icon: NotebookPen },
+  { id: 'tester', label: tr('Testador de estratégias'), icon: FlaskConical },
+  { id: 'visual', label: tr('Construtor visual'), icon: Blocks },
   { id: 'script', label: 'Scripts', icon: Code2 },
-  { id: 'optimizer', label: 'Otimizar / Aprender', icon: Sparkles },
+  { id: 'optimizer', label: tr('Otimizar / Aprender'), icon: Sparkles },
 ];
 
 export function BottomPanel() {
@@ -39,7 +40,7 @@ export function BottomPanel() {
           </button>
         ))}
         <div className="flex-1" />
-        <button type="button" aria-label={tab ? 'Recolher' : 'Expandir'} onClick={() => setTab(tab ? null : 'journal')} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
+        <button type="button" aria-label={tab ? tr('Recolher') : tr('Expandir')} onClick={() => setTab(tab ? null : 'journal')} className="rounded p-1 text-muted hover:bg-hover hover:text-text">
           {tab ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
         </button>
       </div>

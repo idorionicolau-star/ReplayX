@@ -14,6 +14,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { tr } from '@/i18n';
 
 export interface SessionUser {
   uid: string;
@@ -57,7 +58,7 @@ export function isGuestExpired(): boolean {
   return getGuestRemainingMs() <= 0;
 }
 
-const GUEST_USER: SessionUser = { uid: 'guest', name: 'Convidado', email: null, photo: null, guest: true, emailVerified: false, createdAt: null };
+const GUEST_USER: SessionUser = { uid: 'guest', name: tr('Convidado'), email: null, photo: null, guest: true, emailVerified: false, createdAt: null };
 
 export const useAuth = create<AuthState>(() => ({ user: null, ready: false }));
 
@@ -100,20 +101,20 @@ export function startAuth() {
 export function authError(e: unknown): string {
   const code = String((e as { code?: string })?.code ?? '');
   const map: Record<string, string> = {
-    'auth/invalid-email': 'E-mail inválido.',
-    'auth/user-not-found': 'Não existe conta com este e-mail.',
-    'auth/wrong-password': 'Palavra-passe incorreta.',
-    'auth/invalid-credential': 'E-mail ou palavra-passe incorretos.',
-    'auth/email-already-in-use': 'Já existe uma conta com este e-mail. Use "Entrar".',
-    'auth/weak-password': 'A palavra-passe precisa de pelo menos 6 caracteres.',
-    'auth/too-many-requests': 'Demasiadas tentativas. Espere um pouco e tente de novo.',
-    'auth/network-request-failed': 'Sem ligação à internet.',
-    'auth/popup-closed-by-user': 'A janela do Google foi fechada antes de terminar.',
-    'auth/cancelled-popup-request': 'Pedido cancelado.',
-    'auth/unauthorized-domain': `Este domínio (${typeof window !== 'undefined' ? window.location.hostname : ''}) ainda não está autorizado no Firebase. Adicione-o em Firebase Console → Authentication → Settings → Authorized domains, ou entre como convidado.`,
-    'auth/operation-not-allowed': 'Este método de entrada não está ativo no Firebase (Authentication → Sign-in method).',
+    'auth/invalid-email': tr('E-mail inválido.'),
+    'auth/user-not-found': tr('Não existe conta com este e-mail.'),
+    'auth/wrong-password': tr('Palavra-passe incorreta.'),
+    'auth/invalid-credential': tr('E-mail ou palavra-passe incorretos.'),
+    'auth/email-already-in-use': tr('Já existe uma conta com este e-mail. Use "Entrar".'),
+    'auth/weak-password': tr('A palavra-passe precisa de pelo menos 6 caracteres.'),
+    'auth/too-many-requests': tr('Demasiadas tentativas. Espere um pouco e tente de novo.'),
+    'auth/network-request-failed': tr('Sem ligação à internet.'),
+    'auth/popup-closed-by-user': tr('A janela do Google foi fechada antes de terminar.'),
+    'auth/cancelled-popup-request': tr('Pedido cancelado.'),
+    'auth/unauthorized-domain': tr('Este domínio ({0}) ainda não está autorizado no Firebase. Adicione-o em Firebase Console → Authentication → Settings → Authorized domains, ou entre como convidado.', typeof window !== 'undefined' ? window.location.hostname : ''),
+    'auth/operation-not-allowed': tr('Este método de entrada não está ativo no Firebase (Authentication → Sign-in method).'),
   };
-  return map[code] ?? ((e as Error)?.message || 'Não foi possível entrar.');
+  return map[code] ?? ((e as Error)?.message || tr('Não foi possível entrar.'));
 }
 
 export async function loginGoogle(): Promise<void> {

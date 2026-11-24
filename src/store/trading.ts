@@ -7,6 +7,7 @@ import { pipSize, quoteToUsd, resolveSymbol } from '@/core/symbols';
 import type { SpecData } from '@/core/strategy/types';
 import { useSettings, type TradingSettings } from './settings';
 import { uid } from '@/lib/uid';
+import { tr } from '@/i18n';
 
 export interface ReplaySession {
   id: string;
@@ -61,7 +62,7 @@ function execFromFill(f: Fill): ExecMarker {
     price: f.price,
     side: f.side,
     kind: f.kind,
-    text: f.kind === 'entry' ? (buy ? 'Compra' : 'Venda') : f.reason === 'tp' ? 'TP' : f.reason === 'sl' ? 'SL' : f.reason === 'trail' ? 'Trail' : 'Fecho',
+    text: f.kind === 'entry' ? (buy ? tr('Compra') : tr('Venda')) : f.reason === 'tp' ? 'TP' : f.reason === 'sl' ? 'SL' : f.reason === 'trail' ? 'Trail' : tr('Fecho'),
     pnl: f.pnl,
   };
 }

@@ -6,6 +6,7 @@ import { DEFAULT_SYMBOL, DEFAULT_WATCHLIST, resolveSymbol } from '@/core/symbols
 import { dataFeed } from '@/core/feed/datafeed';
 import { newInstance, type IndicatorInstance } from '@/core/indicators/registry';
 import { uid } from '@/lib/uid';
+import { tr } from '@/i18n';
 
 export type LayoutId = '1' | '2h' | '2v' | '3' | '4';
 
@@ -77,7 +78,7 @@ export const useWorkspace = create<WorkspaceState>()(
       const idx = (chart?: number) => chart ?? get().active;
       const patchChart = (i: number, fn: (c: ChartConfig) => ChartConfig) =>
         set((s) => ({ charts: s.charts.map((c, k) => (k === i ? fn(c) : c)), updatedAt: Date.now() }));
-      const firstWatchlist: Watchlist = { id: 'default', name: 'Favoritos', symbols: DEFAULT_WATCHLIST };
+      const firstWatchlist: Watchlist = { id: 'default', name: tr('Favoritos'), symbols: DEFAULT_WATCHLIST };
       return {
         layout: '1',
         charts: [{ ...newChart(), indicators: [newInstance('ema'), { ...newInstance('ema'), params: { length: 50, source: 'close' }, styles: { ma: { color: '#e91e63' } } }] }],

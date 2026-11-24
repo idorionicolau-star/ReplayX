@@ -36,6 +36,7 @@ import { useSettings } from '@/store/settings';
 import { useDrawings } from '@/store/drawings';
 import { useUi } from '@/store/ui';
 import { replay, useReplay } from '@/replay/engine';
+import { TRIAL_DAYS } from '@/core/plans';
 import { resolveSymbol } from '@/core/symbols';
 import { dataFeed, tfsFor } from '@/core/feed/datafeed';
 import { isValidTf, normalizeTf, STANDARD_TFS, tfLabel, tfShort, compareTf } from '@/core/timeframes';
@@ -57,24 +58,25 @@ import { useAuth } from '@/lib/auth';
 import { useGuestTimer, formatGuestTime } from '@/lib/guestTimer';
 import { useCompact } from '@/lib/compact';
 import { CompactBar } from './CompactBar';
+import { tr } from '@/i18n';
 
 export const CHART_TYPES: { id: ChartType; label: string; icon: typeof CandlestickChart }[] = [
-  { id: 'candles', label: 'Velas', icon: CandlestickChart },
-  { id: 'hollow', label: 'Velas ocas', icon: CandlestickChart },
+  { id: 'candles', label: tr('Velas'), icon: CandlestickChart },
+  { id: 'hollow', label: tr('Velas ocas'), icon: CandlestickChart },
   { id: 'heikin', label: 'Heikin Ashi', icon: CandlestickChart },
-  { id: 'bars', label: 'Barras', icon: BarChart },
-  { id: 'line', label: 'Linha', icon: LineChart },
-  { id: 'area', label: 'Área', icon: AreaChart },
-  { id: 'baseline', label: 'Linha de base', icon: Activity },
-  { id: 'columns', label: 'Colunas', icon: BarChart3 },
+  { id: 'bars', label: tr('Barras'), icon: BarChart },
+  { id: 'line', label: tr('Linha'), icon: LineChart },
+  { id: 'area', label: tr('Área'), icon: AreaChart },
+  { id: 'baseline', label: tr('Linha de base'), icon: Activity },
+  { id: 'columns', label: tr('Colunas'), icon: BarChart3 },
 ];
 
 const LAYOUTS: { id: LayoutId; label: string; icon: typeof Square }[] = [
-  { id: '1', label: '1 gráfico', icon: Square },
-  { id: '2h', label: '2 lado a lado', icon: Columns2 },
-  { id: '2v', label: '2 empilhados', icon: Rows2 },
-  { id: '3', label: '3 gráficos', icon: PanelsLeftRight },
-  { id: '4', label: '4 gráficos', icon: Grid2x2 },
+  { id: '1', label: tr('1 gráfico'), icon: Square },
+  { id: '2h', label: tr('2 lado a lado'), icon: Columns2 },
+  { id: '2v', label: tr('2 empilhados'), icon: Rows2 },
+  { id: '3', label: tr('3 gráficos'), icon: PanelsLeftRight },
+  { id: '4', label: tr('4 gráficos'), icon: Grid2x2 },
 ];
 
 function Divider() {
@@ -95,10 +97,10 @@ export function TimeframeMenu() {
   const symId = useWorkspace((s) => s.charts[active]?.symbolId);
   const secs = tfsFor(symId ? resolveSymbol(symId) : null).filter((t) => t.endsWith('s'));
   const groups: { label: string; items: string[] }[] = [
-    ...(secs.length ? [{ label: 'Segundos', items: secs }] : []),
-    { label: 'Minutos', items: STANDARD_TFS.filter((t) => t.endsWith('m')) },
-    { label: 'Horas', items: STANDARD_TFS.filter((t) => t.endsWith('h')) },
-    { label: 'Dias', items: STANDARD_TFS.filter((t) => /[DWM]$/.test(t)) },
+    ...(secs.length ? [{ label: tr('Segundos'), items: secs }] : []),
+    { label: tr('Minutos'), items: STANDARD_TFS.filter((t) => t.endsWith('m')) },
+    { label: tr('Horas'), items: STANDARD_TFS.filter((t) => t.endsWith('h')) },
+    { label: tr('Dias'), items: STANDARD_TFS.filter((t) => /[DWM]$/.test(t)) },
   ];
   const pick = (t: string) => {
     setTf(t, active);
@@ -125,7 +127,7 @@ export function TimeframeMenu() {
         type="button"
         {...wheel.bind}
         onClick={() => setOpen((o) => !o)}
-        title="Intervalo de tempo (no telemóvel: carregue e arraste para cima/baixo)"
+        title={tr('Intervalo de tempo (no telemóvel: carregue e arraste para cima/baixo)')}
         className={cn('flex h-8 items-center gap-0.5 rounded-md px-1.5 text-[13px] font-medium hover:bg-hover', !favs.includes(tf) && 'text-accent')}
       >
         <span className="md:hidden">{tfShort(tf)}</span>
@@ -140,18 +142,18 @@ export function TimeframeMenu() {
                 e.preventDefault();
                 const v = custom.trim();
                 if (!isValidTf(v)) {
-                  toast('Intervalo inválido', { kind: 'error', body: 'Use, por exemplo: 7m, 90m, 2h, 3D' });
+                  toast(tr('Intervalo inválido'), { kind: 'error', body: tr('Use, por exemplo: 7m, 90m, 2h, 3D') });
                   return;
                 }
                 if (symId && !dataFeed().supports(resolveSymbol(symId), normalizeTf(v))) {
-                  toast('Intervalo não disponível', { kind: 'error', body: 'Este símbolo não tem esse intervalo (segundos só existem em sintéticos, cripto e demonstração).' });
+                  toast(tr('Intervalo não disponível'), { kind: 'error', body: tr('Este símbolo não tem esse intervalo (segundos só existem em sintéticos, cripto e demonstração).') });
                   return;
                 }
                 pick(normalizeTf(v));
                 setCustom('');
               }}
             >
-              <Input placeholder="Personalizado (ex.: 7m, 3h)" value={custom} onChange={(e) => setCustom(e.target.value)} />
+              <Input placeholder={tr('Personalizado (ex.: 7m, 3h)')} value={custom} onChange={(e) => setCustom(e.target.value)} />
             </form>
           </div>
           {groups.map((g) => (
@@ -160,7 +162,7 @@ export function TimeframeMenu() {
               {g.items.map((t) => (
                 <div key={t} className="group flex items-center">
                   <MenuItem label={tfLabel(t)} active={tf === t} onClick={() => pick(t)} />
-                  <button type="button" aria-label="Favorito" onClick={() => toggleFav(t)} className={cn('mr-2 rounded p-1', favorites.includes(t) ? 'text-warn' : 'text-faint opacity-0 group-hover:opacity-100')}>
+                  <button type="button" aria-label={tr('Favorito')} onClick={() => toggleFav(t)} className={cn('mr-2 rounded p-1', favorites.includes(t) ? 'text-warn' : 'text-faint opacity-0 group-hover:opacity-100')}>
                     <Star size={14} fill={favorites.includes(t) ? 'currentColor' : 'none'} />
                   </button>
                 </div>
@@ -182,7 +184,7 @@ function ChartTypeMenu() {
   const cur = CHART_TYPES.find((c) => c.id === type) ?? CHART_TYPES[0];
   return (
     <>
-      <IconButton ref={ref} label={`Tipo de gráfico: ${cur.label}`} onClick={() => setOpen((o) => !o)}>
+      <IconButton ref={ref} label={tr('Tipo de gráfico: {0}', cur.label)} onClick={() => setOpen((o) => !o)}>
         <cur.icon size={18} />
       </IconButton>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)}>
@@ -214,7 +216,7 @@ function LayoutMenu() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <IconButton ref={ref} label="Layout de gráficos" onClick={() => setOpen((o) => !o)}>
+      <IconButton ref={ref} label={tr('Layout de gráficos')} onClick={() => setOpen((o) => !o)}>
         <LayoutGrid size={18} />
       </IconButton>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-end">
@@ -224,11 +226,11 @@ function LayoutMenu() {
             <MenuItem key={l.id} icon={<l.icon size={16} />} label={l.label} active={layout === l.id} onClick={() => (setOpen(false), setLayout(l.id))} />
           ))}
           <MenuSeparator />
-          <MenuHeader>Sincronizar entre gráficos</MenuHeader>
-          <MenuItem icon={<Link2 size={15} />} label="Símbolo" checked={sync.symbol} onClick={() => setSync({ symbol: !sync.symbol })} />
-          <MenuItem icon={<Link2 size={15} />} label="Intervalo" checked={sync.interval} onClick={() => setSync({ interval: !sync.interval })} />
-          <MenuItem icon={<Link2 size={15} />} label="Mira (crosshair)" checked={sync.crosshair} onClick={() => setSync({ crosshair: !sync.crosshair })} />
-          <div className="px-3 pt-1 pb-1 text-[11px] text-muted">O replay usa sempre o mesmo instante em todos os gráficos.</div>
+          <MenuHeader>{tr('Sincronizar entre gráficos')}</MenuHeader>
+          <MenuItem icon={<Link2 size={15} />} label={tr('Símbolo')} checked={sync.symbol} onClick={() => setSync({ symbol: !sync.symbol })} />
+          <MenuItem icon={<Link2 size={15} />} label={tr('Intervalo')} checked={sync.interval} onClick={() => setSync({ interval: !sync.interval })} />
+          <MenuItem icon={<Link2 size={15} />} label={tr('Mira (crosshair)')} checked={sync.crosshair} onClick={() => setSync({ crosshair: !sync.crosshair })} />
+          <div className="px-3 pt-1 pb-1 text-[11px] text-muted">{tr('O replay usa sempre o mesmo instante em todos os gráficos.')}</div>
         </MenuList>
       </Popover>
     </>
@@ -280,7 +282,7 @@ function FullTopBar() {
 
   return (
     <header className="flex h-[42px] shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden border-b border-line bg-panel px-1.5 no-select">
-      <IconButton label="Ferramentas de desenho" className="sm:hidden" onClick={() => useUi.getState().set({ mobileTools: !useUi.getState().mobileTools })}>
+      <IconButton label={tr('Ferramentas de desenho')} className="sm:hidden" onClick={() => useUi.getState().set({ mobileTools: !useUi.getState().mobileTools })}>
         <MenuIcon size={18} />
       </IconButton>
       {symWheel.overlay}
@@ -289,7 +291,7 @@ function FullTopBar() {
         {...symWheel.bind}
         onClick={() => useUi.getState().openSymbolSearch('', active)}
         className="flex h-8 shrink-0 items-center gap-2 rounded-md px-2 hover:bg-hover max-sm:hidden"
-        title="Procurar símbolo (no telemóvel: carregue e arraste para cima/baixo para percorrer a lista)"
+        title={tr('Procurar símbolo (no telemóvel: carregue e arraste para cima/baixo para percorrer a lista)')}
         data-testid="symbol-button"
       >
         {sym && <AssetIcon symbol={sym} size={18} />}
@@ -306,11 +308,11 @@ function FullTopBar() {
         type="button"
         onClick={() => useUi.getState().set({ indicators: true })}
         className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-hover"
-        title="Indicadores (/)"
+        title={tr('Indicadores (/)')}
         data-testid="indicators-button"
       >
         <FunctionSquare size={18} />
-        <span className="hidden lg:inline">Indicadores</span>
+        <span className="hidden lg:inline">{tr('Indicadores')}</span>
       </button>
       <FavIndicatorsMenu />
       <Divider />
@@ -325,10 +327,10 @@ function FullTopBar() {
         <span className="hidden sm:inline">Replay</span>
       </button>
       <Divider />
-      <IconButton label="Desfazer (Ctrl+Z)" onClick={() => cfg && undo(cfg.symbolId)}>
+      <IconButton label={tr('Desfazer (Ctrl+Z)')} onClick={() => cfg && undo(cfg.symbolId)}>
         <Undo2 size={17} />
       </IconButton>
-      <IconButton label="Refazer (Ctrl+Y)" onClick={() => cfg && redo(cfg.symbolId)}>
+      <IconButton label={tr('Refazer (Ctrl+Y)')} onClick={() => cfg && redo(cfg.symbolId)}>
         <Redo2 size={17} />
       </IconButton>
 
@@ -337,16 +339,16 @@ function FullTopBar() {
       <GuestCountdownBadge />
       <PlanBadge />
       <LayoutMenu />
-      <IconButton label="Captura do gráfico" onClick={screenshot}>
+      <IconButton label={tr('Captura do gráfico')} onClick={screenshot}>
         <Camera size={17} />
       </IconButton>
-      <IconButton label={theme === 'dark' ? 'Tema claro' : 'Tema escuro'} onClick={() => setSettings({ theme: theme === 'dark' ? 'light' : 'dark' })}>
+      <IconButton label={theme === 'dark' ? tr('Tema claro') : tr('Tema escuro')} onClick={() => setSettings({ theme: theme === 'dark' ? 'light' : 'dark' })}>
         {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
       </IconButton>
-      <IconButton label="Definições" onClick={() => useUi.getState().set({ settings: true })}>
+      <IconButton label={tr('Definições')} onClick={() => useUi.getState().set({ settings: true })}>
         <Settings size={17} />
       </IconButton>
-      <IconButton label="Ecrã inteiro" className="hidden sm:inline-flex" onClick={fullscreen}>
+      <IconButton label={tr('Ecrã inteiro')} className="hidden sm:inline-flex" onClick={fullscreen}>
         {full ? <Minimize size={17} /> : <Maximize size={17} />}
       </IconButton>
       <Divider />
@@ -365,14 +367,14 @@ export function GuestCountdownBadge() {
     <button
       type="button"
       onClick={() => setDialogOpen(true)}
-      title="Tempo restante da demonstração (20 min). Clique para guardar as suas análises e receber 14 dias de Pro Grátis!"
+      title={tr('Tempo restante da demonstração (20 min). Clique para guardar as suas análises e receber {0} dias de Pro Grátis!', TRIAL_DAYS)}
       className={cn(
         'mr-1.5 flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors',
         urgent ? 'border border-down/40 bg-down/20 text-down animate-pulse' : 'border border-warn/30 bg-warn/15 text-warn hover:bg-warn/25',
       )}
     >
       <Clock size={13} />
-      <span>Demonstração · {formatGuestTime(remainingMs)}</span>
+      <span>{tr('Demonstração ·')} {formatGuestTime(remainingMs)}</span>
     </button>
   );
 }
@@ -382,12 +384,12 @@ function PlanBadge() {
   const user = useAuth((s) => s.user);
   const plan = usePlan();
   if (user?.guest || !plan.loaded) return null;
-  const label = plan.reason === 'paid' || plan.reason === 'lifetime' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : 'Assinar Pro';
+  const label = plan.reason === 'paid' || plan.reason === 'lifetime' ? 'Pro' : plan.reason === 'trial' ? `Pro · ${plan.daysLeft}d` : tr('Assinar Pro');
   return (
     <button
       type="button"
       onClick={() => openUpgrade()}
-      title={plan.reason === 'trial' ? 'Teste do Pro' : plan.reason === 'lifetime' ? 'Pro vitalício' : plan.reason === 'paid' ? 'Plano Pro' : 'Ver o plano Pro'}
+      title={plan.reason === 'trial' ? tr('Teste do Pro') : plan.reason === 'lifetime' ? tr('Pro vitalício') : plan.reason === 'paid' ? tr('Plano Pro') : tr('Ver o plano Pro')}
       className={cn(
         'mr-1 flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
         plan.reason === 'free' ? 'bg-accent text-on-accent hover:bg-accent-hover' : 'bg-warn/15 text-warn hover:bg-warn/25',
@@ -409,12 +411,12 @@ function FavIndicatorsMenu() {
   if (!favs.length) return null;
   return (
     <>
-      <button ref={ref} type="button" aria-label="Indicadores favoritos" title="Indicadores favoritos" onClick={() => setOpen((o) => !o)} className="-ml-1 flex h-8 w-5 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text">
+      <button ref={ref} type="button" aria-label={tr('Indicadores favoritos')} title={tr('Indicadores favoritos')} onClick={() => setOpen((o) => !o)} className="-ml-1 flex h-8 w-5 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-text">
         <ChevronDown size={14} />
       </button>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-start">
         <MenuList className="w-[240px]">
-          <MenuHeader>Indicadores favoritos</MenuHeader>
+          <MenuHeader>{tr('Indicadores favoritos')}</MenuHeader>
           {favs.map((id) => {
             const def = getIndicator(id);
             if (!def) return null;
@@ -435,7 +437,7 @@ function FavIndicatorsMenu() {
             );
           })}
           <MenuSeparator />
-          <MenuItem icon={<FunctionSquare size={15} />} label="Todos os indicadores…" onClick={() => (setOpen(false), useUi.getState().set({ indicators: true }))} />
+          <MenuItem icon={<FunctionSquare size={15} />} label={tr('Todos os indicadores…')} onClick={() => (setOpen(false), useUi.getState().set({ indicators: true }))} />
         </MenuList>
       </Popover>
     </>

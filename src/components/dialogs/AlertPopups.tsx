@@ -4,6 +4,7 @@ import { useAlerts } from '@/store/alerts';
 import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { fmtDateTime } from '@/lib/format';
+import { tr } from '@/i18n';
 
 /** Janelas de alerta (como no TradingView): ficam no ecrã até serem fechadas. */
 export function AlertPopups() {
@@ -27,7 +28,7 @@ export function AlertPopups() {
                 {p.replay ? ' · replay' : ''}
               </div>
             </div>
-            <button type="button" aria-label="Fechar" onClick={() => st.closePopup(p.id)} className="rounded-md p-1 text-muted hover:bg-hover hover:text-text">
+            <button type="button" aria-label={tr('Fechar')} onClick={() => st.closePopup(p.id)} className="rounded-md p-1 text-muted hover:bg-hover hover:text-text">
               <X size={16} />
             </button>
           </div>
@@ -40,11 +41,11 @@ export function AlertPopups() {
                 useUi.getState().set({ alertDraft: { symbolId: useAlerts.getState().alerts.find((a) => a.id === p.alertId)?.symbolId ?? '', editId: p.alertId } });
               }}
             >
-              Editar alerta
+              {tr('Editar alerta')}
             </button>
             {popups.length > 1 && (
               <button type="button" className="h-7 rounded-md px-3 text-xs text-muted hover:bg-hover" onClick={() => st.closeAllPopups()}>
-                Fechar todos
+                {tr('Fechar todos')}
               </button>
             )}
             <button type="button" className="h-7 rounded-md bg-accent px-4 text-xs font-medium text-on-accent hover:bg-accent-hover" onClick={() => st.closePopup(p.id)}>

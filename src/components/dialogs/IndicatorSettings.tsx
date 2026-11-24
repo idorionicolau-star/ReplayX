@@ -13,6 +13,7 @@ import { getChart } from '@/chart/registry';
 import { runStrategy } from '@/core/strategy/client';
 import type { ScriptInput, ScriptRunResult } from '@/core/strategy/script';
 import { MA_TYPES, SOURCES } from '@/core/indicators/ta';
+import { tr } from '@/i18n';
 
 export function IndicatorSettings() {
   const target = useUi((s) => s.indicatorSettings);
@@ -51,13 +52,13 @@ export function IndicatorSettings() {
     <Dialog
       open
       onClose={close}
-      title={def?.name ?? script?.name ?? 'Indicador'}
+      title={def?.name ?? script?.name ?? tr('Indicador')}
       width={440}
       footer={
         <>
           {def && (
             <Button variant="ghost" onClick={() => update(inst.uid, { params: defaultParams(def), styles: {} }, target.chart)}>
-              Repor padrão
+              {tr('Repor padrão')}
             </Button>
           )}
           <Button variant="primary" onClick={close}>
@@ -71,8 +72,8 @@ export function IndicatorSettings() {
         value={tab}
         onChange={setTab}
         items={[
-          { value: 'inputs', label: 'Parâmetros' },
-          { value: 'style', label: 'Estilo' },
+          { value: 'inputs', label: tr('Parâmetros') },
+          { value: 'style', label: tr('Estilo') },
         ]}
       />
       {tab === 'inputs' && (
@@ -97,8 +98,8 @@ export function IndicatorSettings() {
               </Row>
             );
           })}
-          {def && !def.inputs.length && <div className="py-4 text-center text-xs text-muted">Este indicador não tem parâmetros.</div>}
-          {isScript && scriptInputs === null && <div className="py-4 text-center text-xs text-muted">A ler os parâmetros do script…</div>}
+          {def && !def.inputs.length && <div className="py-4 text-center text-xs text-muted">{tr('Este indicador não tem parâmetros.')}</div>}
+          {isScript && scriptInputs === null && <div className="py-4 text-center text-xs text-muted">{tr('A ler os parâmetros do script…')}</div>}
           {isScript &&
             scriptInputs?.map((inp) => {
               const v = inst.params[inp.title] ?? inp.default;
@@ -120,7 +121,7 @@ export function IndicatorSettings() {
                 </Row>
               );
             })}
-          {isScript && scriptInputs && !scriptInputs.length && <div className="py-4 text-center text-xs text-muted">Este script não tem parâmetros (input.*).</div>}
+          {isScript && scriptInputs && !scriptInputs.length && <div className="py-4 text-center text-xs text-muted">{tr('Este script não tem parâmetros (input.*).')}</div>}
         </div>
       )}
       {tab === 'style' && (
@@ -141,7 +142,7 @@ export function IndicatorSettings() {
               </Row>
             );
           })}
-          {!outputs.length && <div className="py-4 text-center text-xs text-muted">Sem linhas para configurar.</div>}
+          {!outputs.length && <div className="py-4 text-center text-xs text-muted">{tr('Sem linhas para configurar.')}</div>}
         </div>
       )}
     </Dialog>

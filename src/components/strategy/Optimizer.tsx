@@ -24,6 +24,7 @@ import { toast } from '@/components/ui/Toast';
 import { fmtDate, fmtMoney, fmtNum } from '@/lib/format';
 import { useSettings } from '@/store/settings';
 import { cn } from '@/components/ui/cn';
+import { locale, tr } from '@/i18n';
 
 interface RangeRow extends OptimizeRange {
   enabled: boolean;
@@ -118,7 +119,7 @@ export function Optimizer() {
     if (!ref) return;
     const ctrl = new AbortController();
     setAbort(ctrl);
-    st.set({ running: { kind: 'optimize', done: 0, total: maxRuns, info: 'A carregar dados…' }, error: null });
+    st.set({ running: { kind: 'optimize', done: 0, total: maxRuns, info: tr('A carregar dados…') }, error: null });
     try {
       const data = await loadDataset(st.barsToTest);
       const r = await runStrategy<OptimizeResult>({ type: 'optimize', strategy: ref, data, settings: st.settings, config: config() }, { onProgress: progress('optimize'), signal: ctrl.signal });
@@ -135,7 +136,7 @@ export function Optimizer() {
     if (!ref) return;
     const ctrl = new AbortController();
     setAbort(ctrl);
-    st.set({ running: { kind: 'walkforward', done: 0, total: folds, info: 'A carregar dados…' }, error: null });
+    st.set({ running: { kind: 'walkforward', done: 0, total: folds, info: tr('A carregar dados…') }, error: null });
     try {
       const data = await loadDataset(st.barsToTest);
       const r = await runStrategy<WalkForwardResult>(
@@ -156,14 +157,14 @@ export function Optimizer() {
     const ctrl = new AbortController();
     setAbort(ctrl);
     const tf = multiTf || cfg?.tf || '1h';
-    st.set({ running: { kind: 'multi', done: 0, total: multiSyms.length, info: 'A carregar dados…' }, error: null });
+    st.set({ running: { kind: 'multi', done: 0, total: multiSyms.length, info: tr('A carregar dados…') }, error: null });
     try {
       const datasets: Dataset[] = [];
       const failed: BatchRow[] = [];
       for (let k = 0; k < multiSyms.length; k++) {
-        if (ctrl.signal.aborted) throw new Error('Cancelado');
+        if (ctrl.signal.aborted) throw new Error(tr('Cancelado'));
         const id = multiSyms[k];
-        st.set({ running: { kind: 'multi', done: k, total: multiSyms.length, info: `A carregar ${resolveSymbol(id).name}…` } });
+        st.set({ running: { kind: 'multi', done: k, total: multiSyms.length, info: tr('A carregar {0}…', resolveSymbol(id).name) } });
         try {
           datasets.push(await loadDataset(st.barsToTest, id, tf));
         } catch (e) {
@@ -187,7 +188,7 @@ export function Optimizer() {
     } else if (script) {
       st.saveScript({ id: script.id, name: script.name, code: applyScriptParams(script.code, params) });
     }
-    toast('Parâmetros aplicados à estratégia', { kind: 'success', body: 'Teste-a no Testador para ver o resultado completo.' });
+    toast(tr('Parâmetros aplicados à estratégia'), { kind: 'success', body: tr('Teste-a no Testador para ver o resultado completo.') });
   };
 
   const watchSymbols = watchlists.find((w) => w.id === activeList)?.symbols ?? [];
@@ -227,14 +228,14 @@ export function Optimizer() {
           value={view}
           onChange={setView}
           items={[
-            { value: 'optimize', label: 'Aprender parâmetros' },
+            { value: 'optimize', label: tr('Aprender parâmetros') },
             { value: 'walkforward', label: 'Walk-forward' },
-            { value: 'multi', label: 'Vários ativos' },
+            { value: 'multi', label: tr('Vários ativos') },
           ]}
         />
         {view !== 'multi' && (
           <div className="rounded-lg border border-line">
-            <div className="border-b border-line px-2.5 py-1.5 text-[11px] font-semibold text-muted">Parâmetros a otimizar</div>
+            <div className="border-b border-line px-2.5 py-1.5 text-[11px] font-semibold text-muted">{tr('Parâmetros a otimizar')}</div>
             <div className="max-h-56 overflow-y-auto p-1.5">
               {ranges.map((r, i) => (
                 <div key={r.key} className="flex items-center gap-1.5 py-1 text-xs">
@@ -247,26 +248,26 @@ export function Optimizer() {
                   <NumberInput className="w-12 [&_input]:h-6 [&_input]:px-1 [&_input]:text-[11px]" value={r.step} step={r.integer ? 1 : 0.05} min={r.integer ? 1 : 0.0001} onChange={(v) => v !== undefined && setRanges(ranges.map((x, k) => (k === i ? { ...x, step: v } : x)))} />
                 </div>
               ))}
-              {!ranges.length && <div className="p-3 text-center text-xs text-muted">Esta estratégia não tem parâmetros numéricos.</div>}
+              {!ranges.length && <div className="p-3 text-center text-xs text-muted">{tr('Esta estratégia não tem parâmetros numéricos.')}</div>}
             </div>
             <div className="flex justify-between border-t border-line px-2.5 py-1 text-[10px] text-muted">
-              <span>mín · máx · passo</span>
-              <span>{combos.toLocaleString('pt-PT')} combinações</span>
+              <span>{tr('mín · máx · passo')}</span>
+              <span>{combos.toLocaleString(locale())} {tr('combinações')}</span>
             </div>
           </div>
         )}
         {view !== 'multi' && (
           <div className="grid grid-cols-2 gap-2 text-xs">
             <label className="flex flex-col gap-1 text-muted">
-              Método
+              {tr('Método')}
               <Select value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
-                <option value="genetic">Genético (aprende)</option>
-                <option value="grid">Grelha completa</option>
-                <option value="random">Aleatório</option>
+                <option value="genetic">{tr('Genético (aprende)')}</option>
+                <option value="grid">{tr('Grelha completa')}</option>
+                <option value="random">{tr('Aleatório')}</option>
               </Select>
             </label>
             <label className="flex flex-col gap-1 text-muted">
-              Objetivo
+              {tr('Objetivo')}
               <Select value={objective} onChange={(e) => setObjective(e.target.value as Objective)}>
                 {(Object.keys(OBJECTIVE_LABEL) as Objective[]).map((o) => (
                   <option key={o} value={o}>
@@ -276,11 +277,11 @@ export function Optimizer() {
               </Select>
             </label>
             <label className="flex flex-col gap-1 text-muted">
-              Mín. operações
+              {tr('Mín. operações')}
               <NumberInput value={minTrades} min={1} step={5} onChange={(v) => v !== undefined && setMinTrades(Math.round(v))} />
             </label>
             <label className="flex flex-col gap-1 text-muted">
-              Máx. testes
+              {tr('Máx. testes')}
               <NumberInput value={maxRuns} min={10} max={5000} step={50} onChange={(v) => v !== undefined && setMaxRuns(Math.round(v))} />
             </label>
           </div>
@@ -288,22 +289,22 @@ export function Optimizer() {
         {view === 'walkforward' && (
           <div className="grid grid-cols-2 gap-2 text-xs">
             <label className="flex flex-col gap-1 text-muted">
-              Janelas
+              {tr('Janelas')}
               <NumberInput value={folds} min={2} max={12} step={1} onChange={(v) => v !== undefined && setFolds(Math.round(v))} />
             </label>
             <label className="flex flex-col gap-1 text-muted">
-              % para aprender
+              {tr('% para aprender')}
               <NumberInput value={isPct} min={50} max={90} step={5} onChange={(v) => v !== undefined && setIsPct(Math.round(v))} />
             </label>
-            <Switch checked={anchored} onChange={setAnchored} label={<span className="text-muted">Ancorado (janela cresce)</span>} />
+            <Switch checked={anchored} onChange={setAnchored} label={<span className="text-muted">{tr('Ancorado (janela cresce)')}</span>} />
           </div>
         )}
         {view === 'multi' && (
           <div className="flex flex-col gap-2 text-xs">
             <label className="flex items-center justify-between gap-2 text-muted">
-              Intervalo
+              {tr('Intervalo')}
               <Select className="w-32" value={multiTf} onChange={(e) => setMultiTf(e.target.value)}>
-                <option value="">Igual ao gráfico ({cfg ? tfShort(cfg.tf) : ''})</option>
+                <option value="">{tr('Igual ao gráfico (')}{cfg ? tfShort(cfg.tf) : ''})</option>
                 {STANDARD_TFS.map((t) => (
                   <option key={t} value={t}>
                     {tfShort(t)}
@@ -312,13 +313,13 @@ export function Optimizer() {
               </Select>
             </label>
             <div className="flex items-center justify-between">
-              <span className="text-muted">Ativos ({multiSyms.length})</span>
+              <span className="text-muted">{tr('Ativos (')}{multiSyms.length})</span>
               <span className="flex gap-2">
                 <button type="button" className="text-accent hover:underline" onClick={() => setMultiSyms(watchSymbols)}>
-                  Toda a lista
+                  {tr('Toda a lista')}
                 </button>
                 <button type="button" className="text-muted hover:underline" onClick={() => setMultiSyms([])}>
-                  Limpar
+                  {tr('Limpar')}
                 </button>
               </span>
             </div>
@@ -329,23 +330,23 @@ export function Optimizer() {
                 </div>
               ))}
             </div>
-            <div className="text-[11px] text-muted">Usa a lista de observação ativa. Testar em vários mercados mostra se a estratégia é robusta ou só funciona num.</div>
+            <div className="text-[11px] text-muted">{tr('Usa a lista de observação ativa. Testar em vários mercados mostra se a estratégia é robusta ou só funciona num.')}</div>
           </div>
         )}
         <div className="flex gap-2">
           {view === 'optimize' && (
             <Button variant="primary" block onClick={() => void runOptimize()} disabled={!!running || !enabled.length}>
-              <Sparkles size={15} /> Aprender ({Math.min(maxRuns, method === 'grid' ? combos : maxRuns)} testes)
+              <Sparkles size={15} /> {tr('Aprender (')}{Math.min(maxRuns, method === 'grid' ? combos : maxRuns)} {tr('testes)')}
             </Button>
           )}
           {view === 'walkforward' && (
             <Button variant="primary" block onClick={() => void runWalkForward()} disabled={!!running || !enabled.length}>
-              <Play size={14} /> Correr walk-forward
+              <Play size={14} /> {tr('Correr walk-forward')}
             </Button>
           )}
           {view === 'multi' && (
             <Button variant="primary" block onClick={() => void runMulti()} disabled={!!running || !multiSyms.length}>
-              <Layers3 size={15} /> Testar em {multiSyms.length} ativo(s)
+              <Layers3 size={15} /> {tr('Testar em')} {multiSyms.length} {tr('ativo(s)')}
             </Button>
           )}
           {abort && (
@@ -357,7 +358,7 @@ export function Optimizer() {
         {running && running.kind !== 'backtest' && (
           <div>
             <div className="mb-1 flex justify-between text-[11px] text-muted">
-              <span>{running.info ?? 'A trabalhar…'}</span>
+              <span>{running.info ?? tr('A trabalhar…')}</span>
               <span className="tnum">
                 {running.done}/{running.total}
               </span>
@@ -378,8 +379,8 @@ export function Optimizer() {
         {view === 'optimize' && (
           <>
             {!st.optimization && !running && (
-              <Empty icon={<Sparkles size={28} />} title="Deixe o ReplayX aprender os melhores parâmetros">
-                Escolha os parâmetros e intervalos. O algoritmo genético combina e “evolui” as melhores configurações. Depois valide no walk-forward para evitar sobre-otimização.
+              <Empty icon={<Sparkles size={28} />} title={tr('Deixe o ReplayX aprender os melhores parâmetros')}>
+                {tr('Escolha os parâmetros e intervalos. O algoritmo genético combina e “evolui” as melhores configurações. Depois valide no walk-forward para evitar sobre-otimização.')}
               </Empty>
             )}
             {running?.kind === 'optimize' && !st.optimization && (
@@ -393,7 +394,7 @@ export function Optimizer() {
                   <span className="text-xs font-semibold">{st.optimization.label}</span>
                   {st.optimization.bestParams && (
                     <Button size="sm" variant="primary" onClick={() => applyParams(st.optimization!.bestParams!)}>
-                      <Check size={14} /> Aplicar os melhores
+                      <Check size={14} /> {tr('Aplicar os melhores')}
                     </Button>
                   )}
                 </div>
@@ -408,11 +409,11 @@ export function Optimizer() {
                             {k.label.length > 18 ? `${k.label.slice(0, 18)}…` : k.label}
                           </th>
                         ))}
-                        <th className="px-2 py-1.5 text-right">Lucro</th>
-                        <th className="px-2 py-1.5 text-right">F. lucro</th>
-                        <th className="px-2 py-1.5 text-right">Acerto</th>
-                        <th className="px-2 py-1.5 text-right">Op.</th>
-                        <th className="px-2 py-1.5 text-right">DD máx.</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Lucro')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('F. lucro')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Acerto')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Op.')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('DD máx.')}</th>
                         <th className="px-2 py-1.5" />
                       </tr>
                     </thead>
@@ -432,7 +433,7 @@ export function Optimizer() {
                           <td className="px-2 py-1 text-right text-down tnum">{c.stats.maxDrawdownPct.toFixed(1)}%</td>
                           <td className="px-2 py-1 text-right">
                             <button type="button" className="text-accent hover:underline" onClick={() => applyParams(c.params)}>
-                              Aplicar
+                              {tr('Aplicar')}
                             </button>
                           </td>
                         </tr>
@@ -447,9 +448,8 @@ export function Optimizer() {
         {view === 'walkforward' && (
           <>
             {!st.walkforward && (
-              <Empty icon={<Info size={26} />} title="Walk-forward: aprende num período, testa no seguinte">
-                Os dados são divididos em janelas. Em cada uma, os parâmetros são otimizados na primeira parte (amostra) e testados na parte seguinte, que o otimizador nunca viu. É a forma mais honesta de saber se a
-                estratégia funciona no futuro.
+              <Empty icon={<Info size={26} />} title={tr('Walk-forward: aprende num período, testa no seguinte')}>
+                {tr('Os dados são divididos em janelas. Em cada uma, os parâmetros são otimizados na primeira parte (amostra) e testados na parte seguinte, que o otimizador nunca viu. É a forma mais honesta de saber se a estratégia funciona no futuro.')}
               </Empty>
             )}
             {st.walkforward && (
@@ -457,10 +457,10 @@ export function Optimizer() {
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className="font-semibold">{st.walkforward.label}</span>
                   <span className={cn('rounded px-2 py-0.5 font-semibold', st.walkforward.efficiency >= 50 ? 'bg-up/15 text-up' : st.walkforward.efficiency > 0 ? 'bg-warn/15 text-warn' : 'bg-down/15 text-down')}>
-                    Eficiência {st.walkforward.efficiency.toFixed(0)}%
+                    {tr('Eficiência')} {st.walkforward.efficiency.toFixed(0)}%
                   </span>
                   <span className="text-muted">
-                    {st.walkforward.efficiency >= 50 ? 'Robusta: mantém boa parte do desempenho fora da amostra.' : st.walkforward.efficiency > 0 ? 'Aceitável, mas perde força fora da amostra.' : 'Provável sobre-otimização: não se mantém fora da amostra.'}
+                    {st.walkforward.efficiency >= 50 ? tr('Robusta: mantém boa parte do desempenho fora da amostra.') : st.walkforward.efficiency > 0 ? tr('Aceitável, mas perde força fora da amostra.') : tr('Provável sobre-otimização: não se mantém fora da amostra.')}
                   </span>
                 </div>
                 {st.walkforward.oos && <KeyStats s={st.walkforward.oos.stats} />}
@@ -468,13 +468,13 @@ export function Optimizer() {
                   <table className="w-full min-w-[640px] text-xs">
                     <thead className="bg-sunken text-[11px] text-muted">
                       <tr className="text-left">
-                        <th className="px-2 py-1.5">Janela</th>
-                        <th className="px-2 py-1.5">Aprendizagem</th>
-                        <th className="px-2 py-1.5">Parâmetros</th>
-                        <th className="px-2 py-1.5 text-right">Lucro (amostra)</th>
-                        <th className="px-2 py-1.5">Teste</th>
-                        <th className="px-2 py-1.5 text-right">Lucro (teste)</th>
-                        <th className="px-2 py-1.5 text-right">Op.</th>
+                        <th className="px-2 py-1.5">{tr('Janela')}</th>
+                        <th className="px-2 py-1.5">{tr('Aprendizagem')}</th>
+                        <th className="px-2 py-1.5">{tr('Parâmetros')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Lucro (amostra)')}</th>
+                        <th className="px-2 py-1.5">{tr('Teste')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Lucro (teste)')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Op.')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -503,8 +503,8 @@ export function Optimizer() {
         {view === 'multi' && (
           <>
             {!st.batch && (
-              <Empty icon={<Layers3 size={26} />} title="Teste a mesma estratégia em vários mercados">
-                Selecione os ativos à esquerda. O resultado inclui uma simulação de Monte Carlo (baralha a ordem das operações) para estimar o pior drawdown provável.
+              <Empty icon={<Layers3 size={26} />} title={tr('Teste a mesma estratégia em vários mercados')}>
+                {tr('Selecione os ativos à esquerda. O resultado inclui uma simulação de Monte Carlo (baralha a ordem das operações) para estimar o pior drawdown provável.')}
               </Empty>
             )}
             {st.batch && (
@@ -514,13 +514,13 @@ export function Optimizer() {
                   <table className="w-full min-w-[620px] text-xs">
                     <thead className="bg-sunken text-[11px] text-muted">
                       <tr className="text-left">
-                        <th className="px-2 py-1.5">Ativo</th>
-                        <th className="px-2 py-1.5 text-right">Lucro</th>
-                        <th className="px-2 py-1.5 text-right">F. lucro</th>
-                        <th className="px-2 py-1.5 text-right">Acerto</th>
-                        <th className="px-2 py-1.5 text-right">Op.</th>
-                        <th className="px-2 py-1.5 text-right">DD máx.</th>
-                        <th className="px-2 py-1.5 text-right">Comprar e manter</th>
+                        <th className="px-2 py-1.5">{tr('Ativo')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Lucro')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('F. lucro')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Acerto')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Op.')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('DD máx.')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Comprar e manter')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -550,22 +550,22 @@ export function Optimizer() {
                 </div>
                 {st.batch.monteCarlo && (
                   <div className="rounded-lg border border-line p-3 text-xs">
-                    <div className="mb-2 font-semibold">Monte Carlo ({st.batch.monteCarlo.runs} simulações, todas as operações juntas)</div>
+                    <div className="mb-2 font-semibold">Monte Carlo ({st.batch.monteCarlo.runs} {tr('simulações, todas as operações juntas)')}</div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div>
-                        <div className="text-muted">Drawdown mediano</div>
+                        <div className="text-muted">{tr('Drawdown mediano')}</div>
                         <div className="font-semibold text-down tnum">{st.batch.monteCarlo.ddMedian.toFixed(1)}%</div>
                       </div>
                       <div>
-                        <div className="text-muted">Drawdown 95%</div>
+                        <div className="text-muted">{tr('Drawdown 95%')}</div>
                         <div className="font-semibold text-down tnum">{st.batch.monteCarlo.dd95.toFixed(1)}%</div>
                       </div>
                       <div>
-                        <div className="text-muted">Capital final (5% pior)</div>
+                        <div className="text-muted">{tr('Capital final (5% pior)')}</div>
                         <div className="font-semibold tnum">{fmtMoney(st.batch.monteCarlo.finalP5)}</div>
                       </div>
                       <div>
-                        <div className="text-muted">Risco de perder 50%</div>
+                        <div className="text-muted">{tr('Risco de perder 50%')}</div>
                         <div className={cn('font-semibold tnum', st.batch.monteCarlo.ruinPct > 5 ? 'text-down' : 'text-up')}>{st.batch.monteCarlo.ruinPct.toFixed(1)}%</div>
                       </div>
                     </div>

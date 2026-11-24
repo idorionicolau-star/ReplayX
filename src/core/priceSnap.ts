@@ -1,4 +1,5 @@
 import type { Bar } from './types';
+import { tr } from '@/i18n';
 
 export interface Pivot {
   idx: number;
@@ -12,9 +13,9 @@ export interface Pivot {
 /** Sensibilidade dos pivôs: quantas velas à vista por cada vela de "janela" de cada lado (mais = janela menor = mais pivôs). */
 export type PivotSensitivity = 'few' | 'normal' | 'more';
 export const PIVOT_SENSITIVITY: Record<PivotSensitivity, { label: string; per: number }> = {
-  few: { label: 'Poucos (só os topos e fundos maiores)', per: 8 },
-  normal: { label: 'Normal', per: 12 },
-  more: { label: 'Mais (também os médios)', per: 18 },
+  few: { label: tr('Poucos (só os topos e fundos maiores)'), per: 8 },
+  normal: { label: tr('Normal'), per: 12 },
+  more: { label: tr('Mais (também os médios)'), per: 18 },
 };
 
 /** Velas de cada lado que o pivô tem de dominar: cresce com o número de velas à vista (o zoom). */

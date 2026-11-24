@@ -2,6 +2,7 @@ import type { Bar } from '../types';
 import { findPivots } from './apocalypse';
 import type { DrawData, DrawLine, DrawText } from '../../chart/layer';
 import type { IndicatorMarker } from './registry';
+import { tr } from '@/i18n';
 
 /**
  * Método Footprint + Layer Line + divergência escondida no Estocástico.
@@ -265,9 +266,9 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
   /** Depois da primeira entrada: escalonamentos a favor da nova tendência, sem violar a layer line nova. */
   const stepTrend = (ent: { lv: Live; setup: FpSetup | null }, t: number): boolean => {
     const lv = ent.lv;
-    const tr = lv.trend!;
+    const trd = lv.trend!;
     const s = ent.setup!;
-    const line = lv.l2.price + tr.s * (t - lv.l2.idx);
+    const line = lv.l2.price + trd.s * (t - lv.l2.idx);
     // violar a layer line nova (um fecho por baixo) ou o extremo da 2.ª perna acaba a tendência
     if (e.C[t] < line || e.L[t] < lv.l2.price) {
       s.trendLine!.end = t;
@@ -275,29 +276,29 @@ function scanBuy(bars: readonly Bar[], atr: readonly number[], k: readonly numbe
     }
     // a vela anterior é um fundo de recuo (mínimo local) confirmado pela atual
     const j = t - 1;
-    if (j >= lv.l2.idx + 2 && e.L[j] < e.L[j - 1] && e.L[j] <= e.L[t] && j > tr.last.idx) {
-      tr.prev = tr.last;
-      tr.last = { idx: j, price: e.L[j] };
+    if (j >= lv.l2.idx + 2 && e.L[j] < e.L[j - 1] && e.L[j] <= e.L[t] && j > trd.last.idx) {
+      trd.prev = trd.last;
+      trd.last = { idx: j, price: e.L[j] };
       const r = (e.L[j] - lv.l2.price) / (j - lv.l2.idx);
-      if (r < tr.s) {
-        tr.s = r;
+      if (r < trd.s) {
+        trd.s = r;
         s.trendLine!.slope = r;
       }
       // divergência escondida: fundo mais alto no preço, mais baixo no Estocástico
-      tr.armed = tr.last.price > tr.prev.price && stochLow(tr.last.idx, t) < stochLow(tr.prev.idx, t);
+      trd.armed = trd.last.price > trd.prev.price && stochLow(trd.last.idx, t) < stochLow(trd.prev.idx, t);
     }
-    if (tr.last.idx <= tr.used) return true; // cada fundo só dá uma entrada
+    if (trd.last.idx <= trd.used) return true; // cada fundo só dá uma entrada
     const useDiv = o.trigger !== 'ac';
     const useAc = o.trigger !== 'div';
     const crossed = e.K[t - 1] <= e.D[t - 1] && e.K[t] > e.D[t];
-    if (useDiv && tr.armed && crossed) {
-      s.entries.push({ idx: t, kind: 'scale', trigger: 'div', stop: tr.prev.price - o.stopBuffer * atr[t], from: tr.prev, to: tr.last });
-      tr.used = tr.last.idx;
-      tr.armed = false;
+    if (useDiv && trd.armed && crossed) {
+      s.entries.push({ idx: t, kind: 'scale', trigger: 'div', stop: trd.prev.price - o.stopBuffer * atr[t], from: trd.prev, to: trd.last });
+      trd.used = trd.last.idx;
+      trd.armed = false;
     } else if (useAc && acPattern(t)) {
-      s.entries.push({ idx: t, kind: 'scale', trigger: 'ac', stop: tr.last.price - o.stopBuffer * atr[t], from: null, to: tr.last });
-      tr.used = tr.last.idx;
-      tr.armed = false;
+      s.entries.push({ idx: t, kind: 'scale', trigger: 'ac', stop: trd.last.price - o.stopBuffer * atr[t], from: null, to: trd.last });
+      trd.used = trd.last.idx;
+      trd.armed = false;
     }
     return true;
   };
@@ -427,16 +428,16 @@ export function drawFootprint(bars: readonly Bar[], setups: FpSetup[]): Footprin
     if (Number.isFinite(s.layerAt(lEnd))) lines.push({ i1: s.h2.idx, p1: s.h2.price, i2: lEnd, p2: s.layerAt(lEnd), color: RED, width: 2 });
     texts.push({ i: s.h2.idx, p: s.h2.price, text: buy ? 'footprint ↓' : 'footprint ↑', color: TEAL, size: 10, pos: buy ? 'above' : 'below', bold: false });
     if (s.brk !== null) {
-      texts.push({ i: s.brk, p: bars[s.brk].close, text: 'layer line rompida', color: RED, size: 10, pos: buy ? 'below' : 'above', bold: false });
+      texts.push({ i: s.brk, p: bars[s.brk].close, text: tr('layer line rompida'), color: RED, size: 10, pos: buy ? 'below' : 'above', bold: false });
     }
     if (s.l3 && s.brk !== null) {
       // divergência: preço (fundo mais alto) contra o Estocástico (fundo mais baixo)
       lines.push({ i1: s.l2.idx, p1: s.l2.price, i2: s.l3.idx, p2: s.l3.price, color: WHITE, width: 1.5, dash: true });
-      texts.push({ i: s.l3.idx, p: s.l3.price, text: 'reteste', color: WHITE, size: 10, pos: buy ? 'below' : 'above', bold: false });
+      texts.push({ i: s.l3.idx, p: s.l3.price, text: tr('reteste'), color: WHITE, size: 10, pos: buy ? 'below' : 'above', bold: false });
     }
     for (const en of s.entries) {
       const first = en.kind === 'first';
-      markers.push({ index: en.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? GREEN : RED, text: `${buy ? 'COMPRA' : 'VENDA'}${first ? '' : ' +'}` });
+      markers.push({ index: en.idx, position: buy ? 'below' : 'above', shape: buy ? 'arrowUp' : 'arrowDown', color: buy ? GREEN : RED, text: `${buy ? tr('COMPRA') : tr('VENDA')}${first ? '' : ' +'}` });
       const to = Math.min(last, en.idx + 12);
       lines.push({ i1: en.idx, p1: en.stop, i2: to, p2: en.stop, color: RED, width: 1, dash: true });
       if (first) texts.push({ i: to, p: en.stop, text: 'stop', color: RED, size: 10, pos: buy ? 'below' : 'above', bold: false });
@@ -446,7 +447,7 @@ export function drawFootprint(bars: readonly Bar[], setups: FpSetup[]): Footprin
       const tl = s.trendLine;
       const to = tl.end ?? last;
       lines.push({ i1: tl.idx0, p1: tl.p0, i2: to, p2: tl.p0 + tl.slope * (to - tl.idx0), color: '#00e676', width: 1.5 });
-      texts.push({ i: Math.max(tl.idx0 + 1, Math.round((tl.idx0 + to) / 2)), p: tl.p0 + tl.slope * (Math.round((tl.idx0 + to) / 2) - tl.idx0), text: tl.end === null ? 'layer line nova' : 'layer line nova (violada)', color: '#00e676', size: 10, pos: buy ? 'below' : 'above', bold: false });
+      texts.push({ i: Math.max(tl.idx0 + 1, Math.round((tl.idx0 + to) / 2)), p: tl.p0 + tl.slope * (Math.round((tl.idx0 + to) / 2) - tl.idx0), text: tl.end === null ? tr('layer line nova') : tr('layer line nova (violada)'), color: '#00e676', size: 10, pos: buy ? 'below' : 'above', bold: false });
     }
   }
 
@@ -454,20 +455,20 @@ export function drawFootprint(bars: readonly Bar[], setups: FpSetup[]): Footprin
   const cur = [...setups].reverse().find((x) => x.status === 'trend' && x.trendLine?.end == null) ?? setups[setups.length - 1];
   const panel = cur
     ? [
-        { text: `${cur.dir === 1 ? 'Compra' : 'Venda'}: footprint de ${cur.dir === 1 ? 'queda' : 'alta'}`, color: cur.dir === 1 ? GREEN : RED },
+        { text: tr('{0}: footprint de {1}', cur.dir === 1 ? tr('Compra') : tr('Venda'), cur.dir === 1 ? tr('queda') : tr('alta')), color: cur.dir === 1 ? GREEN : RED },
         {
           text:
             cur.status === 'trend'
               ? cur.trendLine?.end == null
-                ? `tendência em curso: ${cur.entries.length} entrada${cur.entries.length === 1 ? '' : 's'}`
-                : `tendência acabou (layer line violada): ${cur.entries.length} entrada${cur.entries.length === 1 ? '' : 's'}`
+                ? cur.entries.length === 1 ? tr('tendência em curso: {0} entrada', 1) : tr('tendência em curso: {0} entradas', cur.entries.length)
+                : cur.entries.length === 1 ? tr('tendência acabou (layer line violada): {0} entrada', 1) : tr('tendência acabou (layer line violada): {0} entradas', cur.entries.length)
               : cur.brk !== null
-                ? 'layer line rompida: à espera de divergência'
-                : 'a seguir a layer line',
+                ? tr('layer line rompida: à espera de divergência')
+                : tr('a seguir a layer line'),
           color: '#d1d4dc',
         },
       ]
-    : [{ text: 'sem footprint à vista', color: '#d1d4dc' }];
+    : [{ text: tr('sem footprint à vista'), color: '#d1d4dc' }];
 
   return { draw: { lines, texts, panel: { lines: panel, corner: 'bl' } }, markers, setups };
 }

@@ -46,6 +46,7 @@ import { withAlpha } from './drawings/geometry';
 import { fmtDateTime, fmtPrice, fmtTick } from '@/lib/format';
 import type { PlotOutput, ShapeOutput } from '@/core/strategy/types';
 import type { PlotStyle } from '@/core/indicators/registry';
+import { locale, tr } from '@/i18n';
 
 export interface ChartTheme {
   dark: boolean;
@@ -346,7 +347,7 @@ export class ChartController {
         },
       },
       localization: {
-        locale: 'pt-PT',
+        locale: locale(),
         timeFormatter: (time: Time) => fmtDateTime(time as number, tz, this.secs),
       },
       kineticScroll: { mouse: false, touch: true },
@@ -878,12 +879,12 @@ export class ChartController {
       this.setBars(res.bars, true);
       this.chart.priceScale('right').applyOptions({ autoScale: true });
       this.chart.timeScale().scrollToRealTime();
-      this.setStatus(res.bars.length ? { state: 'ready' } : { state: 'error', message: 'Sem dados para este símbolo/timeframe.' });
+      this.setStatus(res.bars.length ? { state: 'ready' } : { state: 'error', message: tr('Sem dados para este símbolo/timeframe.') });
       this.liveUnsub = dataFeed().subscribe(sym, tf, (bar) => this.onLiveBar(bar, gen));
       this.livePaused = false;
     } catch (e) {
       if (gen !== this.gen) return;
-      this.setStatus({ state: 'error', message: (e as Error).message || 'Falha ao carregar dados' });
+      this.setStatus({ state: 'error', message: (e as Error).message || tr('Falha ao carregar dados') });
     }
   }
 
@@ -1229,7 +1230,7 @@ export class ChartController {
     this.updateMarkers();
     this.cb.onBars?.(this.bars);
     if (this.status.state !== 'ready' && visible.length) this.setStatus({ state: 'ready' });
-    else if (!visible.length) this.setStatus({ state: 'error', message: 'Sem dados antes desta data. Escolha outro ponto de partida.' });
+    else if (!visible.length) this.setStatus({ state: 'error', message: tr('Sem dados antes desta data. Escolha outro ponto de partida.') });
     this.emitLegend(null);
     this.redraw();
   }

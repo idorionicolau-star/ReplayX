@@ -10,6 +10,7 @@ import type { DataSaverSetting } from '@/lib/dataSaver';
 export type Theme = 'dark' | 'light';
 export type { Magnet } from '@/core/magnet';
 import type { Magnet } from '@/core/magnet';
+import { tr } from '@/i18n';
 
 export interface TradingSettings {
   initialBalance: number;
@@ -205,17 +206,17 @@ export const useSettings = create<SettingsState>()(
 );
 
 export const TIMEZONES: { value: string; label: string }[] = [
-  { value: 'local', label: 'Do navegador' },
+  { value: 'local', label: tr('Do navegador') },
   { value: 'UTC', label: 'UTC' },
   { value: 'Africa/Maputo', label: '(UTC+2) Maputo' },
-  { value: 'Africa/Johannesburg', label: '(UTC+2) Joanesburgo' },
+  { value: 'Africa/Johannesburg', label: tr('(UTC+2) Joanesburgo') },
   { value: 'Africa/Luanda', label: '(UTC+1) Luanda' },
-  { value: 'Europe/Lisbon', label: 'Lisboa' },
-  { value: 'Europe/London', label: 'Londres' },
+  { value: 'Europe/Lisbon', label: tr('Lisboa') },
+  { value: 'Europe/London', label: tr('Londres') },
   { value: 'Europe/Berlin', label: 'Frankfurt' },
-  { value: 'America/New_York', label: 'Nova Iorque' },
+  { value: 'America/New_York', label: tr('Nova Iorque') },
   { value: 'America/Sao_Paulo', label: 'São Paulo' },
-  { value: 'Asia/Tokyo', label: 'Tóquio' },
+  { value: 'Asia/Tokyo', label: tr('Tóquio') },
   { value: 'Asia/Dubai', label: 'Dubai' },
   { value: 'Australia/Sydney', label: 'Sydney' },
 ];

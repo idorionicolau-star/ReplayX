@@ -4,8 +4,9 @@ import { resolveSymbol } from '@/core/symbols';
 import { useSettings } from '@/store/settings';
 import { fmtDateTime, fmtDuration, fmtMoney, fmtPrice } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
-const REASON: Record<string, string> = { sl: 'Stop', tp: 'Alvo', manual: 'Manual', signal: 'Sinal', reverse: 'Inversão', trail: 'Trailing', time: 'Tempo', end: 'Fim do teste' };
+const REASON: Record<string, string> = { sl: 'Stop', tp: tr('Alvo'), manual: 'Manual', signal: tr('Sinal'), reverse: tr('Inversão'), trail: 'Trailing', time: tr('Tempo'), end: tr('Fim do teste') };
 
 export function TradesTable({ trades, onPick, editable, onNote, max = 500 }: { trades: Trade[]; onPick?: (t: Trade) => void; editable?: boolean; onNote?: (id: string, notes: string) => void; max?: number }) {
   const tz = useSettings((s) => s.timezone);
@@ -16,16 +17,16 @@ export function TradesTable({ trades, onPick, editable, onNote, max = 500 }: { t
         <thead className="sticky top-0 bg-panel text-[11px] text-muted">
           <tr className="border-b border-line text-left">
             <th className="px-2 py-1.5 font-medium">#</th>
-            <th className="px-2 py-1.5 font-medium">Tipo</th>
-            <th className="px-2 py-1.5 font-medium">Símbolo</th>
-            <th className="px-2 py-1.5 font-medium">Entrada</th>
-            <th className="px-2 py-1.5 font-medium">Saída</th>
-            <th className="px-2 py-1.5 text-right font-medium">Qtd</th>
-            <th className="px-2 py-1.5 text-right font-medium">Lucro</th>
+            <th className="px-2 py-1.5 font-medium">{tr('Tipo')}</th>
+            <th className="px-2 py-1.5 font-medium">{tr('Símbolo')}</th>
+            <th className="px-2 py-1.5 font-medium">{tr('Entrada')}</th>
+            <th className="px-2 py-1.5 font-medium">{tr('Saída')}</th>
+            <th className="px-2 py-1.5 text-right font-medium">{tr('Qtd')}</th>
+            <th className="px-2 py-1.5 text-right font-medium">{tr('Lucro')}</th>
             <th className="px-2 py-1.5 text-right font-medium">R</th>
-            <th className="px-2 py-1.5 font-medium">Duração</th>
-            <th className="px-2 py-1.5 font-medium">Motivo</th>
-            {editable && <th className="px-2 py-1.5 font-medium">Notas</th>}
+            <th className="px-2 py-1.5 font-medium">{tr('Duração')}</th>
+            <th className="px-2 py-1.5 font-medium">{tr('Motivo')}</th>
+            {editable && <th className="px-2 py-1.5 font-medium">{tr('Notas')}</th>}
           </tr>
         </thead>
         <tbody>
@@ -34,7 +35,7 @@ export function TradesTable({ trades, onPick, editable, onNote, max = 500 }: { t
             return (
               <tr key={t.id} onClick={() => onPick?.(t)} className={cn('border-b border-line', onPick && 'cursor-pointer hover:bg-hover')}>
                 <td className="px-2 py-1.5 text-muted tnum">{trades.length - i}</td>
-                <td className={cn('px-2 py-1.5 font-semibold', t.side === 'long' ? 'text-up' : 'text-down')}>{t.side === 'long' ? 'Compra' : 'Venda'}</td>
+                <td className={cn('px-2 py-1.5 font-semibold', t.side === 'long' ? 'text-up' : 'text-down')}>{t.side === 'long' ? tr('Compra') : tr('Venda')}</td>
                 <td className="px-2 py-1.5">{s.name}</td>
                 <td className="px-2 py-1.5 tnum">
                   <div>{fmtPrice(t.entryPrice, s.precision)}</div>
@@ -53,7 +54,7 @@ export function TradesTable({ trades, onPick, editable, onNote, max = 500 }: { t
                   <td className="px-2 py-1" onClick={(e) => e.stopPropagation()}>
                     <input
                       defaultValue={t.notes ?? ''}
-                      placeholder="Porque entrei? O que aprendi?"
+                      placeholder={tr('Porque entrei? O que aprendi?')}
                       onBlur={(e) => onNote?.(t.id, e.target.value)}
                       className="h-7 w-56 rounded border border-transparent bg-transparent px-1.5 text-xs outline-none hover:border-line focus:border-accent"
                     />
@@ -64,7 +65,7 @@ export function TradesTable({ trades, onPick, editable, onNote, max = 500 }: { t
           })}
         </tbody>
       </table>
-      {!trades.length && <div className="py-8 text-center text-xs text-muted">Sem operações.</div>}
+      {!trades.length && <div className="py-8 text-center text-xs text-muted">{tr('Sem operações.')}</div>}
     </div>
   );
 }

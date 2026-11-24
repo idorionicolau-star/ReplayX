@@ -1,14 +1,15 @@
 import type { AssetClass, ProviderId, SymbolInfo } from './types';
+import { tr } from '@/i18n';
 
 export const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
-  synthetic: 'Índices Sintéticos',
+  synthetic: tr('Índices Sintéticos'),
   forex: 'Forex',
-  crypto: 'Cripto',
-  commodities: 'Matérias-primas',
-  indices: 'Índices',
-  stocks: 'Ações',
-  futures: 'Futuros',
-  demo: 'Simulado (offline)',
+  crypto: tr('Cripto'),
+  commodities: tr('Matérias-primas'),
+  indices: tr('Índices'),
+  stocks: tr('Ações'),
+  futures: tr('Futuros'),
+  demo: tr('Simulado (offline)'),
 };
 
 export const PROVIDER_LABEL: Record<ProviderId, string> = {
@@ -44,8 +45,8 @@ function deriv(
   };
 }
 
-const VOL = 'Volatilidade';
-const VOL1S = 'Volatilidade (1s)';
+const VOL = tr('Volatilidade');
+const VOL1S = tr('Volatilidade (1s)');
 const BC = 'Boom & Crash';
 
 const SYNTHETICS: SymbolInfo[] = [
@@ -83,8 +84,8 @@ const SYNTHETICS: SymbolInfo[] = [
   deriv('JD100', 'Jump 100', 'Jump 100 Index', 'synthetic', 'Jump', 2),
   deriv('RB100', 'Range Break 100', 'Range Break 100 Index', 'synthetic', 'Range Break', 1),
   deriv('RB200', 'Range Break 200', 'Range Break 200 Index', 'synthetic', 'Range Break', 1),
-  deriv('RDBEAR', 'Bear Market', 'Bear Market Index', 'synthetic', 'Mercado Bull/Bear', 4),
-  deriv('RDBULL', 'Bull Market', 'Bull Market Index', 'synthetic', 'Mercado Bull/Bear', 4),
+  deriv('RDBEAR', 'Bear Market', 'Bear Market Index', 'synthetic', tr('Mercado Bull/Bear'), 4),
+  deriv('RDBULL', 'Bull Market', 'Bull Market Index', 'synthetic', tr('Mercado Bull/Bear'), 4),
   deriv('DEX600UP', 'DEX 600 UP', 'DEX 600 UP Index', 'synthetic', 'DEX', 2),
   deriv('DEX600DN', 'DEX 600 DOWN', 'DEX 600 DOWN Index', 'synthetic', 'DEX', 2),
   deriv('DEX900UP', 'DEX 900 UP', 'DEX 900 UP Index', 'synthetic', 'DEX', 2),
@@ -94,11 +95,11 @@ const SYNTHETICS: SymbolInfo[] = [
   deriv('DSI10', 'Drift Switch 10', 'Drift Switch Index 10', 'synthetic', 'Drift Switch', 3),
   deriv('DSI20', 'Drift Switch 20', 'Drift Switch Index 20', 'synthetic', 'Drift Switch', 3),
   deriv('DSI30', 'Drift Switch 30', 'Drift Switch Index 30', 'synthetic', 'Drift Switch', 3),
-  deriv('WLDAUD', 'AUD Basket', 'AUD Basket', 'synthetic', 'Cestas', 3),
-  deriv('WLDEUR', 'EUR Basket', 'EUR Basket', 'synthetic', 'Cestas', 3),
-  deriv('WLDGBP', 'GBP Basket', 'GBP Basket', 'synthetic', 'Cestas', 3),
-  deriv('WLDUSD', 'USD Basket', 'USD Basket', 'synthetic', 'Cestas', 3),
-  deriv('WLDXAU', 'Gold Basket', 'Gold Basket', 'synthetic', 'Cestas', 3),
+  deriv('WLDAUD', 'AUD Basket', 'AUD Basket', 'synthetic', tr('Cestas'), 3),
+  deriv('WLDEUR', 'EUR Basket', 'EUR Basket', 'synthetic', tr('Cestas'), 3),
+  deriv('WLDGBP', 'GBP Basket', 'GBP Basket', 'synthetic', tr('Cestas'), 3),
+  deriv('WLDUSD', 'USD Basket', 'USD Basket', 'synthetic', tr('Cestas'), 3),
+  deriv('WLDXAU', 'Gold Basket', 'Gold Basket', 'synthetic', tr('Cestas'), 3),
 ];
 
 const FX_PAIRS: [string, number][] = [
@@ -112,7 +113,7 @@ const FX_PAIRS: [string, number][] = [
 const MAJORS = new Set(['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD']);
 
 const FOREX: SymbolInfo[] = FX_PAIRS.map(([p, prec]) =>
-  deriv(`frx${p}`, p, `${p.slice(0, 3)}/${p.slice(3)}`, 'forex', MAJORS.has(p) ? 'Principais' : 'Cruzados e exóticos', prec, {
+  deriv(`frx${p}`, p, `${p.slice(0, 3)}/${p.slice(3)}`, 'forex', MAJORS.has(p) ? tr('Principais') : tr('Cruzados e exóticos'), prec, {
     contractSize: 100000,
     baseCurrency: p.slice(0, 3),
     quoteCurrency: p.slice(3),
@@ -120,25 +121,25 @@ const FOREX: SymbolInfo[] = FX_PAIRS.map(([p, prec]) =>
 );
 
 const COMMODITIES: SymbolInfo[] = [
-  deriv('frxXAUUSD', 'XAUUSD', 'Ouro / Dólar', 'commodities', 'Metais', 2, { contractSize: 100, baseCurrency: 'XAU', quoteCurrency: 'USD' }),
-  deriv('frxXAGUSD', 'XAGUSD', 'Prata / Dólar', 'commodities', 'Metais', 4, { contractSize: 5000, baseCurrency: 'XAG', quoteCurrency: 'USD' }),
-  deriv('frxXPTUSD', 'XPTUSD', 'Platina / Dólar', 'commodities', 'Metais', 2, { contractSize: 100, baseCurrency: 'XPT', quoteCurrency: 'USD' }),
-  deriv('frxXPDUSD', 'XPDUSD', 'Paládio / Dólar', 'commodities', 'Metais', 2, { contractSize: 100, baseCurrency: 'XPD', quoteCurrency: 'USD' }),
+  deriv('frxXAUUSD', 'XAUUSD', tr('Ouro / Dólar'), 'commodities', tr('Metais'), 2, { contractSize: 100, baseCurrency: 'XAU', quoteCurrency: 'USD' }),
+  deriv('frxXAGUSD', 'XAGUSD', tr('Prata / Dólar'), 'commodities', tr('Metais'), 4, { contractSize: 5000, baseCurrency: 'XAG', quoteCurrency: 'USD' }),
+  deriv('frxXPTUSD', 'XPTUSD', tr('Platina / Dólar'), 'commodities', tr('Metais'), 2, { contractSize: 100, baseCurrency: 'XPT', quoteCurrency: 'USD' }),
+  deriv('frxXPDUSD', 'XPDUSD', tr('Paládio / Dólar'), 'commodities', tr('Metais'), 2, { contractSize: 100, baseCurrency: 'XPD', quoteCurrency: 'USD' }),
 ];
 
 const DERIV_INDICES: SymbolInfo[] = [
-  deriv('OTC_SPC', 'US 500', 'US 500 (S&P 500)', 'indices', 'Américas', 2),
-  deriv('OTC_NDX', 'US Tech 100', 'US Tech 100 (Nasdaq 100)', 'indices', 'Américas', 2),
-  deriv('OTC_DJI', 'Wall Street 30', 'Wall Street 30 (Dow Jones)', 'indices', 'Américas', 2),
-  deriv('OTC_GDAXI', 'Germany 40', 'Germany 40 (DAX)', 'indices', 'Europa', 2),
-  deriv('OTC_FTSE', 'UK 100', 'UK 100 (FTSE)', 'indices', 'Europa', 2),
-  deriv('OTC_FCHI', 'France 40', 'France 40 (CAC)', 'indices', 'Europa', 2),
-  deriv('OTC_SX5E', 'Euro 50', 'Euro 50 (Euro Stoxx)', 'indices', 'Europa', 2),
-  deriv('OTC_SSMI', 'Swiss 20', 'Swiss 20 (SMI)', 'indices', 'Europa', 2),
-  deriv('OTC_AEX', 'Netherlands 25', 'Netherlands 25 (AEX)', 'indices', 'Europa', 2),
-  deriv('OTC_N225', 'Japan 225', 'Japan 225 (Nikkei)', 'indices', 'Ásia/Pacífico', 2),
-  deriv('OTC_HSI', 'Hong Kong 50', 'Hong Kong 50 (Hang Seng)', 'indices', 'Ásia/Pacífico', 2),
-  deriv('OTC_AS51', 'Australia 200', 'Australia 200 (ASX)', 'indices', 'Ásia/Pacífico', 2),
+  deriv('OTC_SPC', 'US 500', 'US 500 (S&P 500)', 'indices', tr('Américas'), 2),
+  deriv('OTC_NDX', 'US Tech 100', 'US Tech 100 (Nasdaq 100)', 'indices', tr('Américas'), 2),
+  deriv('OTC_DJI', 'Wall Street 30', 'Wall Street 30 (Dow Jones)', 'indices', tr('Américas'), 2),
+  deriv('OTC_GDAXI', 'Germany 40', 'Germany 40 (DAX)', 'indices', tr('Europa'), 2),
+  deriv('OTC_FTSE', 'UK 100', 'UK 100 (FTSE)', 'indices', tr('Europa'), 2),
+  deriv('OTC_FCHI', 'France 40', 'France 40 (CAC)', 'indices', tr('Europa'), 2),
+  deriv('OTC_SX5E', 'Euro 50', 'Euro 50 (Euro Stoxx)', 'indices', tr('Europa'), 2),
+  deriv('OTC_SSMI', 'Swiss 20', 'Swiss 20 (SMI)', 'indices', tr('Europa'), 2),
+  deriv('OTC_AEX', 'Netherlands 25', 'Netherlands 25 (AEX)', 'indices', tr('Europa'), 2),
+  deriv('OTC_N225', 'Japan 225', 'Japan 225 (Nikkei)', 'indices', tr('Ásia/Pacífico'), 2),
+  deriv('OTC_HSI', 'Hong Kong 50', 'Hong Kong 50 (Hang Seng)', 'indices', tr('Ásia/Pacífico'), 2),
+  deriv('OTC_AS51', 'Australia 200', 'Australia 200 (ASX)', 'indices', tr('Ásia/Pacífico'), 2),
 ];
 
 function binance(base: string, precision: number, description: string, quote = 'USDT'): SymbolInfo {
@@ -188,8 +189,8 @@ const CRYPTO: SymbolInfo[] = [
   binance('INJ', 2, 'Injective'),
   binance('PAXG', 2, 'PAX Gold'),
   binance('ETH', 5, 'Ethereum', 'BTC'),
-  deriv('cryBTCUSD', 'BTCUSD', 'Bitcoin / Dólar (Deriv)', 'crypto', 'Deriv', 2, { baseCurrency: 'BTC', quoteCurrency: 'USD' }),
-  deriv('cryETHUSD', 'ETHUSD', 'Ethereum / Dólar (Deriv)', 'crypto', 'Deriv', 2, { baseCurrency: 'ETH', quoteCurrency: 'USD' }),
+  deriv('cryBTCUSD', 'BTCUSD', tr('Bitcoin / Dólar (Deriv)'), 'crypto', 'Deriv', 2, { baseCurrency: 'BTC', quoteCurrency: 'USD' }),
+  deriv('cryETHUSD', 'ETHUSD', tr('Ethereum / Dólar (Deriv)'), 'crypto', 'Deriv', 2, { baseCurrency: 'ETH', quoteCurrency: 'USD' }),
 ];
 
 function yahoo(ticker: string, name: string, description: string, assetClass: AssetClass, category: string, precision = 2, extra: Partial<SymbolInfo> = {}): SymbolInfo {
@@ -211,24 +212,24 @@ function yahoo(ticker: string, name: string, description: string, assetClass: As
 }
 
 const YAHOO: SymbolInfo[] = [
-  yahoo('^GSPC', 'SPX', 'S&P 500', 'indices', 'Américas'),
-  yahoo('^NDX', 'NDX', 'Nasdaq 100', 'indices', 'Américas'),
-  yahoo('^DJI', 'DJI', 'Dow Jones Industrial Average', 'indices', 'Américas'),
-  yahoo('^RUT', 'RUT', 'Russell 2000', 'indices', 'Américas'),
-  yahoo('^VIX', 'VIX', 'CBOE Volatility Index', 'indices', 'Américas'),
-  yahoo('^GDAXI', 'DAX', 'DAX 40', 'indices', 'Europa'),
-  yahoo('^FTSE', 'UKX', 'FTSE 100', 'indices', 'Europa'),
-  yahoo('^N225', 'NI225', 'Nikkei 225', 'indices', 'Ásia/Pacífico'),
-  yahoo('DX-Y.NYB', 'DXY', 'Índice do Dólar (DXY)', 'indices', 'Américas', 3),
-  yahoo('ES=F', 'ES1!', 'E-mini S&P 500', 'futures', 'Índices'),
-  yahoo('NQ=F', 'NQ1!', 'E-mini Nasdaq 100', 'futures', 'Índices'),
-  yahoo('YM=F', 'YM1!', 'E-mini Dow', 'futures', 'Índices', 0),
-  yahoo('CL=F', 'CL1!', 'Petróleo WTI', 'futures', 'Energia'),
-  yahoo('BZ=F', 'BRN1!', 'Petróleo Brent', 'futures', 'Energia'),
-  yahoo('NG=F', 'NG1!', 'Gás Natural', 'futures', 'Energia', 3),
-  yahoo('GC=F', 'GC1!', 'Ouro (futuros)', 'futures', 'Metais', 1),
-  yahoo('SI=F', 'SI1!', 'Prata (futuros)', 'futures', 'Metais', 3),
-  yahoo('HG=F', 'HG1!', 'Cobre (futuros)', 'futures', 'Metais', 4),
+  yahoo('^GSPC', 'SPX', 'S&P 500', 'indices', tr('Américas')),
+  yahoo('^NDX', 'NDX', 'Nasdaq 100', 'indices', tr('Américas')),
+  yahoo('^DJI', 'DJI', 'Dow Jones Industrial Average', 'indices', tr('Américas')),
+  yahoo('^RUT', 'RUT', 'Russell 2000', 'indices', tr('Américas')),
+  yahoo('^VIX', 'VIX', 'CBOE Volatility Index', 'indices', tr('Américas')),
+  yahoo('^GDAXI', 'DAX', 'DAX 40', 'indices', tr('Europa')),
+  yahoo('^FTSE', 'UKX', 'FTSE 100', 'indices', tr('Europa')),
+  yahoo('^N225', 'NI225', 'Nikkei 225', 'indices', tr('Ásia/Pacífico')),
+  yahoo('DX-Y.NYB', 'DXY', tr('Índice do Dólar (DXY)'), 'indices', tr('Américas'), 3),
+  yahoo('ES=F', 'ES1!', 'E-mini S&P 500', 'futures', tr('Índices')),
+  yahoo('NQ=F', 'NQ1!', 'E-mini Nasdaq 100', 'futures', tr('Índices')),
+  yahoo('YM=F', 'YM1!', 'E-mini Dow', 'futures', tr('Índices'), 0),
+  yahoo('CL=F', 'CL1!', tr('Petróleo WTI'), 'futures', tr('Energia')),
+  yahoo('BZ=F', 'BRN1!', tr('Petróleo Brent'), 'futures', tr('Energia')),
+  yahoo('NG=F', 'NG1!', tr('Gás Natural'), 'futures', tr('Energia'), 3),
+  yahoo('GC=F', 'GC1!', tr('Ouro (futuros)'), 'futures', tr('Metais'), 1),
+  yahoo('SI=F', 'SI1!', tr('Prata (futuros)'), 'futures', tr('Metais'), 3),
+  yahoo('HG=F', 'HG1!', tr('Cobre (futuros)'), 'futures', tr('Metais'), 4),
   yahoo('AAPL', 'AAPL', 'Apple Inc.', 'stocks', 'EUA'),
   yahoo('MSFT', 'MSFT', 'Microsoft Corp.', 'stocks', 'EUA'),
   yahoo('NVDA', 'NVDA', 'NVIDIA Corp.', 'stocks', 'EUA'),
@@ -255,16 +256,16 @@ function demo(ticker: string, name: string, description: string, precision: numb
     contractSize: 1,
     session: '24x7',
     hasVolume: true,
-    exchange: 'Simulado',
+    exchange: tr('Simulado'),
     ...extra,
   };
 }
 
 const DEMO: SymbolInfo[] = [
-  demo('SIMFX', 'SIM-FX', 'Par de moedas simulado', 5, { contractSize: 100000 }),
-  demo('SIMVOL', 'SIM-VOL', 'Índice de volatilidade simulado', 2),
-  demo('SIMBTC', 'SIM-BTC', 'Cripto simulada', 2),
-  demo('SIMIDX', 'SIM-IDX', 'Índice de ações simulado', 2),
+  demo('SIMFX', 'SIM-FX', tr('Par de moedas simulado'), 5, { contractSize: 100000 }),
+  demo('SIMVOL', 'SIM-VOL', tr('Índice de volatilidade simulado'), 2),
+  demo('SIMBTC', 'SIM-BTC', tr('Cripto simulada'), 2),
+  demo('SIMIDX', 'SIM-IDX', tr('Índice de ações simulado'), 2),
 ];
 
 export const CATALOG: SymbolInfo[] = [

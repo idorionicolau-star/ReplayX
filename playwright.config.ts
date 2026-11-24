@@ -15,6 +15,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // os testes leem os textos em português (o idioma automático segue o do navegador)
+    locale: 'pt-PT',
     viewport: { width: 1440, height: 900 },
     launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM, args: ['--no-sandbox'] } : {},
     trace: 'retain-on-failure',

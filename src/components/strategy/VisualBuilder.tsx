@@ -13,6 +13,7 @@ import { Popover } from '@/components/ui/Popover';
 import { MenuHeader, MenuItem, MenuList } from '@/components/ui/Menu';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 const KEYS = 'ABCDEFGHIJKLMNOP'.split('');
 const DAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -37,8 +38,8 @@ function OperandEditor({ o, s, onChange }: { o: VOperand; s: VisualStrategy; onC
           }
         }}
       >
-        <option value="price">Preço</option>
-        <option value="value">Valor</option>
+        <option value="price">{tr('Preço')}</option>
+        <option value="value">{tr('Valor')}</option>
         {s.indicators.map((vi) => (
           <option key={vi.key} value={`ind:${vi.key}`}>
             {vi.key}: {getIndicator(vi.type)?.short ?? vi.type}
@@ -65,10 +66,10 @@ function OperandEditor({ o, s, onChange }: { o: VOperand; s: VisualStrategy; onC
       )}
       {o.kind === 'value' && <NumberInput className="w-[78px] [&_input]:h-7 [&_input]:text-xs" value={o.value} step={1} onChange={(v) => onChange({ ...o, value: v ?? 0 })} />}
       {o.kind !== 'value' && (
-        <Select className="h-7 w-[64px] text-xs" title="Barras atrás" value={String(o.offset ?? 0)} onChange={(e) => onChange({ ...o, offset: Number(e.target.value) })}>
+        <Select className="h-7 w-[64px] text-xs" title={tr('Barras atrás')} value={String(o.offset ?? 0)} onChange={(e) => onChange({ ...o, offset: Number(e.target.value) })}>
           {[0, 1, 2, 3, 5, 10].map((n) => (
             <option key={n} value={n}>
-              {n === 0 ? 'atual' : `[${n}]`}
+              {n === 0 ? tr('atual') : `[${n}]`}
             </option>
           ))}
         </Select>
@@ -96,7 +97,7 @@ function RulesEditor({ title, rules, s, onChange, tone }: { title: string; rules
       <div className="flex flex-col gap-1.5 p-2">
         {rules.groups.map((g, gi) => (
           <div key={g.id}>
-            {gi > 0 && <div className="my-1 text-center text-[10px] font-bold text-warn">— OU —</div>}
+            {gi > 0 && <div className="my-1 text-center text-[10px] font-bold text-warn">{tr('— OU —')}</div>}
             <div className="flex flex-col gap-1">
               {g.conditions.map((c, ci) => (
                 <div key={c.id} className="flex flex-wrap items-center gap-1 rounded-md bg-sunken p-1.5">
@@ -117,18 +118,18 @@ function RulesEditor({ title, rules, s, onChange, tone }: { title: string; rules
                   ) : (
                     <OperandEditor o={c.right} s={s} onChange={(right) => setCond(gi, ci, { ...c, right })} />
                   )}
-                  <button type="button" aria-label="Remover condição" className="ml-auto rounded p-1 text-muted hover:text-down" onClick={() => setCond(gi, ci, null)}>
+                  <button type="button" aria-label={tr('Remover condição')} className="ml-auto rounded p-1 text-muted hover:text-down" onClick={() => setCond(gi, ci, null)}>
                     <X size={13} />
                   </button>
                 </div>
               ))}
               <div className="flex gap-1">
                 <Button size="xs" variant="ghost" onClick={() => addCond(gi)}>
-                  <Plus size={12} /> E (condição)
+                  <Plus size={12} /> {tr('E (condição)')}
                 </Button>
                 {gi === rules.groups.length - 1 && g.conditions.length > 0 && (
                   <Button size="xs" variant="ghost" onClick={() => onChange({ groups: [...rules.groups, { id: vid(), conditions: [] }] })}>
-                    <Plus size={12} /> OU (grupo)
+                    <Plus size={12} /> {tr('OU (grupo)')}
                   </Button>
                 )}
               </div>
@@ -137,7 +138,7 @@ function RulesEditor({ title, rules, s, onChange, tone }: { title: string; rules
         ))}
         {!rules.groups.length && (
           <Button size="xs" variant="ghost" onClick={() => addCond(0)}>
-            <Plus size={12} /> Adicionar condição
+            <Plus size={12} /> {tr('Adicionar condição')}
           </Button>
         )}
       </div>
@@ -161,7 +162,7 @@ export function VisualBuilder() {
   const patch = (p: Partial<VisualStrategy>) => setDrafts((d) => ({ ...d, [base.id]: { ...(d[base.id] ?? base), ...p } }));
   const save = () => {
     saveVisual(s);
-    toast('Estratégia guardada', { kind: 'success', duration: 1500 });
+    toast(tr('Estratégia guardada'), { kind: 'success', duration: 1500 });
   };
   const test = async () => {
     saveVisual(s);
@@ -173,7 +174,7 @@ export function VisualBuilder() {
     const id = useStrategies.getState().saveScript({ name: `${s.name} (script)`, code });
     useStrategies.getState().setActiveScript(id);
     useWorkspace.getState().setBottomTab('script');
-    toast('Convertido para script', { kind: 'success', body: 'Pode editar o código no separador Scripts.' });
+    toast(tr('Convertido para script'), { kind: 'success', body: tr('Pode editar o código no separador Scripts.') });
   };
 
   const addIndicator = (type: string) => {
@@ -193,20 +194,20 @@ export function VisualBuilder() {
             </option>
           ))}
         </Select>
-        {dirty && <span className="text-[11px] text-warn">● não guardado</span>}
+        {dirty && <span className="text-[11px] text-warn">{tr('● não guardado')}</span>}
         <Button ref={newRef} size="sm" variant="ghost" onClick={() => setNewOpen((o) => !o)}>
-          <FilePlus2 size={14} /> Nova <ChevronDown size={12} />
+          <FilePlus2 size={14} /> {tr('Nova')} <ChevronDown size={12} />
         </Button>
         <Popover anchor={newRef} open={newOpen} onClose={() => setNewOpen(false)} placement="top-start">
           <MenuList className="w-[280px]">
             <MenuItem
-              label="Em branco"
+              label={tr('Em branco')}
               onClick={() => {
                 saveVisual(emptyStrategy());
                 setNewOpen(false);
               }}
             />
-            <MenuHeader>Modelos</MenuHeader>
+            <MenuHeader>{tr('Modelos')}</MenuHeader>
             {templates().map((t) => (
               <MenuItem
                 key={t.name}
@@ -220,17 +221,17 @@ export function VisualBuilder() {
           </MenuList>
         </Popover>
         <Button size="sm" variant="ghost" onClick={save} disabled={!dirty}>
-          <Save size={14} /> Guardar
+          <Save size={14} /> {tr('Guardar')}
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => saveVisual({ ...s, id: vid(), name: `${s.name} (cópia)` })}>
+        <Button size="sm" variant="ghost" onClick={() => saveVisual({ ...s, id: vid(), name: tr('{0} (cópia)', s.name) })}>
           <Copy size={14} />
         </Button>
-        <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => saved && confirm(`Apagar "${saved.name}"?`) && useStrategies.getState().deleteVisual(saved.id)}>
+        <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => saved && confirm(tr('Apagar "{0}"?', saved.name)) && useStrategies.getState().deleteVisual(saved.id)}>
           <Trash2 size={14} />
         </Button>
         <div className="flex-1" />
         <Button size="sm" variant="ghost" onClick={toScriptAction}>
-          <Code2 size={14} /> Converter em script
+          <Code2 size={14} /> {tr('Converter em script')}
         </Button>
         <Button
           size="sm"
@@ -240,10 +241,10 @@ export function VisualBuilder() {
             useWorkspace.getState().setBottomTab('optimizer');
           }}
         >
-          <Sparkles size={14} /> Otimizar
+          <Sparkles size={14} /> {tr('Otimizar')}
         </Button>
         <Button size="sm" variant="primary" onClick={() => void test()}>
-          <Play size={13} fill="currentColor" /> Testar
+          <Play size={13} fill="currentColor" /> {tr('Testar')}
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -255,9 +256,9 @@ export function VisualBuilder() {
             </div>
             <div className="rounded-lg border border-line">
               <div className="flex items-center justify-between border-b border-line px-3 py-1.5">
-                <span className="text-xs font-semibold">Indicadores usados</span>
+                <span className="text-xs font-semibold">{tr('Indicadores usados')}</span>
                 <Select className="h-7 w-48 text-xs" value="" onChange={(e) => e.target.value && addIndicator(e.target.value)}>
-                  <option value="">+ Adicionar indicador…</option>
+                  <option value="">{tr('+ Adicionar indicador…')}</option>
                   {INDICATORS.filter((d) => d.outputs.length > 0).map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
@@ -300,27 +301,27 @@ export function VisualBuilder() {
                           </Select>
                         ) : null,
                       )}
-                      <button type="button" aria-label="Remover indicador" className="ml-auto rounded p-1 text-muted hover:text-down" onClick={() => patch({ indicators: s.indicators.filter((_, j) => j !== k) })}>
+                      <button type="button" aria-label={tr('Remover indicador')} className="ml-auto rounded p-1 text-muted hover:text-down" onClick={() => patch({ indicators: s.indicators.filter((_, j) => j !== k) })}>
                         <X size={13} />
                       </button>
                     </div>
                   );
                 })}
-                {!s.indicators.length && <div className="py-2 text-center text-xs text-muted">Adicione indicadores para os usar nas condições (ex.: EMA, RSI).</div>}
+                {!s.indicators.length && <div className="py-2 text-center text-xs text-muted">{tr('Adicione indicadores para os usar nas condições (ex.: EMA, RSI).')}</div>}
               </div>
             </div>
             <div className="rounded-lg border border-line p-3">
-              <div className="mb-2 text-xs font-semibold">Gestão de risco</div>
+              <div className="mb-2 text-xs font-semibold">{tr('Gestão de risco')}</div>
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <label className="flex items-center justify-between gap-2 text-muted">
                   Stop loss
                   <span className="flex gap-1">
                     <Select className="h-7 w-28 text-xs" value={s.stopLoss.type} onChange={(e) => patch({ stopLoss: { ...s.stopLoss, type: e.target.value as VisualStrategy['stopLoss']['type'] } })}>
-                      <option value="none">Sem stop</option>
+                      <option value="none">{tr('Sem stop')}</option>
                       <option value="atr">x ATR</option>
-                      <option value="percent">% do preço</option>
-                      <option value="points">Pontos</option>
-                      <option value="swing">Último swing</option>
+                      <option value="percent">{tr('% do preço')}</option>
+                      <option value="points">{tr('Pontos')}</option>
+                      <option value="swing">{tr('Último swing')}</option>
                     </Select>
                     {s.stopLoss.type !== 'none' && s.stopLoss.type !== 'swing' && <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.stopLoss.value} step={0.25} min={0} onChange={(v) => v !== undefined && patch({ stopLoss: { ...s.stopLoss, value: v } })} />}
                     {s.stopLoss.type === 'swing' && <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.stopLoss.lookback} step={1} min={2} onChange={(v) => v !== undefined && patch({ stopLoss: { ...s.stopLoss, lookback: Math.round(v) } })} />}
@@ -330,11 +331,11 @@ export function VisualBuilder() {
                   Take profit
                   <span className="flex gap-1">
                     <Select className="h-7 w-28 text-xs" value={s.takeProfit.type} onChange={(e) => patch({ takeProfit: { ...s.takeProfit, type: e.target.value as VisualStrategy['takeProfit']['type'] } })}>
-                      <option value="none">Sem alvo</option>
-                      <option value="rr">x risco (R:R)</option>
+                      <option value="none">{tr('Sem alvo')}</option>
+                      <option value="rr">{tr('x risco (R:R)')}</option>
                       <option value="atr">x ATR</option>
-                      <option value="percent">% do preço</option>
-                      <option value="points">Pontos</option>
+                      <option value="percent">{tr('% do preço')}</option>
+                      <option value="points">{tr('Pontos')}</option>
                     </Select>
                     {s.takeProfit.type !== 'none' && <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.takeProfit.value} step={0.25} min={0} onChange={(v) => v !== undefined && patch({ takeProfit: { ...s.takeProfit, value: v } })} />}
                   </span>
@@ -343,26 +344,26 @@ export function VisualBuilder() {
                   Trailing stop
                   <span className="flex gap-1">
                     <Select className="h-7 w-28 text-xs" value={s.trailing.type} onChange={(e) => patch({ trailing: { ...s.trailing, type: e.target.value as VisualStrategy['trailing']['type'] } })}>
-                      <option value="none">Desligado</option>
+                      <option value="none">{tr('Desligado')}</option>
                       <option value="atr">x ATR</option>
-                      <option value="percent">% do preço</option>
-                      <option value="points">Pontos</option>
+                      <option value="percent">{tr('% do preço')}</option>
+                      <option value="points">{tr('Pontos')}</option>
                     </Select>
                     {s.trailing.type !== 'none' && <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.trailing.value} step={0.25} min={0} onChange={(v) => v !== undefined && patch({ trailing: { ...s.trailing, value: v } })} />}
                   </span>
                 </label>
                 <label className="flex items-center justify-between gap-2 text-muted">
-                  Período do ATR
+                  {tr('Período do ATR')}
                   <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.stopLoss.atrLen} step={1} min={1} onChange={(v) => v !== undefined && patch({ stopLoss: { ...s.stopLoss, atrLen: Math.round(v) } })} />
                 </label>
                 <label className="flex items-center justify-between gap-2 text-muted">
-                  Sair após N barras (0 = não)
+                  {tr('Sair após N barras (0 = não)')}
                   <NumberInput className="w-16 [&_input]:h-7 [&_input]:text-xs" value={s.maxBarsInTrade} step={1} min={0} onChange={(v) => v !== undefined && patch({ maxBarsInTrade: Math.round(v) })} />
                 </label>
-                <Switch checked={s.exitOnOpposite} onChange={(v) => patch({ exitOnOpposite: v })} label={<span className="text-muted">Fechar com o sinal contrário</span>} />
+                <Switch checked={s.exitOnOpposite} onChange={(v) => patch({ exitOnOpposite: v })} label={<span className="text-muted">{tr('Fechar com o sinal contrário')}</span>} />
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3 text-xs">
-                <Switch checked={s.session.enabled} onChange={(v) => patch({ session: { ...s.session, enabled: v } })} label={<span className="text-muted">Só negociar entre</span>} />
+                <Switch checked={s.session.enabled} onChange={(v) => patch({ session: { ...s.session, enabled: v } })} label={<span className="text-muted">{tr('Só negociar entre')}</span>} />
                 <NumberInput className="w-14 [&_input]:h-7 [&_input]:text-xs" value={s.session.startHour} min={0} max={23} step={1} onChange={(v) => v !== undefined && patch({ session: { ...s.session, startHour: Math.round(v) } })} />
                 <span className="text-muted">e</span>
                 <NumberInput className="w-14 [&_input]:h-7 [&_input]:text-xs" value={s.session.endHour} min={0} max={24} step={1} onChange={(v) => v !== undefined && patch({ session: { ...s.session, endHour: Math.round(v) } })} />
@@ -384,19 +385,19 @@ export function VisualBuilder() {
           </div>
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3 text-xs">
-              <Switch checked={s.long.enabled} onChange={(v) => patch({ long: { ...s.long, enabled: v } })} label="Compras (long)" />
-              <Switch checked={s.short.enabled} onChange={(v) => patch({ short: { ...s.short, enabled: v } })} label="Vendas (short)" />
+              <Switch checked={s.long.enabled} onChange={(v) => patch({ long: { ...s.long, enabled: v } })} label={tr('Compras (long)')} />
+              <Switch checked={s.short.enabled} onChange={(v) => patch({ short: { ...s.short, enabled: v } })} label={tr('Vendas (short)')} />
             </div>
             {s.long.enabled && (
               <>
-                <RulesEditor title="SE … ENTÃO COMPRAR" rules={s.long.entry} s={s} tone="up" onChange={(entry) => patch({ long: { ...s.long, entry } })} />
-                <RulesEditor title="Fechar a compra quando (opcional)" rules={s.long.exit} s={s} tone="muted" onChange={(exit) => patch({ long: { ...s.long, exit } })} />
+                <RulesEditor title={tr('SE … ENTÃO COMPRAR')} rules={s.long.entry} s={s} tone="up" onChange={(entry) => patch({ long: { ...s.long, entry } })} />
+                <RulesEditor title={tr('Fechar a compra quando (opcional)')} rules={s.long.exit} s={s} tone="muted" onChange={(exit) => patch({ long: { ...s.long, exit } })} />
               </>
             )}
             {s.short.enabled && (
               <>
-                <RulesEditor title="SE … ENTÃO VENDER" rules={s.short.entry} s={s} tone="down" onChange={(entry) => patch({ short: { ...s.short, entry } })} />
-                <RulesEditor title="Fechar a venda quando (opcional)" rules={s.short.exit} s={s} tone="muted" onChange={(exit) => patch({ short: { ...s.short, exit } })} />
+                <RulesEditor title={tr('SE … ENTÃO VENDER')} rules={s.short.entry} s={s} tone="down" onChange={(entry) => patch({ short: { ...s.short, entry } })} />
+                <RulesEditor title={tr('Fechar a venda quando (opcional)')} rules={s.short.exit} s={s} tone="muted" onChange={(exit) => patch({ short: { ...s.short, exit } })} />
               </>
             )}
           </div>

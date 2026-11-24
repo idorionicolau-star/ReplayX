@@ -15,6 +15,7 @@ import { NumberInput, Switch } from '@/components/ui/Field';
 import { Segmented, Tabs } from '@/components/ui/Tabs';
 import { fmtDateTime, fmtMoney, fmtPrice } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 export function TradePanel() {
   const symbolId = useWorkspace((s) => s.charts[s.active]?.symbolId);
@@ -61,10 +62,10 @@ export function TradePanel() {
     return a + (px === undefined ? 0 : unrealized(p, px, specFor(resolveSymbol(p.symbolId))));
   }, 0);
   const equity = acc.balance + openPnl;
-  const lotLabel = sym.contractSize && sym.contractSize > 1 ? 'lotes' : 'unidades';
+  const lotLabel = sym.contractSize && sym.contractSize > 1 ? tr('lotes') : tr('unidades');
 
   const send = () => {
-    if (trading.confirmOrders && !confirm(`${side === 'long' ? 'Comprar' : 'Vender'} ${qtyRounded} ${sym.name}?`)) return;
+    if (trading.confirmOrders && !confirm(`${side === 'long' ? tr('Comprar') : tr('Vender')} ${qtyRounded} ${sym.name}?`)) return;
     submitOrder({ symbolId, side, type, qty: qtyRounded, price: type === 'market' ? undefined : limitPrice, sl, tp });
   };
 
@@ -72,20 +73,20 @@ export function TradePanel() {
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="border-b border-line p-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide', mode === 'replay' ? 'bg-accent/15 text-accent' : 'bg-up/15 text-up')}>{mode === 'replay' ? 'CONTA DE REPLAY' : 'CONTA DEMO · TEMPO REAL'}</span>
+          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide', mode === 'replay' ? 'bg-accent/15 text-accent' : 'bg-up/15 text-up')}>{mode === 'replay' ? tr('CONTA DE REPLAY') : tr('CONTA DEMO · TEMPO REAL')}</span>
           <span className="text-[11px] text-muted">{sym.name}</span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-[11px] text-muted">Saldo</div>
+            <div className="text-[11px] text-muted">{tr('Saldo')}</div>
             <div className="text-[13px] font-semibold tnum">{fmtMoney(acc.balance)}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted">Capital</div>
+            <div className="text-[11px] text-muted">{tr('Capital')}</div>
             <div className="text-[13px] font-semibold tnum">{fmtMoney(equity)}</div>
           </div>
           <div>
-            <div className="text-[11px] text-muted">Aberto</div>
+            <div className="text-[11px] text-muted">{tr('Aberto')}</div>
             <div className={cn('text-[13px] font-semibold tnum', openPnl >= 0 ? 'text-up' : 'text-down')}>{fmtMoney(openPnl)}</div>
           </div>
         </div>
@@ -94,11 +95,11 @@ export function TradePanel() {
       <div className="flex flex-col gap-2.5 border-b border-line p-3">
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setSide('short')} className={cn('rounded-lg border px-2 py-1.5 text-left transition-colors', side === 'short' ? 'border-down bg-down/10' : 'border-line hover:bg-hover')}>
-            <div className="text-[11px] text-down">Vender</div>
+            <div className="text-[11px] text-down">{tr('Vender')}</div>
             <div className="text-[15px] font-semibold tnum">{fmtPrice(price !== undefined ? price - spec.spread / 2 : undefined, sym.precision)}</div>
           </button>
           <button type="button" onClick={() => setSide('long')} className={cn('rounded-lg border px-2 py-1.5 text-right transition-colors', side === 'long' ? 'border-up bg-up/10' : 'border-line hover:bg-hover')}>
-            <div className="text-[11px] text-up">Comprar</div>
+            <div className="text-[11px] text-up">{tr('Comprar')}</div>
             <div className="text-[15px] font-semibold tnum">{fmtPrice(price !== undefined ? price + spec.spread / 2 : undefined, sym.precision)}</div>
           </button>
         </div>
@@ -110,14 +111,14 @@ export function TradePanel() {
             if (v !== 'market' && price !== undefined) setLimitPrice(+price.toFixed(sym.precision));
           }}
           items={[
-            { value: 'market', label: 'Mercado' },
-            { value: 'limit', label: 'Limite' },
+            { value: 'market', label: tr('Mercado') },
+            { value: 'limit', label: tr('Limite') },
             { value: 'stop', label: 'Stop' },
           ]}
         />
         {type !== 'market' && (
           <label className="flex items-center justify-between gap-2 text-xs text-muted">
-            Preço
+            {tr('Preço')}
             <NumberInput className="w-36" value={limitPrice} step={pip} onChange={setLimitPrice} />
           </label>
         )}
@@ -126,8 +127,8 @@ export function TradePanel() {
             value={trading.sizing}
             onChange={(v) => setTrading({ sizing: v })}
             items={[
-              { value: 'risk', label: 'Risco %' },
-              { value: 'qty', label: 'Quantidade' },
+              { value: 'risk', label: tr('Risco %') },
+              { value: 'qty', label: tr('Quantidade') },
             ]}
           />
           {trading.sizing === 'risk' ? (
@@ -137,7 +138,7 @@ export function TradePanel() {
           )}
         </div>
         <div className="flex items-center justify-between gap-2 text-xs">
-          <Switch checked={useSl} onChange={setUseSl} label={<span className="text-muted">Stop loss ({sym.assetClass === 'forex' ? 'pips' : 'pontos'})</span>} />
+          <Switch checked={useSl} onChange={setUseSl} label={<span className="text-muted">Stop loss ({sym.assetClass === 'forex' ? 'pips' : tr('pontos')})</span>} />
           <NumberInput className="w-24" value={slPips} step={1} min={0} onChange={setSlPips} disabled={!useSl} />
         </div>
         <div className="flex items-center justify-between gap-2 text-xs">
@@ -146,18 +147,18 @@ export function TradePanel() {
         </div>
         <div className="rounded-md bg-sunken px-2.5 py-2 text-[11px] leading-relaxed text-muted tnum">
           <div className="flex justify-between">
-            <span>Quantidade</span>
+            <span>{tr('Quantidade')}</span>
             <span className="text-text">
               {fmtLotWith(qtyRounded, lotRuleNow)} {lotLabel}
             </span>
           </div>
           <div className="flex justify-between text-faint">
-            <span>Regras deste ativo</span>
+            <span>{tr('Regras deste ativo')}</span>
             <span>
-              mín. {fmtLotWith(lotRuleNow.min, lotRuleNow)} · passo {fmtLotWith(lotRuleNow.step, lotRuleNow)}
+              {tr('mín.')} {fmtLotWith(lotRuleNow.min, lotRuleNow)} {tr('· passo')} {fmtLotWith(lotRuleNow.step, lotRuleNow)}
             </span>
           </div>
-          {trading.sizing === 'risk' && rl?.minExceeds && <div className="text-warn">O lote mínimo já arrisca mais do que {trading.defaultRiskPct}%. Afaste o stop ou aumente o risco.</div>}
+          {trading.sizing === 'risk' && rl?.minExceeds && <div className="text-warn">{tr('O lote mínimo já arrisca mais do que')} {trading.defaultRiskPct}{tr('%. Afaste o stop ou aumente o risco.')}</div>}
           {sl !== undefined && (
             <div className="flex justify-between">
               <span>SL {fmtPrice(sl, sym.precision)}</span>
@@ -170,12 +171,12 @@ export function TradePanel() {
               <span className="text-up">{entry !== undefined ? fmtMoney(pnlFor(side, qtyRounded, entry, tp, spec)) : '—'}</span>
             </div>
           )}
-          {trading.sizing === 'risk' && sl === undefined && <div className="text-warn">Defina um stop para calcular a quantidade pelo risco.</div>}
+          {trading.sizing === 'risk' && sl === undefined && <div className="text-warn">{tr('Defina um stop para calcular a quantidade pelo risco.')}</div>}
         </div>
         <Button variant={side === 'long' ? 'success' : 'danger'} size="lg" block disabled={price === undefined || !(qtyRounded > 0)} onClick={send} data-testid="order-submit">
-          {side === 'long' ? 'Comprar' : 'Vender'} {qtyRounded} {type === 'market' ? 'a mercado' : type === 'limit' ? 'limite' : 'stop'}
+          {side === 'long' ? tr('Comprar') : tr('Vender')} {qtyRounded} {type === 'market' ? tr('a mercado') : type === 'limit' ? 'limite' : 'stop'}
         </Button>
-        {price === undefined && <div className="text-center text-[11px] text-muted">{mode === 'replay' ? 'À espera do preço do replay…' : 'À espera do preço em tempo real…'}</div>}
+        {price === undefined && <div className="text-center text-[11px] text-muted">{mode === 'replay' ? tr('À espera do preço do replay…') : tr('À espera do preço em tempo real…')}</div>}
       </div>
 
       <div className="flex items-center justify-between px-2 pt-2">
@@ -184,14 +185,14 @@ export function TradePanel() {
           value={tab}
           onChange={setTab}
           items={[
-            { value: 'positions', label: `Posições (${acc.positions.length})` },
-            { value: 'orders', label: `Ordens (${acc.orders.length})` },
-            { value: 'history', label: 'Histórico' },
+            { value: 'positions', label: tr('Posições ({0})', acc.positions.length) },
+            { value: 'orders', label: tr('Ordens ({0})', acc.orders.length) },
+            { value: 'history', label: tr('Histórico') },
           ]}
         />
         {tab === 'positions' && acc.positions.length > 0 && (
           <button type="button" className="text-[11px] text-down hover:underline" onClick={() => closeAll()}>
-            Fechar todas
+            {tr('Fechar todas')}
           </button>
         )}
       </div>
@@ -205,31 +206,31 @@ export function TradePanel() {
               <div key={p.id} className="mb-1.5 rounded-lg border border-line p-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
-                    <span className={p.side === 'long' ? 'text-up' : 'text-down'}>{p.side === 'long' ? 'COMPRA' : 'VENDA'}</span> {s.name} · {+p.qty.toFixed(4)}
+                    <span className={p.side === 'long' ? 'text-up' : 'text-down'}>{p.side === 'long' ? tr('COMPRA') : tr('VENDA')}</span> {s.name} · {+p.qty.toFixed(4)}
                   </span>
                   <span className={cn('font-semibold tnum', pnl >= 0 ? 'text-up' : 'text-down')}>{fmtMoney(pnl)}</span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 text-muted tnum">
-                  <span>Entrada {fmtPrice(p.entryPrice, s.precision)}</span>
+                  <span>{tr('Entrada')} {fmtPrice(p.entryPrice, s.precision)}</span>
                   <span>SL {p.sl !== undefined ? fmtPrice(p.sl, s.precision) : '—'}</span>
                   <span>TP {p.tp !== undefined ? fmtPrice(p.tp, s.precision) : '—'}</span>
                 </div>
                 <div className="mt-1.5 flex gap-1.5">
-                  <Button size="xs" variant="subtle" onClick={() => moveToBreakEven(p.id)} title="Mover stop para a entrada">
+                  <Button size="xs" variant="subtle" onClick={() => moveToBreakEven(p.id)} title={tr('Mover stop para a entrada')}>
                     <ShieldCheck size={12} /> BE
                   </Button>
                   <Button size="xs" variant="subtle" onClick={() => applyTradeAction({ type: 'modify-position', id: p.id, sl: null, tp: null })}>
-                    Sem SL/TP
+                    {tr('Sem SL/TP')}
                   </Button>
                   <div className="flex-1" />
                   <Button size="xs" variant="danger" onClick={() => applyTradeAction({ type: 'close-position', id: p.id })}>
-                    <X size={12} /> Fechar
+                    <X size={12} /> {tr('Fechar')}
                   </Button>
                 </div>
               </div>
             );
           })}
-        {tab === 'positions' && !acc.positions.length && <div className="py-6 text-center text-xs text-muted">Sem posições abertas. Também pode arrastar as linhas de SL/TP no gráfico.</div>}
+        {tab === 'positions' && !acc.positions.length && <div className="py-6 text-center text-xs text-muted">{tr('Sem posições abertas. Também pode arrastar as linhas de SL/TP no gráfico.')}</div>}
         {tab === 'orders' &&
           acc.orders.map((o) => {
             const s = resolveSymbol(o.symbolId);
@@ -237,7 +238,7 @@ export function TradePanel() {
               <div key={o.id} className="mb-1.5 flex items-center justify-between rounded-lg border border-line p-2 text-xs">
                 <div>
                   <div className="font-semibold">
-                    <span className={o.side === 'long' ? 'text-up' : 'text-down'}>{o.side === 'long' ? 'COMPRA' : 'VENDA'}</span> {o.type === 'limit' ? 'LIMITE' : 'STOP'} {s.name}
+                    <span className={o.side === 'long' ? 'text-up' : 'text-down'}>{o.side === 'long' ? tr('COMPRA') : tr('VENDA')}</span> {o.type === 'limit' ? tr('LIMITE') : 'STOP'} {s.name}
                   </div>
                   <div className="text-muted tnum">
                     {+o.qty.toFixed(4)} @ {fmtPrice(o.price, s.precision)}
@@ -245,13 +246,13 @@ export function TradePanel() {
                     {o.tp !== undefined && ` · TP ${fmtPrice(o.tp, s.precision)}`}
                   </div>
                 </div>
-                <button type="button" aria-label="Cancelar ordem" onClick={() => applyTradeAction({ type: 'cancel-order', id: o.id })} className="rounded p-1 text-muted hover:text-down">
+                <button type="button" aria-label={tr('Cancelar ordem')} onClick={() => applyTradeAction({ type: 'cancel-order', id: o.id })} className="rounded p-1 text-muted hover:text-down">
                   <XCircle size={16} />
                 </button>
               </div>
             );
           })}
-        {tab === 'orders' && !acc.orders.length && <div className="py-6 text-center text-xs text-muted">Sem ordens pendentes.</div>}
+        {tab === 'orders' && !acc.orders.length && <div className="py-6 text-center text-xs text-muted">{tr('Sem ordens pendentes.')}</div>}
         {tab === 'history' &&
           [...acc.trades]
             .reverse()
@@ -262,7 +263,7 @@ export function TradePanel() {
                 <div key={t.id} className="flex items-center justify-between border-b border-line py-1.5 text-xs last:border-0">
                   <div>
                     <div>
-                      <span className={t.side === 'long' ? 'text-up' : 'text-down'}>{t.side === 'long' ? 'Compra' : 'Venda'}</span> {s.name} · {+t.qty.toFixed(4)}
+                      <span className={t.side === 'long' ? 'text-up' : 'text-down'}>{t.side === 'long' ? tr('Compra') : tr('Venda')}</span> {s.name} · {+t.qty.toFixed(4)}
                     </div>
                     <div className="text-[11px] text-muted">{fmtDateTime(t.exitTime, tz)} · {t.exitReason.toUpperCase()}</div>
                   </div>
@@ -273,9 +274,9 @@ export function TradePanel() {
                 </div>
               );
             })}
-        {tab === 'history' && !acc.trades.length && <div className="py-6 text-center text-xs text-muted">Ainda sem operações fechadas.</div>}
+        {tab === 'history' && !acc.trades.length && <div className="py-6 text-center text-xs text-muted">{tr('Ainda sem operações fechadas.')}</div>}
       </div>
-      <div className="px-3 pb-3 text-[11px] text-muted">{tradingMode() === 'replay' ? 'As ordens são executadas à medida que o replay avança.' : 'Conta simulada: executa com os preços em tempo real.'}</div>
+      <div className="px-3 pb-3 text-[11px] text-muted">{tradingMode() === 'replay' ? tr('As ordens são executadas à medida que o replay avança.') : tr('Conta simulada: executa com os preços em tempo real.')}</div>
     </div>
   );
 }

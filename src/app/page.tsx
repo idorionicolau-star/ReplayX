@@ -7,6 +7,8 @@ import { LoginCard } from '@/components/auth/LoginCard';
 import { Logo } from '@/components/Logo';
 import { Spinner } from '@/components/ui/Spinner';
 import { LegalFooter } from '@/components/legal/LegalFooter';
+import { LangSwitch } from '@/components/LangSwitch';
+import { useTr } from '@/i18n/react';
 
 const FEATURES = [
   { icon: Rewind, title: 'Bar Replay completo', text: 'Volte a qualquer data, avance barra a barra ou em reprodução, e troque de timeframe a meio do replay sem perder o ponto.' },
@@ -20,6 +22,7 @@ const FEATURES = [
 ];
 
 export default function Home() {
+  const tr = useTr();
   const router = useRouter();
   const { user, ready } = useAuth();
 
@@ -36,27 +39,29 @@ export default function Home() {
       <div className="mx-auto flex min-h-full max-w-6xl flex-col px-5 py-6 lg:px-8">
         <header className="flex items-center justify-between">
           <Logo size={30} />
-          <span className="hidden text-xs text-muted sm:block">Bar Replay · Backtest · Estratégias</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs text-muted sm:block">{tr('Bar Replay · Backtest · Estratégias')}</span>
+            <LangSwitch />
+          </div>
         </header>
 
         <section className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1.15fr_1fr] lg:py-16">
           <div>
             <h1 className="text-3xl leading-tight font-bold tracking-tight sm:text-[42px]">
-              Treine no passado.
+              {tr('Treine no passado.')}
               <br />
-              <span className="text-accent">Opere melhor no futuro.</span>
+              <span className="text-accent">{tr('Opere melhor no futuro.')}</span>
             </h1>
             <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
-              Uma plataforma de gráficos profissional, feita para praticar: Bar Replay com troca de timeframe, operações simuladas, diário de trading e
-              backtest automático de estratégias — incluindo os índices sintéticos.
+              {tr('Uma plataforma de gráficos profissional, feita para praticar: Bar Replay com troca de timeframe, operações simuladas, diário de trading e backtest automático de estratégias — incluindo os índices sintéticos.')}
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {FEATURES.map((f) => (
                 <div key={f.title} className="flex gap-3 rounded-xl border border-line bg-elev/60 p-3">
                   <f.icon size={20} className="mt-0.5 shrink-0 text-accent" />
                   <div>
-                    <div className="text-[13px] font-semibold">{f.title}</div>
-                    <div className="mt-0.5 text-xs leading-relaxed text-muted">{f.text}</div>
+                    <div className="text-[13px] font-semibold">{tr(f.title)}</div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-muted">{tr(f.text)}</div>
                   </div>
                 </div>
               ))}
@@ -66,7 +71,7 @@ export default function Home() {
         </section>
 
         <div className="border-t border-line pt-4">
-          <p className="mb-2 text-[11px] text-muted">Dados de mercado: Deriv (sintéticos, forex, metais, índices), Binance (cripto) e Yahoo Finance (ações e futuros).</p>
+          <p className="mb-2 text-[11px] text-muted">{tr('Dados de mercado: Deriv (sintéticos, forex, metais, índices), Binance (cripto) e Yahoo Finance (ações e futuros).')}</p>
           <LegalFooter />
         </div>
       </div>

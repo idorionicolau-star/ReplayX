@@ -20,15 +20,16 @@ import { Tabs } from '@/components/ui/Tabs';
 import { toast } from '@/components/ui/Toast';
 import { uid } from '@/lib/uid';
 import { cn } from '@/components/ui/cn';
+import { tr } from '@/i18n';
 
 const COMPLETIONS = [
-  ...['open', 'high', 'low', 'close', 'volume', 'time', 'hl2', 'hlc3', 'ohlc4', 'bar_count'].map((l) => ({ label: l, type: 'variable', info: 'Série de preços (array)' })),
+  ...['open', 'high', 'low', 'close', 'volume', 'time', 'hl2', 'hlc3', 'ohlc4', 'bar_count'].map((l) => ({ label: l, type: 'variable', info: tr('Série de preços (array)') })),
   { label: 'indicator', type: 'function', info: "indicator('Nome', { overlay: true })" },
   { label: 'strategy', type: 'function', info: "strategy('Nome', { overlay: true })" },
   { label: 'plot', type: 'function', info: "plot(serie, { title, color, width, style: 'line'|'histogram'|'area'|'dots'|'step' })" },
   { label: 'plotshape', type: 'function', info: "plotshape(condicao, { location: 'above'|'below', color, text })" },
   { label: 'hline', type: 'function', info: 'hline(valor, { color })' },
-  { label: 'onBar', type: 'function', info: 'onBar((i) => { … }) — lógica barra a barra' },
+  { label: 'onBar', type: 'function', info: tr('onBar((i) => { … }) — lógica barra a barra') },
   { label: 'input.int', type: 'function', info: "input.int('Título', 14, { min, max })" },
   { label: 'input.float', type: 'function', info: "input.float('Título', 1.5, { step })" },
   { label: 'input.bool', type: 'function' },
@@ -40,13 +41,13 @@ const COMPLETIONS = [
   { label: 'strategy.exit', type: 'function', info: "strategy.exit('Long', { sl, tp, trail })" },
   { label: 'strategy.cancel', type: 'function' },
   { label: 'strategy.position', type: 'property', info: '{ size, side, avgPrice, openTrades, barsInTrade }' },
-  { label: 'crossover', type: 'function', info: 'crossover(a, b, i) → true/false na barra i' },
+  { label: 'crossover', type: 'function', info: tr('crossover(a, b, i) → true/false na barra i') },
   { label: 'crossunder', type: 'function', info: 'crossunder(a, b, i)' },
   { label: 'highest', type: 'function', info: 'highest(serie, n, i)' },
   { label: 'lowest', type: 'function', info: 'lowest(serie, n, i)' },
   { label: 'nz', type: 'function' },
   { label: 'na', type: 'function' },
-  { label: 'log', type: 'function', info: 'log(…) — escreve na consola' },
+  { label: 'log', type: 'function', info: tr('log(…) — escreve na consola') },
   { label: 'indicatorValues', type: 'function', info: "indicatorValues('rsi', { length: 14 }) → { rsi: [...] }" },
   ...[
     'sma', 'ema', 'wma', 'hma', 'rma', 'dema', 'tema', 'vwma', 'stdev', 'highest', 'lowest', 'sum', 'change', 'roc', 'mom', 'rsi', 'macd', 'bb', 'atr', 'tr', 'stoch', 'stochRsi', 'cci', 'williamsR', 'dmi', 'adx', 'mfi', 'obv', 'cmf',
@@ -117,7 +118,7 @@ export function ScriptEditor() {
   const save = () => {
     if (!active) return;
     saveScript({ id: active.id, name: active.name, code });
-    toast('Script guardado', { kind: 'success', duration: 1500 });
+    toast(tr('Script guardado'), { kind: 'success', duration: 1500 });
   };
 
   const check = async () => {
@@ -143,7 +144,7 @@ export function ScriptEditor() {
     const ws = useWorkspace.getState();
     const cfg = ws.charts[ws.active];
     ws.updateChart(ws.active, { indicators: [...cfg.indicators, { uid: uid('si'), type: `script:${active.id}`, params: {}, styles: {} }] });
-    toast(`${active.name} adicionado ao gráfico`, { kind: 'success' });
+    toast(tr('{0} adicionado ao gráfico', active.name), { kind: 'success' });
   };
 
   const test = async () => {
@@ -173,17 +174,17 @@ export function ScriptEditor() {
             </option>
           ))}
         </Select>
-        {dirty && <span className="text-[11px] text-warn">● não guardado</span>}
+        {dirty && <span className="text-[11px] text-warn">{tr('● não guardado')}</span>}
         <Button ref={newRef} size="sm" variant="ghost" onClick={() => setNewOpen((o) => !o)}>
-          <FilePlus2 size={14} /> Novo <ChevronDown size={12} />
+          <FilePlus2 size={14} /> {tr('Novo')} <ChevronDown size={12} />
         </Button>
         <Popover anchor={newRef} open={newOpen} onClose={() => setNewOpen(false)} placement="top-start">
           <MenuList className="w-[300px]">
-            <MenuHeader>Começar a partir de</MenuHeader>
+            <MenuHeader>{tr('Começar a partir de')}</MenuHeader>
             <MenuItem
-              label="Script vazio"
+              label={tr('Script vazio')}
               onClick={() => {
-                saveScript({ name: 'Novo indicador', code: "indicator('Novo indicador', { overlay: true });\n\nconst len = input.int('Período', 20);\nplot(ta.sma(close, len), { title: 'Média' });\n" });
+                saveScript({ name: tr('Novo indicador'), code: "indicator('Novo indicador', { overlay: true });\n\nconst len = input.int('Período', 20);\nplot(ta.sma(close, len), { title: 'Média' });\n" });
                 setNewOpen(false);
               }}
             />
@@ -200,41 +201,41 @@ export function ScriptEditor() {
           </MenuList>
         </Popover>
         <Button size="sm" variant="ghost" onClick={save} disabled={!dirty} title="Ctrl+S">
-          <Save size={14} /> Guardar
+          <Save size={14} /> {tr('Guardar')}
         </Button>
         <Button
           size="sm"
           variant="ghost"
           onClick={() => {
             if (!active) return;
-            const name = prompt('Nome do script', active.name);
+            const name = prompt(tr('Nome do script'), active.name);
             if (name?.trim()) saveScript({ id: active.id, name: name.trim(), code });
           }}
         >
           <Pencil size={14} />
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => active && saveScript({ name: `${active.name} (cópia)`, code })}>
+        <Button size="sm" variant="ghost" onClick={() => active && saveScript({ name: tr('{0} (cópia)', active.name), code })}>
           <Copy size={14} />
         </Button>
-        <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => active && confirm(`Apagar "${active.name}"?`) && useStrategies.getState().deleteScript(active.id)}>
+        <Button size="sm" variant="ghost" className="hover:text-down" onClick={() => active && confirm(tr('Apagar "{0}"?', active.name)) && useStrategies.getState().deleteScript(active.id)}>
           <Trash2 size={14} />
         </Button>
         <div className="flex-1" />
         <Button size="sm" variant="outline" onClick={() => void check()} disabled={checking}>
-          <CheckCircle2 size={14} /> Verificar
+          <CheckCircle2 size={14} /> {tr('Verificar')}
         </Button>
         {!isStrategy && (
           <Button size="sm" variant="primary" onClick={addToChart}>
-            <LineChart size={14} /> Adicionar ao gráfico
+            <LineChart size={14} /> {tr('Adicionar ao gráfico')}
           </Button>
         )}
         {isStrategy && (
           <>
-            <Button size="sm" variant="outline" onClick={addToChart} title="Mostra os plots da estratégia como indicador">
-              <LineChart size={14} /> No gráfico
+            <Button size="sm" variant="outline" onClick={addToChart} title={tr('Mostra os plots da estratégia como indicador')}>
+              <LineChart size={14} /> {tr('No gráfico')}
             </Button>
             <Button size="sm" variant="primary" onClick={() => void test()}>
-              <Play size={13} fill="currentColor" /> Testar estratégia
+              <Play size={13} fill="currentColor" /> {tr('Testar estratégia')}
             </Button>
           </>
         )}
@@ -250,8 +251,8 @@ export function ScriptEditor() {
               value={side}
               onChange={setSide}
               items={[
-                { value: 'console', label: 'Consola' },
-                { value: 'help', label: 'Ajuda da API' },
+                { value: 'console', label: tr('Consola') },
+                { value: 'help', label: tr('Ajuda da API') },
               ]}
             />
           </div>
@@ -259,21 +260,21 @@ export function ScriptEditor() {
             {side === 'help' && <pre className="whitespace-pre-wrap text-muted">{HELP}</pre>}
             {side === 'console' && (
               <>
-                {!result && !error && <div className="font-sans text-xs text-muted">Carregue em “Verificar” para correr o script nos dados do gráfico ativo.</div>}
+                {!result && !error && <div className="font-sans text-xs text-muted">{tr('Carregue em “Verificar” para correr o script nos dados do gráfico ativo.')}</div>}
                 {error && (
                   <div className="flex gap-2 rounded bg-down/10 p-2 text-down">
                     <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                     <span>
-                      {error.line ? `Linha ${error.line}: ` : ''}
+                      {error.line ? tr('Linha {0}: ', error.line) : ''}
                       {error.message}
                     </span>
                   </div>
                 )}
                 {result && (
                   <div className="flex flex-col gap-2">
-                    <div className="text-up">✔ {result.meta.kind === 'strategy' ? 'Estratégia' : 'Indicador'} “{result.meta.title}” sem erros</div>
+                    <div className="text-up">✔ {result.meta.kind === 'strategy' ? tr('Estratégia') : tr('Indicador')} “{result.meta.title}{tr('” sem erros')}</div>
                     <div className="text-muted">
-                      {result.plots.length} plot(s) · {result.shapes.length} marca(s) · {result.inputs.length} parâmetro(s)
+                      {result.plots.length} plot(s) · {result.shapes.length} {tr('marca(s) ·')} {result.inputs.length} {tr('parâmetro(s)')}
                     </div>
                     {result.inputs.map((i) => (
                       <div key={i.title} className="text-muted">

@@ -5,6 +5,8 @@ import { authError, enterAsGuest, isGuestExpired, loginEmail, loginGoogle, regis
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Segmented } from '@/components/ui/Tabs';
+import { TRIAL_DAYS } from '@/core/plans';
+import { useTr } from '@/i18n/react';
 
 function GoogleIcon() {
   return (
@@ -18,6 +20,7 @@ function GoogleIcon() {
 }
 
 export function LoginCard() {
+  const tr = useTr();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,17 +44,17 @@ export function LoginCard() {
 
   return (
     <div className="w-full max-w-[400px] rounded-2xl border border-line bg-elev p-6 shadow-pop">
-      <h2 className="text-lg font-semibold">{mode === 'login' ? 'Entrar no ReplayX' : 'Criar conta'}</h2>
-      <p className="mt-1 text-[13px] text-muted">Os seus gráficos, desenhos, sessões de replay e estratégias ficam guardados na sua conta.</p>
+      <h2 className="text-lg font-semibold">{mode === 'login' ? tr('Entrar no ReplayX') : tr('Criar conta')}</h2>
+      <p className="mt-1 text-[13px] text-muted">{tr('Os seus gráficos, desenhos, sessões de replay e estratégias ficam guardados na sua conta.')}</p>
 
       <Button variant="outline" size="lg" block className="mt-5 bg-input" disabled={!!busy} onClick={() => run('google', loginGoogle)}>
         {busy === 'google' ? <Loader2 size={18} className="animate-spin" /> : <GoogleIcon />}
-        Continuar com Google
+        {tr('Continuar com Google')}
       </Button>
 
       <div className="my-5 flex items-center gap-3 text-[11px] uppercase text-muted">
         <span className="h-px flex-1 bg-line" />
-        ou com e-mail
+        {tr('ou com e-mail')}
         <span className="h-px flex-1 bg-line" />
       </div>
 
@@ -63,8 +66,8 @@ export function LoginCard() {
           setError(null);
         }}
         items={[
-          { value: 'login', label: 'Entrar' },
-          { value: 'register', label: 'Criar conta' },
+          { value: 'login', label: tr('Entrar') },
+          { value: 'register', label: tr('Criar conta') },
         ]}
       />
 
@@ -76,13 +79,13 @@ export function LoginCard() {
           else void run('email', () => registerEmail(name, email, password));
         }}
       >
-        {mode === 'register' && <Input placeholder="Nome" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10" />}
-        <Input type="email" required placeholder="E-mail" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" />
+        {mode === 'register' && <Input placeholder={tr('Nome')} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10" />}
+        <Input type="email" required placeholder={tr('E-mail')} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" />
         <Input
           type="password"
           required
           minLength={6}
-          placeholder="Palavra-passe"
+          placeholder={tr('Palavra-passe')}
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -92,7 +95,7 @@ export function LoginCard() {
         {info && <div className="rounded-md bg-up/10 px-3 py-2 text-xs text-up">{info}</div>}
         <Button variant="primary" size="lg" type="submit" disabled={!!busy}>
           {busy === 'email' ? <Loader2 size={18} className="animate-spin" /> : <Mail size={16} />}
-          {mode === 'login' ? 'Entrar' : 'Criar conta'}
+          {mode === 'login' ? tr('Entrar') : tr('Criar conta')}
         </Button>
       </form>
 
@@ -102,16 +105,16 @@ export function LoginCard() {
           className="mt-3 text-xs text-accent hover:underline"
           onClick={() => {
             if (!email) {
-              setError('Escreva primeiro o seu e-mail.');
+              setError(tr('Escreva primeiro o seu e-mail.'));
               return;
             }
             void run('reset', async () => {
               await resetPassword(email);
-              setInfo('Enviámos um e-mail para redefinir a palavra-passe.');
+              setInfo(tr('Enviámos um e-mail para redefinir a palavra-passe.'));
             });
           }}
         >
-          Esqueci-me da palavra-passe
+          {tr('Esqueci-me da palavra-passe')}
         </button>
       )}
 
@@ -121,7 +124,7 @@ export function LoginCard() {
           block
           onClick={() => {
             if (isGuestExpired()) {
-              setError('A sua demonstração de 20 minutos terminou. Crie a sua conta gratuita para continuar com 14 dias de Pro Grátis!');
+              setError(tr('A sua demonstração de 20 minutos terminou. Crie a sua conta gratuita para continuar com {0} dias de Pro Grátis!', TRIAL_DAYS));
               setMode('register');
               return;
             }
@@ -131,21 +134,21 @@ export function LoginCard() {
           className="text-xs text-muted hover:text-text"
         >
           <UserRound size={16} className="text-accent" />
-          Experimentar demonstração gratuita (20 min)
+          {tr('Experimentar demonstração gratuita (20 min)')}
         </Button>
       </div>
       <p className="mt-3 text-center text-[11px] leading-snug text-muted" data-testid="consent">
-        Ao continuar, aceita os{' '}
+        {tr('Ao continuar, aceita os')}{' '}
         <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-          Termos
+          {tr('Termos')}
         </a>
-        , a{' '}
+        {tr(', a')}{' '}
         <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-          Política de privacidade
+          {tr('Política de privacidade')}
         </a>{' '}
-        e o{' '}
+        {tr('e o')}{' '}
         <a href="/aviso-de-risco" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-          Aviso de risco
+          {tr('Aviso de risco')}
         </a>
         .
       </p>

@@ -9,6 +9,7 @@ import { cn } from '@/components/ui/cn';
 import { useSettings } from '@/store/settings';
 import { useDrawings } from '@/store/drawings';
 import { PriceSnapIcon } from '@/components/ui/PriceSnapIcon';
+import { tr } from '@/i18n';
 
 const btn = 'flex h-7 w-7 items-center justify-center rounded-md border border-line bg-elev/95 text-text shadow-sm hover:bg-hover';
 
@@ -24,19 +25,19 @@ export function ChartNav({ ctrl }: { ctrl: ChartController }) {
       )}
       data-testid="chart-nav"
     >
-      <button type="button" className={btn} title="Afastar" aria-label="Afastar" onClick={() => ctrl.zoom(1.25)}>
+      <button type="button" className={btn} title={tr('Afastar')} aria-label={tr('Afastar')} onClick={() => ctrl.zoom(1.25)}>
         <Minus size={14} />
       </button>
-      <button type="button" className={btn} title="Aproximar" aria-label="Aproximar" onClick={() => ctrl.zoom(0.8)}>
+      <button type="button" className={btn} title={tr('Aproximar')} aria-label={tr('Aproximar')} onClick={() => ctrl.zoom(0.8)}>
         <Plus size={14} />
       </button>
-      <button type="button" className={btn} title="Para trás" aria-label="Para trás" onClick={() => ctrl.scrollBy(-0.25)}>
+      <button type="button" className={btn} title={tr('Para trás')} aria-label={tr('Para trás')} onClick={() => ctrl.scrollBy(-0.25)}>
         <ChevronLeft size={15} />
       </button>
-      <button type="button" className={btn} title="Para a frente" aria-label="Para a frente" onClick={() => ctrl.scrollBy(0.25)}>
+      <button type="button" className={btn} title={tr('Para a frente')} aria-label={tr('Para a frente')} onClick={() => ctrl.scrollBy(0.25)}>
         <ChevronRight size={15} />
       </button>
-      <button type="button" className={btn} title="Repor a vista (Alt+R)" aria-label="Repor a vista" onClick={() => ctrl.resetView()}>
+      <button type="button" className={btn} title={tr('Repor a vista (Alt+R)')} aria-label={tr('Repor a vista')} onClick={() => ctrl.resetView()}>
         <RotateCcw size={13} />
       </button>
     </div>
@@ -72,8 +73,8 @@ export function PriceAxisPlus({ ctrl, chart }: { ctrl: ChartController; chart: n
   return (
     <button
       type="button"
-      aria-label="Ações neste preço"
-      title="Alerta, ordem ou linha neste preço"
+      aria-label={tr('Ações neste preço')}
+      title={tr('Alerta, ordem ou linha neste preço')}
       className="absolute z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-line bg-elev text-text shadow-sm hover:border-accent hover:text-accent [@media(pointer:coarse)]:hidden"
       style={{ left: pos.x - 22, top: pos.y - 9 }}
       onMouseEnter={() => (hovered.current = true)}
@@ -119,10 +120,10 @@ export function FitButton({ ctrl }: { ctrl: ChartController }) {
         setNeed(false);
       }}
       className="absolute bottom-[34px] left-2 z-20 flex h-9 items-center gap-1.5 rounded-full border border-line bg-elev/95 px-3 text-xs font-semibold text-accent shadow-pop active:bg-hover"
-      title="Ajustar os dados à tela (sem mexer na posição)"
+      title={tr('Ajustar os dados à tela (sem mexer na posição)')}
       data-testid="fit-view"
     >
-      <Maximize2 size={14} /> Ajustar
+      <Maximize2 size={14} /> {tr('Ajustar')}
     </button>
   );
 }
@@ -153,8 +154,8 @@ export function PriceSnapButton() {
     <button
       type="button"
       aria-pressed={armed}
-      aria-label="Prender ao topo ou fundo mais próximo"
-      title={armed ? 'Íman de preço armado: o desenho prende ao topo/fundo mais próximo (toque para desligar)' : 'Íman de preço: toque para o ligar neste desenho'}
+      aria-label={tr('Prender ao topo ou fundo mais próximo')}
+      title={armed ? tr('Íman de preço armado: o desenho prende ao topo/fundo mais próximo (toque para desligar)') : tr('Íman de preço: toque para o ligar neste desenho')}
       onClick={() => useUi.getState().set({ priceSnapArmed: !armed })}
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
@@ -163,7 +164,7 @@ export function PriceSnapButton() {
       )}
       data-testid="price-snap-button"
     >
-      <PriceSnapIcon size={15} /> {armed ? 'Íman ligado' : 'Íman'}
+      <PriceSnapIcon size={15} /> {armed ? tr('Íman ligado') : tr('Íman')}
     </button>
   );
 }

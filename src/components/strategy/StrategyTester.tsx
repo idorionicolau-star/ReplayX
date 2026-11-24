@@ -20,6 +20,7 @@ import { getChart } from '@/chart/registry';
 import { fmtDate, fmtMoney } from '@/lib/format';
 import { useSettings } from '@/store/settings';
 import { cn } from '@/components/ui/cn';
+import { locale, tr } from '@/i18n';
 
 export function BacktestSettingsForm() {
   const settings = useStrategies((s) => s.settings);
@@ -27,30 +28,30 @@ export function BacktestSettingsForm() {
   const barsToTest = useStrategies((s) => s.barsToTest);
   return (
     <div className="w-[300px] divide-y divide-line p-3">
-      <Row label="Capital inicial">
+      <Row label={tr('Capital inicial')}>
         <NumberInput className="w-28" value={settings.initialCapital} min={100} step={1000} onChange={(v) => v !== undefined && setSettings({ initialCapital: v })} />
       </Row>
-      <Row label="Tamanho">
+      <Row label={tr('Tamanho')}>
         <Select className="w-28" value={settings.sizing.mode} onChange={(e) => setSettings({ sizing: { ...settings.sizing, mode: e.target.value as 'fixed' | 'equityPct' | 'riskPct' } })}>
-          <option value="riskPct">% de risco</option>
-          <option value="equityPct">% do capital</option>
-          <option value="fixed">Lotes fixos</option>
+          <option value="riskPct">{tr('% de risco')}</option>
+          <option value="equityPct">{tr('% do capital')}</option>
+          <option value="fixed">{tr('Lotes fixos')}</option>
         </Select>
         <NumberInput className="w-20" value={settings.sizing.value} min={0.0001} step={settings.sizing.mode === 'fixed' ? 0.01 : 0.5} onChange={(v) => v !== undefined && setSettings({ sizing: { ...settings.sizing, value: v } })} />
       </Row>
-      <Row label="Pirâmide (entradas no mesmo lado)">
+      <Row label={tr('Pirâmide (entradas no mesmo lado)')}>
         <NumberInput className="w-20" value={settings.pyramiding} min={1} max={10} step={1} onChange={(v) => v !== undefined && setSettings({ pyramiding: Math.round(v) })} />
       </Row>
-      <Row label="Barras a testar">
+      <Row label={tr('Barras a testar')}>
         <Select className="w-28" value={String(barsToTest)} onChange={(e) => useStrategies.getState().set({ barsToTest: Number(e.target.value) })}>
           {[500, 1000, 2000, 5000, 10000, 20000, 40000].map((n) => (
             <option key={n} value={n}>
-              {n.toLocaleString('pt-PT')}
+              {n.toLocaleString(locale())}
             </option>
           ))}
         </Select>
       </Row>
-      <p className="pt-2 text-[11px] text-muted">Spread, deslizamento e comissões vêm das Definições → Negociação. As ordens executam na abertura da barra seguinte ao sinal.</p>
+      <p className="pt-2 text-[11px] text-muted">{tr('Spread, deslizamento e comissões vêm das Definições → Negociação. As ordens executam na abertura da barra seguinte ao sinal.')}</p>
     </div>
   );
 }
@@ -110,21 +111,21 @@ export function StrategyTester() {
         )}
         <Button size="sm" variant="primary" onClick={run} disabled={!!st.running} data-testid="tester-run">
           {st.running?.kind === 'backtest' ? <Spinner size={13} /> : <Play size={13} fill="currentColor" />}
-          Testar em {cfg ? `${resolveSymbol(cfg.symbolId).name} ${tfShort(cfg.tf)}` : ''}
+          {tr('Testar em')} {cfg ? `${resolveSymbol(cfg.symbolId).name} ${tfShort(cfg.tf)}` : ''}
         </Button>
         <Button ref={setRef} size="sm" variant="ghost" onClick={() => setSetOpen((o) => !o)}>
-          <Settings2 size={14} /> Propriedades
+          <Settings2 size={14} /> {tr('Propriedades')}
         </Button>
         <Popover anchor={setRef} open={setOpen} onClose={() => setSetOpen(false)} placement="top-start">
           <BacktestSettingsForm />
         </Popover>
         {r && (
           <Button size="sm" variant="ghost" onClick={() => st.setApplied(shown ? null : { ref: currentRef(kind)!.ref, chartId: cfg!.id, label: r.label })}>
-            {shown ? <EyeOff size={14} /> : <Eye size={14} />} {shown ? 'Ocultar no gráfico' : 'Mostrar no gráfico'}
+            {shown ? <EyeOff size={14} /> : <Eye size={14} />} {shown ? tr('Ocultar no gráfico') : tr('Mostrar no gráfico')}
           </Button>
         )}
         <div className="flex-1" />
-        {replayOn && <span className="rounded bg-accent/15 px-2 py-0.5 text-[11px] text-accent">Replay: testa só até ao cursor</span>}
+        {replayOn && <span className="rounded bg-accent/15 px-2 py-0.5 text-[11px] text-accent">{tr('Replay: testa só até ao cursor')}</span>}
         {st.running && <span className="text-[11px] text-muted">{st.running.info}</span>}
       </div>
       {st.error && (
@@ -133,7 +134,7 @@ export function StrategyTester() {
         </div>
       )}
       {!r ? (
-        <Empty title="Teste uma estratégia no gráfico ativo">Escolha uma estratégia visual (blocos) ou um script de estratégia e carregue em “Testar”. O resultado mostra estatísticas, curva de capital e todas as operações — e as entradas/saídas aparecem no gráfico.</Empty>
+        <Empty title={tr('Teste uma estratégia no gráfico ativo')}>{tr('Escolha uma estratégia visual (blocos) ou um script de estratégia e carregue em “Testar”. O resultado mostra estatísticas, curva de capital e todas as operações — e as entradas/saídas aparecem no gráfico.')}</Empty>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-center justify-between px-3 pt-2">
@@ -142,13 +143,13 @@ export function StrategyTester() {
               value={tab}
               onChange={setTab}
               items={[
-                { value: 'overview', label: 'Visão geral' },
-                { value: 'perf', label: 'Desempenho' },
-                { value: 'trades', label: `Operações (${r.result.trades.length})` },
+                { value: 'overview', label: tr('Visão geral') },
+                { value: 'perf', label: tr('Desempenho') },
+                { value: 'trades', label: tr('Operações ({0})', r.result.trades.length) },
               ]}
             />
             <span className="hidden text-[11px] text-muted md:block">
-              {r.label} · {r.result.bars.toLocaleString('pt-PT')} barras · {fmtDate(r.result.from, tz)} → {fmtDate(r.result.to, tz)}
+              {r.label} · {r.result.bars.toLocaleString(locale())} {tr('barras ·')} {fmtDate(r.result.from, tz)} → {fmtDate(r.result.to, tz)}
             </span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -157,9 +158,9 @@ export function StrategyTester() {
                 <KeyStats s={r.result.stats} />
                 <div className="rounded-lg border border-line p-2">
                   <div className="mb-1 flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-muted">
-                    <span>Curva de capital</span>
+                    <span>{tr('Curva de capital')}</span>
                     <span>
-                      Comprar e manter: <span className={cn('font-semibold', r.result.buyHoldPct >= 0 ? 'text-up' : 'text-down')}>{r.result.buyHoldPct.toFixed(2)}%</span> · Estratégia:{' '}
+                      {tr('Comprar e manter:')} <span className={cn('font-semibold', r.result.buyHoldPct >= 0 ? 'text-up' : 'text-down')}>{r.result.buyHoldPct.toFixed(2)}%</span> {tr('· Estratégia:')}{' '}
                       <span className={cn('font-semibold', r.result.stats.netProfit >= 0 ? 'text-up' : 'text-down')}>{r.result.stats.netProfitPct.toFixed(2)}%</span> · Final {fmtMoney(r.result.stats.finalBalance)}
                     </span>
                   </div>

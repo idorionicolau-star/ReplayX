@@ -1,11 +1,12 @@
-/** Formatação em português (pt-PT / Moçambique). */
+/** Formatação de números e datas no idioma escolhido (pt-PT ou en-US). */
+import { locale } from '@/i18n';
 
 export function fmtPrice(v: number | undefined | null, precision = 2): string {
   if (v === undefined || v === null || !Number.isFinite(v)) return '—';
   return v.toFixed(Math.max(0, Math.min(10, precision)));
 }
 
-const money = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export function fmtMoney(v: number | undefined | null, currency = 'USD'): string {
   if (v === undefined || v === null || !Number.isFinite(v)) return '—';
   const s = money.format(Math.abs(v));
@@ -22,7 +23,7 @@ export function fmtPct(v: number | undefined | null, digits = 2): string {
   return fmtSigned(v, digits, '%');
 }
 
-const compact = new Intl.NumberFormat('pt-PT', { notation: 'compact', maximumFractionDigits: 2 });
+const compact = new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 2 });
 export function fmtCompact(v: number | undefined | null): string {
   if (v === undefined || v === null || !Number.isFinite(v)) return '—';
   return compact.format(v);
@@ -32,7 +33,7 @@ export function fmtNum(v: number | undefined | null, digits = 2): string {
   if (v === undefined || v === null) return '—';
   if (v === Infinity) return '∞';
   if (!Number.isFinite(v)) return '—';
-  return v.toLocaleString('pt-PT', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return v.toLocaleString(locale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 /** Fuso horário escolhido nas definições ('local' = do navegador). */
@@ -45,7 +46,7 @@ function dtf(tz: string, opts: Intl.DateTimeFormatOptions, key: string): Intl.Da
   const k = `${tz}|${key}`;
   let f = fmtCache.get(k);
   if (!f) {
-    f = new Intl.DateTimeFormat('pt-PT', { ...opts, timeZone: tzName(tz), hourCycle: 'h23' });
+    f = new Intl.DateTimeFormat(locale(), { ...opts, timeZone: tzName(tz), hourCycle: 'h23' });
     fmtCache.set(k, f);
   }
   return f;
