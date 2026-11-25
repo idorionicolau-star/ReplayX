@@ -59,7 +59,8 @@ function useShortcuts() {
       const cfg = ws.charts[ws.active];
       const r = useReplay.getState();
       // replay
-      if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // com um desenho selecionado as setas movem o desenho (ver interaction.ts), não o replay
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !useDrawings.getState().selected) {
         if (e.key === 'ArrowRight' && r.active && !r.selecting) {
           e.preventDefault();
           void replay.stepForward();

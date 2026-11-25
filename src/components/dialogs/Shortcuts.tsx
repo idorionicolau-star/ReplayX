@@ -21,6 +21,7 @@ const ROWS: [string, string][] = [
   [tr('Shift (a desenhar)'), tr('Alinhar a linha de 15 em 15°')],
   [tr('Ctrl (a desenhar, premido)'), tr('Inverte o íman: com o íman desligado liga-o, com ele ligado desliga-o')],
   [tr('Alt (a desenhar, premido)'), tr('Íman de preço: prende ao pavio mais próximo na vertical, mesmo sem velas ao lado')],
+  ['← → ↑ ↓', tr('Mover o desenho selecionado (← → uma barra, ↑ ↓ um tick; com Shift, 10 vezes mais)')],
   ['Delete', tr('Apagar desenho selecionado')],
   ['Esc', tr('Cancelar desenho / sair da seleção')],
   ['Alt + R', tr('Repor vista do gráfico')],

@@ -74,6 +74,20 @@ export function shade(color: string, delta: number): string {
   return hex(fromHsl(h, s, Math.max(0, Math.min(1, l + delta))));
 }
 
+/** A mesma cor (tom e saturação) com outra luminosidade, de 0 a 1; a saturação pode ser reduzida (`satMul`). */
+export function withLightness(color: string, l: number, satMul = 1): string {
+  const c = parse(color);
+  if (!c) return color;
+  const [h, s] = toHsl(c);
+  return hex(fromHsl(h, Math.max(0, Math.min(1, s * satMul)), Math.max(0, Math.min(1, l))));
+}
+
+/** Luminosidade HSL (0 a 1); 0,5 se a cor não for reconhecida. */
+export function lightnessOf(color: string): number {
+  const c = parse(color);
+  return c ? toHsl(c)[2] : 0.5;
+}
+
 const MIN_CONTRAST = 3;
 
 /**
