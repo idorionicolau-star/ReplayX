@@ -27,7 +27,9 @@ test('testador, scripts e otimizador', async ({ page }) => {
 
 test('limites do plano grátis', async ({ page }) => {
   await enterAsGuest(page);
-  await expect(page.getByTestId('plan-badge')).toHaveText(/Assinar Pro/);
+  // convidado: em vez do selo do plano mostra o tempo da demonstração
+  await expect(page.getByTestId('plan-badge')).toHaveCount(0);
+  await expect(page.getByText(/Demonstração ·/)).toBeVisible();
 
   // vários gráficos → Pro
   await page.getByRole('button', { name: /Layout/ }).first().click();
