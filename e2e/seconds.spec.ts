@@ -15,13 +15,15 @@ test('intervalos em segundos: o gráfico carrega velas de 15s e mostra os segund
   await pickTf(page, '15 segundos');
   await expect.poll(async () => (await chartInfo(page)).tf).toBe('15s');
   await waitBars(page, 300);
-  const info = await page.evaluate(() => {
-    const c = [...(window as unknown as { __rxCharts: Map<string, { bars: { time: number }[]; chart: { options(): { timeScale: { secondsVisible: boolean } } } }> }).__rxCharts.values()][0];
-    const t = c.bars.slice(-6).map((b) => b.time);
-    return { diffs: t.slice(1).map((x, i) => x - t[i]), secondsVisible: c.chart.options().timeScale.secondsVisible };
-  });
-  expect(info.diffs.every((d) => d === 15)).toBe(true);
-  expect(info.secondsVisible).toBe(true);
+  // o intervalo muda logo; as velas de 15s chegam a seguir
+  const info = () =>
+    page.evaluate(() => {
+      const c = [...(window as unknown as { __rxCharts: Map<string, { bars: { time: number }[]; chart: { options(): { timeScale: { secondsVisible: boolean } } } }> }).__rxCharts.values()][0];
+      const t = c.bars.slice(-6).map((b) => b.time);
+      return { diffs: t.slice(1).map((x, i) => x - t[i]), secondsVisible: c.chart.options().timeScale.secondsVisible };
+    });
+  await expect.poll(async () => (await info()).diffs.every((d) => d === 15)).toBe(true);
+  expect((await info()).secondsVisible).toBe(true);
   // voltar a minutos desliga os segundos no eixo
   await pickTf(page, '1 minuto');
   await expect.poll(async () => (await chartInfo(page)).tf).toBe('1m');

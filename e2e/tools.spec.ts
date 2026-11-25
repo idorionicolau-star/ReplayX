@@ -216,7 +216,8 @@ test('barra de baixo: períodos, navegação, "+" do preço e ir para data', asy
   const before = (await view()).width;
   await page.getByTestId('chart-0').hover();
   await page.getByRole('button', { name: 'Aproximar' }).click();
-  expect((await view()).width).toBeLessThan(before);
+  // a vista nova só se lê depois de o gráfico se redesenhar
+  await expect.poll(async () => (await view()).width).toBeLessThan(before);
 
   // "+" junto à escala de preços abre o menu com alerta e linha horizontal
   const box = (await page.getByTestId('chart-0').boundingBox())!;
