@@ -1,5 +1,5 @@
 import type { Appearance } from './appearance';
-import { contrastOf } from './drawings/auto';
+import { contrastOf, legible, lightnessOf, shade, withLightness } from './drawings/auto';
 import { tr } from '@/i18n';
 
 /** Cores de um estilo num dos modos (claro ou escuro). `null` = automático do tema. */
@@ -91,6 +91,37 @@ export const CHART_PRESETS: ChartPreset[] = [
   { id: 'nude-clay', name: tr('Argila'),
     light: { up: '#3f8fb0', down: '#b5523b', background: '#e9d6cb', grid: 'rgba(120,70,55,0.11)', text: '#50362d', crosshair: '#a07768' },
     dark: { up: '#6cc0e0', down: '#ff8566', background: '#231a17', grid: 'rgba(235,200,185,0.07)', text: '#d9c0b5', crosshair: '#8d6a5d' } },
+  // contrastes: velas de cor viva contra cinzento, e fundos diferentes
+  { id: 'red-gray', name: tr('Vermelho / Cinzento'),
+    light: { up: '#9e9e9e', down: '#d32f2f', background: '#ffffff', grid: 'rgba(0,0,0,0.07)', text: '#2b2b2b', crosshair: '#8a8a8a' },
+    dark: { up: '#c8c8c8', down: '#ff3b3b', background: '#141414', grid: 'rgba(255,255,255,0.06)', text: '#c8c8c8', crosshair: '#777777' } },
+  { id: 'purple-gray', name: tr('Roxo / Cinzento'),
+    light: { up: '#7b1fa2', down: '#9e9e9e', background: '#f7f4fb', grid: 'rgba(80,40,120,0.08)', text: '#3a2a4a', crosshair: '#8e7aa3' },
+    dark: { up: '#b45cff', down: '#5c5c5c', background: '#151219', grid: 'rgba(200,170,255,0.07)', text: '#cbbfdc', crosshair: '#7d6a96' } },
+  { id: 'blue-gray', name: tr('Azul / Cinzento'),
+    light: { up: '#1e63d6', down: '#a0a0a0', background: '#ffffff', grid: 'rgba(0,0,0,0.07)', text: '#22324a', crosshair: '#7f8ea6' },
+    dark: { up: '#3d8bff', down: '#555555', background: '#10141c', grid: 'rgba(150,180,230,0.07)', text: '#b9c4d6', crosshair: '#5f6f8a' } },
+  { id: 'green-gray', name: tr('Verde / Cinzento'),
+    light: { up: '#0f9d58', down: '#606060', background: '#f5faf6', grid: 'rgba(20,90,50,0.08)', text: '#24402f', crosshair: '#7fa08b' },
+    dark: { up: '#1fe07a', down: '#8a8a8a', background: '#0f1511', grid: 'rgba(120,230,160,0.06)', text: '#b8d1c0', crosshair: '#5f7d69' } },
+  { id: 'orange-gray', name: tr('Laranja / Cinzento'),
+    light: { up: '#5f5f5f', down: '#ef6c00', background: '#fbf8f4', grid: 'rgba(120,70,20,0.08)', text: '#3d2f22', crosshair: '#a08a74' },
+    dark: { up: '#5a5a5a', down: '#ff8c1a', background: '#17130f', grid: 'rgba(255,190,120,0.06)', text: '#d4c4b2', crosshair: '#86735e' } },
+  { id: 'red-white', name: tr('Vermelho / Branco'),
+    light: { up: '#ffffff', down: '#e0001b', background: '#ffffff', grid: 'rgba(0,0,0,0.06)', text: '#1a1a1a', crosshair: '#777777', border: true },
+    dark: { up: '#f5f5f5', down: '#ff2d46', background: '#0d0d0d', grid: 'rgba(255,255,255,0.05)', text: '#d6d6d6', crosshair: '#8a8a8a' } },
+  { id: 'gold-black', name: tr('Dourado / Preto'),
+    light: { up: '#c9a227', down: '#1a1a1a', background: '#f4f1ea', grid: 'rgba(90,70,20,0.09)', text: '#3a3222', crosshair: '#9a8a5c' },
+    dark: { up: '#f2c94c', down: '#4a4a4a', background: '#1b1b1d', grid: 'rgba(240,210,120,0.06)', text: '#d9cfae', crosshair: '#8a7c52', border: true } },
+  { id: 'cyan-magenta', name: tr('Ciano / Magenta'),
+    light: { up: '#0097a7', down: '#c2185b', background: '#eef3fb', grid: 'rgba(40,60,120,0.09)', text: '#24304d', crosshair: '#7381a6' },
+    dark: { up: '#00e5ff', down: '#ff2d95', background: '#0b1026', background2: '#121a3a', grid: 'rgba(110,140,255,0.08)', text: '#aab6dd', crosshair: '#5b6aa3' } },
+  { id: 'wine-cream', name: tr('Vinho / Creme'),
+    light: { up: '#d8c9a3', down: '#7b1e3a', background: '#fbf7ef', grid: 'rgba(110,40,60,0.08)', text: '#4a2330', crosshair: '#a07f88', border: true },
+    dark: { up: '#f1e4c3', down: '#c2185b', background: '#2a0f18', background2: '#1c0a10', grid: 'rgba(255,200,215,0.07)', text: '#e8cfd6', crosshair: '#9b6c7a' } },
+  { id: 'emerald-ruby', name: tr('Esmeralda / Rubi'),
+    light: { up: '#00a86b', down: '#c0143c', background: '#eef7f2', grid: 'rgba(10,90,60,0.09)', text: '#1f3d31', crosshair: '#6f9a87' },
+    dark: { up: '#2ee59d', down: '#ff3d63', background: '#08201a', background2: '#0b2a22', grid: 'rgba(120,240,190,0.07)', text: '#b6dccd', crosshair: '#4f8a74' } },
 ];
 
 export const DEFAULT_PRESET_ID = 'classic';
@@ -129,4 +160,55 @@ export function presetPatch(p: ChartPreset, dark: boolean): { appearance: Partia
       crosshair: c.crosshair,
     },
   };
+}
+
+/** Estilo pelo id, entre os pré-definidos e os do utilizador. */
+export function findPreset(id: string | null | undefined, user: readonly ChartPreset[] = []): ChartPreset | undefined {
+  if (!id) return undefined;
+  return CHART_PRESETS.find((p) => p.id === id) ?? user.find((p) => p.id === id);
+}
+
+/**
+ * As cores de um modo passadas para o outro (claro ↔ escuro): fundos, texto e mira mudam de luminosidade com o
+ * mesmo tom; as velas ficam iguais, salvo se deixarem de se ver no novo fundo.
+ */
+export function mirrorColors(c: PresetColors, toDark: boolean): PresetColors {
+  const flip = (col: string | null | undefined, darkL: number, lightL: number, sat = 1): string | null =>
+    col ? withLightness(col, toDark ? Math.min(darkL, 1 - lightnessOf(col)) : Math.max(lightL, 1 - lightnessOf(col)), sat) : null;
+  const background = flip(c.background, 0.1, 0.95, toDark ? 0.6 : 0.5);
+  const background2 = c.background2 ? flip(c.background2, 0.14, 0.9, toDark ? 0.6 : 0.5) : null;
+  const bg = background ?? (toDark ? '#131722' : '#ffffff');
+  const fit = (col: string) => legible(col, bg, toDark);
+  return {
+    up: fit(c.up),
+    down: fit(c.down),
+    up2: c.up2,
+    down2: c.down2,
+    border: c.border,
+    background,
+    background2,
+    grid: c.grid ? (toDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)') : null,
+    text: c.text ? withLightness(c.text, toDark ? 0.8 : 0.22) : null,
+    crosshair: c.crosshair ? withLightness(c.crosshair, toDark ? 0.55 : 0.45) : null,
+  };
+}
+
+/** Novo estilo a partir das cores atuais do gráfico (no modo em que está); o outro modo é derivado. */
+export function presetFromLook(id: string, name: string, dark: boolean, upColor: string, downColor: string, a: Appearance): ChartPreset {
+  const up = a.bodyUp ?? upColor;
+  const down = a.bodyDown ?? downColor;
+  const cur: PresetColors = {
+    up,
+    down,
+    up2: a.gradient ? a.bodyUp2 ?? shade(up, -0.2) : undefined,
+    down2: a.gradient ? a.bodyDown2 ?? shade(down, -0.2) : undefined,
+    border: !a.gradient && a.showBorder ? true : undefined,
+    background: a.background,
+    background2: a.background2,
+    grid: a.gridHorz ?? a.gridVert,
+    text: a.textColor,
+    crosshair: a.crosshair,
+  };
+  const other = mirrorColors(cur, !dark);
+  return { id, name, light: dark ? other : cur, dark: dark ? cur : other };
 }

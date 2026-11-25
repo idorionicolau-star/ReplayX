@@ -22,6 +22,8 @@ const PANE_TOOLS = new Set<ToolId>(['trendline', 'ray', 'extended', 'infoline', 
 /** Peso da distância horizontal no íman (a vertical conta por inteiro): o íman é mais vertical do que horizontal. */
 const HORIZ_WEIGHT = 0.35;
 
+const ARROWS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
 export interface InteractionCallbacks {
   tool(): ToolId;
   setTool(t: ToolId): void;
@@ -1118,6 +1120,39 @@ export class Interaction {
     this.cb.onContextMenu({ clientX: e.clientX, clientY: e.clientY, price: this.c.paneCtx ? null : pt?.price ?? null, time: pt?.time ?? null, drawingId: hit?.d.id ?? null });
   };
 
+  /**
+   * Setas com um desenho selecionado: ← → movem uma barra, ↑ ↓ um tick do ativo (ou um pixel, se o tick for
+   * minúsculo no zoom atual). Shift move 10 vezes mais. Cada toque fica no histórico (Ctrl+Z desfaz).
+   */
+  private nudgeSelected(key: string, big: boolean): boolean {
+    const d = this.c.drawings.find((x) => x.id === this.c.selectedId);
+    if (!d || d.locked || this.cb.globalLocked()) return false;
+    const n = big ? 10 : 1;
+    let dl = 0;
+    let dp = 0;
+    if (key === 'ArrowLeft' || key === 'ArrowRight') dl = key === 'ArrowLeft' ? -n : n;
+    else {
+      const y0 = this.c.ctxPaneSize().height / 2;
+      const a = this.c.ctxYToPrice(y0);
+      const b = this.c.ctxYToPrice(y0 + 1);
+      if (a === null || b === null) return false;
+      const px = Math.abs(a - b);
+      const tick = this.c.paneCtx ? 0 : Math.pow(10, -(this.c.symbol?.precision ?? 2));
+      dp = (key === 'ArrowUp' ? 1 : -1) * n * Math.max(px, tick);
+    }
+    const shift = (q: PricePoint): PricePoint => {
+      if (!dl) return { time: q.time, price: q.price + dp };
+      const lq = this.c.timeToLogical(q.time);
+      return { time: lq === null ? q.time : this.c.logicalToTime(lq + dl) ?? q.time, price: q.price + dp };
+    };
+    const patch: Partial<Drawing> = { points: d.points.map(shift) };
+    if (d.data && dp) patch.data = { ...d.data, stop: d.data.stop + dp, target: d.data.target + dp };
+    this.cb.checkpoint();
+    this.cb.patchDrawing(d.id, patch);
+    this.cb.commit();
+    return true;
+  }
+
   private onKey = (e: KeyboardEvent) => {
     if (focus.chartId !== this.c.id) return;
     const target = e.target as HTMLElement | null;
@@ -1139,6 +1174,8 @@ export class Interaction {
       clipboard = copy;
       this.cb.addDrawing(copy);
       this.cb.select(copy.id);
+    } else if (ARROWS.has(e.key) && this.c.selectedId && !e.ctrlKey && !e.metaKey && !e.altKey && this.mode.kind === 'idle') {
+      if (this.nudgeSelected(e.key, e.shiftKey)) e.preventDefault();
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && this.c.selectedId) {
       const d = this.c.drawings.find((x) => x.id === this.c.selectedId);
       if (d && !d.locked) {

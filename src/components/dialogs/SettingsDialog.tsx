@@ -15,7 +15,8 @@ import { LegalFooter } from '@/components/legal/LegalFooter';
 import { DEFAULT_LOT_RULES, LOT_CLASS_LABEL } from '@/core/trading/lots';
 import type { AssetClass } from '@/core/types';
 import { DEFAULT_APPEARANCE, themeDefaults, type Appearance } from '@/chart/appearance';
-import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { CHART_PRESETS, presetFromLook, presetPatch, type ChartPreset } from '@/chart/presets';
+import { uid } from '@/lib/uid';
 import { shade } from '@/chart/drawings/auto';
 import { clearBarCache } from '@/core/feed/barCache';
 import { useSaverReason, type DataSaverSetting } from '@/lib/dataSaver';
@@ -376,75 +377,146 @@ function UpDown({ label, up, down, autoUp, autoDown, onUp, onDown, show, onShow 
   );
 }
 
-/** Estilos pré-definidos das cores do gráfico, num menu expansível. */
+/** Aplica um estilo (pré-definido ou do utilizador) no modo atual. */
+function applyPreset(p: ChartPreset, quiet = false) {
+  const st = useSettings.getState();
+  const patch = presetPatch(p, st.theme === 'dark');
+  st.set({ chartStyle: p.id, upColor: patch.upColor, downColor: patch.downColor, appearance: { ...st.appearance, ...patch.appearance } });
+  if (!quiet) toast(tr('Estilo “{0}” aplicado', p.name), { kind: 'success' });
+}
+
+/** Miniatura de um estilo: cinco velas sobre o fundo, com o nome por baixo. */
+function PresetCard({ p, dark, active, testId }: { p: ChartPreset; dark: boolean; active: boolean; testId: string }) {
+  const c = dark ? p.dark : p.light;
+  const bg = c.background ?? (dark ? '#131722' : '#ffffff');
+  const ap = presetPatch(p, dark).appearance;
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={() => applyPreset(p)}
+      className={`w-full rounded-md border p-1.5 text-left text-[11px] hover:border-accent ${active ? 'border-accent' : 'border-line'}`}
+    >
+      <svg viewBox="0 0 60 28" className="mb-1 block h-8 w-full rounded-sm" style={{ background: c.background2 ? `linear-gradient(${bg}, ${c.background2})` : bg }} aria-hidden>
+        {c.up2 && c.down2 && (
+          <defs>
+            <linearGradient id={`gu-${p.id}`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor={c.up} />
+              <stop offset="1" stopColor={c.up2} />
+            </linearGradient>
+            <linearGradient id={`gd-${p.id}`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor={c.down} />
+              <stop offset="1" stopColor={c.down2} />
+            </linearGradient>
+          </defs>
+        )}
+        {[
+          [6, 8, 18, c.up, true],
+          [18, 12, 22, c.down, false],
+          [30, 6, 16, c.up, true],
+          [42, 10, 20, c.down, false],
+          [54, 4, 14, c.up, true],
+        ].map(([x, y, h, col, isUp], i) => {
+          const line = ap.showBorder ? (isUp ? ap.borderUp : ap.borderDown) ?? (col as string) : (col as string);
+          const fill = c.up2 ? `url(#${isUp ? 'gu' : 'gd'}-${p.id})` : c.border ? bg : (col as string);
+          return (
+            <g key={i}>
+              <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={line} strokeWidth="1" />
+              <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={fill} stroke={line} strokeWidth="1" />
+            </g>
+          );
+        })}
+      </svg>
+      <span className="block truncate">{p.name}</span>
+    </button>
+  );
+}
+
+/** Estilos das cores do gráfico: pré-definidos e os do utilizador, num menu expansível, com ◀ ▶ para passar de um ao outro. */
 function PresetsMenu() {
   const [open, setOpen] = useState(false);
   const active = useSettings((st) => st.chartStyle);
   const dark = useSettings((st) => st.theme === 'dark');
-  const apply = (id: string) => {
-    const p = CHART_PRESETS.find((x) => x.id === id);
-    if (!p) return;
-    const st = useSettings.getState();
-    const patch = presetPatch(p, st.theme === 'dark');
-    st.set({ chartStyle: id, upColor: patch.upColor, downColor: patch.downColor, appearance: { ...st.appearance, ...patch.appearance } });
-    toast(tr('Estilo “{0}” aplicado', p.name), { kind: 'success' });
+  const mine = useSettings((st) => st.userPresets);
+  const all = [...CHART_PRESETS, ...mine];
+  const idx = all.findIndex((p) => p.id === active);
+  const step = (dir: 1 | -1) => {
+    if (!all.length) return;
+    const i = idx < 0 ? (dir === 1 ? 0 : all.length - 1) : (idx + dir + all.length) % all.length;
+    applyPreset(all[i], true);
   };
+  const save = () => {
+    const name = prompt(tr('Nome do tema'), tr('Meu tema {0}', mine.length + 1))?.trim();
+    if (!name) return;
+    const st = useSettings.getState();
+    const p = presetFromLook(uid('t'), name, st.theme === 'dark', st.upColor, st.downColor, st.appearance);
+    st.set({ userPresets: [...st.userPresets, p], chartStyle: p.id });
+    toast(tr('Tema “{0}” guardado', name), { kind: 'success', body: tr('Tem versão clara e escura: o botão sol/lua troca entre elas.') });
+    setOpen(true);
+  };
+  const rename = (p: ChartPreset) => {
+    const name = prompt(tr('Novo nome'), p.name)?.trim();
+    if (!name) return;
+    const st = useSettings.getState();
+    st.set({ userPresets: st.userPresets.map((x) => (x.id === p.id ? { ...x, name } : x)) });
+  };
+  const remove = (p: ChartPreset) => {
+    if (!confirm(tr('Apagar o tema “{0}”?', p.name))) return;
+    const st = useSettings.getState();
+    st.set({ userPresets: st.userPresets.filter((x) => x.id !== p.id), ...(st.chartStyle === p.id ? { chartStyle: null } : {}) });
+  };
+  const arrow = 'flex h-9 w-8 shrink-0 items-center justify-center text-muted hover:bg-hover hover:text-text';
   return (
     <div className="mb-3 rounded-md border border-line" data-testid="chart-presets">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-hover">
-        <span>{tr('Estilos pré-definidos')}</span>
-        <span className="text-xs text-muted">{open ? '▲' : '▼'}</span>
-      </button>
+      <div className="flex items-stretch">
+        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-hover">
+          <span className="truncate">
+            {tr('Estilos pré-definidos')}
+            {idx >= 0 && <span className="ml-2 text-xs font-normal text-muted">· {all[idx].name}</span>}
+          </span>
+          <span className="text-xs text-muted">{open ? '▲' : '▼'}</span>
+        </button>
+        <button type="button" className={arrow} title={tr('Estilo anterior')} aria-label={tr('Estilo anterior')} data-testid="preset-prev" onClick={() => step(-1)}>
+          ◀
+        </button>
+        <button type="button" className={arrow} title={tr('Estilo seguinte')} aria-label={tr('Estilo seguinte')} data-testid="preset-next" onClick={() => step(1)}>
+          ▶
+        </button>
+      </div>
       {open && (
         <>
           <p className="px-3 pt-2 text-[11px] text-muted">{tr('Cada estilo tem versão clara e escura: o botão sol/lua do topo troca entre elas.')}</p>
           <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto p-2 sm:grid-cols-5">
-            {CHART_PRESETS.map((p) => {
-              const c = dark ? p.dark : p.light;
-              const bg = c.background ?? (dark ? '#131722' : '#ffffff');
-              const ap = presetPatch(p, dark).appearance;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  data-testid={`preset-${p.id}`}
-                  onClick={() => apply(p.id)}
-                  className={`rounded-md border p-1.5 text-left text-[11px] hover:border-accent ${active === p.id ? 'border-accent' : 'border-line'}`}
-                >
-                  <svg viewBox="0 0 60 28" className="mb-1 block h-8 w-full rounded-sm" style={{ background: bg }} aria-hidden>
-                    {c.up2 && c.down2 && (
-                      <defs>
-                        <linearGradient id={`gu-${p.id}`} x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0" stopColor={c.up} />
-                          <stop offset="1" stopColor={c.up2} />
-                        </linearGradient>
-                        <linearGradient id={`gd-${p.id}`} x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0" stopColor={c.down} />
-                          <stop offset="1" stopColor={c.down2} />
-                        </linearGradient>
-                      </defs>
-                    )}
-                    {[
-                      [6, 8, 18, c.up, true],
-                      [18, 12, 22, c.down, false],
-                      [30, 6, 16, c.up, true],
-                      [42, 10, 20, c.down, false],
-                      [54, 4, 14, c.up, true],
-                    ].map(([x, y, h, col, isUp], i) => {
-                      const line = ap.showBorder ? (isUp ? ap.borderUp : ap.borderDown) ?? (col as string) : (col as string);
-                      const fill = c.up2 ? `url(#${isUp ? 'gu' : 'gd'}-${p.id})` : c.border ? bg : (col as string);
-                      return (
-                        <g key={i}>
-                          <line x1={x as number} x2={x as number} y1={(y as number) - 3} y2={(y as number) + (h as number) + 3} stroke={line} strokeWidth="1" />
-                          <rect x={(x as number) - 3} y={y as number} width="6" height={h as number} fill={fill} stroke={line} strokeWidth="1" />
-                        </g>
-                      );
-                    })}
-                  </svg>
-                  {p.name}
-                </button>
-              );
-            })}
+            {CHART_PRESETS.map((p) => (
+              <PresetCard key={p.id} p={p} dark={dark} active={active === p.id} testId={`preset-${p.id}`} />
+            ))}
+          </div>
+          <div className="border-t border-line p-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">{tr('Os meus temas')}</span>
+              <Button size="sm" variant="outline" data-testid="preset-save" onClick={save}>
+                {tr('Guardar as cores atuais como tema…')}
+              </Button>
+            </div>
+            {mine.length ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {mine.map((p) => (
+                  <div key={p.id} className="relative">
+                    <PresetCard p={p} dark={dark} active={active === p.id} testId={`preset-${p.id}`} />
+                    <div className="absolute top-1 right-1 flex gap-0.5">
+                      <button type="button" className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-black/70" title={tr('Mudar o nome')} aria-label={tr('Mudar o nome')} onClick={() => rename(p)}>
+                        ✎
+                      </button>
+                      <button type="button" className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-black/70" title={tr('Apagar')} aria-label={tr('Apagar')} data-testid={`preset-del-${p.id}`} onClick={() => remove(p)}>
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted">{tr('Ajuste as cores do gráfico (velas, fundo, grelha) e guarde-as aqui como tema seu. Fica na sua conta.')}</p>
+            )}
           </div>
         </>
       )}

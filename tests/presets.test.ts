@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_APPEARANCE, resolveAppearance } from '@/chart/appearance';
-import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { CHART_PRESETS, findPreset, mirrorColors, presetFromLook, presetPatch } from '@/chart/presets';
 import { contrastOf } from '@/chart/drawings/auto';
 import { useSettings } from '@/store/settings';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
 describe('estilos pré-definidos do gráfico', () => {
-  it('são 20, com ids únicos e, em cada um, versão clara e escura válidas', () => {
-    expect(CHART_PRESETS).toHaveLength(20);
-    expect(new Set(CHART_PRESETS.map((p) => p.id)).size).toBe(20);
+  it('são 30, com ids únicos e, em cada um, versão clara e escura válidas', () => {
+    expect(CHART_PRESETS).toHaveLength(30);
+    expect(new Set(CHART_PRESETS.map((p) => p.id)).size).toBe(30);
     for (const p of CHART_PRESETS) for (const c of [p.light, p.dark]) {
       expect(c.up).toMatch(HEX);
       expect(c.down).toMatch(HEX);
@@ -30,7 +30,7 @@ describe('estilos pré-definidos do gráfico', () => {
 });
 
 describe('velas com gradiente', () => {
-  it('5 dos 20 estilos têm gradiente, nos dois modos, com contorno na cor de baixo', () => {
+  it('5 dos 30 estilos têm gradiente, nos dois modos, com contorno na cor de baixo', () => {
     const grad = CHART_PRESETS.filter((p) => p.light.up2 && p.dark.up2);
     expect(grad).toHaveLength(5);
     for (const p of grad) {
@@ -48,9 +48,9 @@ describe('velas com gradiente', () => {
     const lum = (h: string) => parseInt(h.slice(1, 3), 16) + parseInt(h.slice(3, 5), 16) + parseInt(h.slice(5, 7), 16);
     expect(lum(r.bodyUp2)).toBeLessThan(lum('#26a69a'));
   });
-  it('as 20 identidades têm cores de vela todas diferentes entre si (no modo claro)', () => {
+  it('as 30 identidades têm cores de vela diferentes entre si (no modo claro)', () => {
     const pairs = new Set(CHART_PRESETS.map((p) => `${p.light.up}/${p.light.down}`));
-    expect(pairs.size).toBeGreaterThanOrEqual(18);
+    expect(pairs.size).toBeGreaterThanOrEqual(28);
   });
 });
 
@@ -114,5 +114,51 @@ describe('cores manuais das velas também ficam visíveis', () => {
     const n = resolveAppearance(DEFAULT_APPEARANCE, true, '#089981', '#f23645');
     expect(n.showBorder).toBe(false);
     expect(n.borderUp).toBe('#089981');
+  });
+});
+
+describe('10 estilos de contraste (sem nude)', () => {
+  it('existem, com velas que se distinguem bem entre si e do fundo', () => {
+    const ids = ['red-gray', 'purple-gray', 'blue-gray', 'green-gray', 'orange-gray', 'red-white', 'gold-black', 'cyan-magenta', 'wine-cream', 'emerald-ruby'];
+    for (const id of ids) {
+      const p = CHART_PRESETS.find((x) => x.id === id);
+      expect(p, id).toBeTruthy();
+      for (const dark of [false, true]) {
+        const c = dark ? p!.dark : p!.light;
+        expect(contrastOf(c.up, c.down), `${id} ${dark}`).toBeGreaterThan(1.5);
+      }
+    }
+  });
+});
+
+describe('temas guardados pelo utilizador', () => {
+  it('guarda as cores atuais e cria a versão do outro modo, com fundo de luminosidade oposta', () => {
+    const a = { ...DEFAULT_APPEARANCE, background: '#0b1026', textColor: '#aab6dd', gridHorz: 'rgba(255,255,255,0.05)', crosshair: '#5b6aa3' };
+    const p = presetFromLook('t-x', 'Meu', true, '#00e5ff', '#ff2d95', a);
+    expect(p.dark.up).toBe('#00e5ff');
+    expect(p.dark.background).toBe('#0b1026');
+    const lum = (h: string) => parseInt(h.slice(1, 3), 16) * 0.3 + parseInt(h.slice(3, 5), 16) * 0.59 + parseInt(h.slice(5, 7), 16) * 0.11;
+    expect(lum(p.light.background!)).toBeGreaterThan(200);
+    expect(lum(p.light.text!)).toBeLessThan(90);
+    // velas continuam visíveis no fundo novo
+    expect(contrastOf(p.light.up, p.light.background!)).toBeGreaterThanOrEqual(2.2);
+    expect(contrastOf(p.light.down, p.light.background!)).toBeGreaterThanOrEqual(2.2);
+  });
+  it('fundo automático fica automático nos dois modos; branco passa a escuro', () => {
+    expect(mirrorColors({ up: '#089981', down: '#f23645', background: null, grid: null, text: null, crosshair: null }, true).background).toBeNull();
+    const m = mirrorColors({ up: '#ffffff', down: '#e0001b', background: '#ffffff', grid: 'rgba(0,0,0,0.06)', text: '#1a1a1a', crosshair: '#777777' }, true);
+    expect(m.background).toMatch(/^#[0-3][0-9a-f]/i);
+    expect(m.up).toBe('#ffffff');
+  });
+  it('o tema do utilizador segue o botão sol/lua e pode ser encontrado pelo id', () => {
+    const p = presetFromLook('t-y', 'Meu 2', false, '#7b1fa2', '#9e9e9e', { ...DEFAULT_APPEARANCE, background: '#f7f4fb' });
+    expect(findPreset('t-y', [p])).toBe(p);
+    expect(findPreset('red-gray')?.id).toBe('red-gray');
+    const st = useSettings.getState();
+    const a = presetPatch(p, false);
+    st.set({ theme: 'light', userPresets: [p], chartStyle: p.id, upColor: a.upColor, downColor: a.downColor, appearance: { ...st.appearance, ...a.appearance } });
+    useSettings.getState().set({ theme: 'dark' });
+    expect(useSettings.getState().appearance.background).toBe(p.dark.background);
+    expect(useSettings.getState().chartStyle).toBe('t-y');
   });
 });

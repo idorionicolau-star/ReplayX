@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { DEFAULT_LOT_RULES, type LotRules } from '@/core/trading/lots';
 import type { DrawingStyle, ToolId } from '@/chart/drawings/types';
 import { DEFAULT_APPEARANCE, type Appearance } from '@/chart/appearance';
-import { CHART_PRESETS, presetPatch } from '@/chart/presets';
+import { findPreset, presetPatch, type ChartPreset } from '@/chart/presets';
 import type { PivotSensitivity } from '@/core/priceSnap';
 import type { DataSaverSetting } from '@/lib/dataSaver';
 
@@ -38,6 +38,8 @@ export interface SettingsState {
   theme: Theme;
   /** Estilo do gráfico escolhido (id): muda de versão clara/escura com o tema. null = cores manuais. */
   chartStyle: string | null;
+  /** Estilos do gráfico guardados pelo utilizador (versão clara e escura). */
+  userPresets: ChartPreset[];
   timezone: string;
   upColor: string;
   downColor: string;
@@ -120,6 +122,7 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       theme: 'dark',
       chartStyle: null,
+      userPresets: [],
       timezone: 'local',
       upColor: '#089981',
       downColor: '#f23645',
@@ -164,7 +167,7 @@ export const useSettings = create<SettingsState>()(
           // trocar o tema (botão sol/lua) troca também a versão clara/escura do estilo do gráfico
           const style = 'chartStyle' in patch ? patch.chartStyle : st.chartStyle;
           const theme = patch.theme ?? st.theme;
-          const preset = style ? CHART_PRESETS.find((x) => x.id === style) : undefined;
+          const preset = findPreset(style, patch.userPresets ?? st.userPresets);
           if (preset && patch.theme && patch.theme !== st.theme && !('appearance' in patch)) {
             const pp = presetPatch(preset, theme === 'dark');
             next = { ...patch, upColor: pp.upColor, downColor: pp.downColor, appearance: { ...st.appearance, ...pp.appearance } };
