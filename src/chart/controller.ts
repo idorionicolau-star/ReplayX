@@ -901,17 +901,29 @@ export class ChartController {
   pauseAfterMs: number | undefined = undefined;
   private pauseTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private hiddenAt = 0;
+
   private onVisibility = () => {
+    const after = this.pauseAfterMs ?? this.cb.getPauseAfterMs?.() ?? 30_000;
     if (document.visibilityState === 'hidden') {
+      this.hiddenAt = Date.now();
       if (this.pauseTimer || this.livePaused) return;
       this.pauseTimer = setTimeout(() => {
         this.pauseTimer = null;
         void this.pauseLive();
-      }, this.pauseAfterMs ?? this.cb.getPauseAfterMs?.() ?? 30_000);
+      }, after);
     } else {
       if (this.pauseTimer) clearTimeout(this.pauseTimer);
       this.pauseTimer = null;
+      const away = this.hiddenAt ? Date.now() - this.hiddenAt : 0;
+      this.hiddenAt = 0;
       if (this.livePaused) void this.resumeLive();
+      // o telemóvel congela os temporizadores em standby: a pausa nunca chegou a acontecer, mas o tempo real
+      // pode ter morrido e faltam as velas desse tempo; refaz como se tivesse havido pausa
+      else if (away >= after && this.liveUnsub && this.cursor === null) {
+        this.stopLive();
+        void this.resumeLive();
+      }
     }
   };
 

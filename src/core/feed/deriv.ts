@@ -166,17 +166,8 @@ export class DerivClient {
     };
     ws.onclose = () => {
       if (this.ws !== ws) return;
-      this.ws = null;
       if (!this.healthy) this.endpointIdx = (this.endpointIdx + 1) % this.endpoints.length;
-      if (this.pingTimer) clearInterval(this.pingTimer);
-      this.pingTimer = null;
-      for (const [id, p] of this.pending) {
-        clearTimeout(p.timer);
-        p.reject(new ProviderError(tr('Ligação à Deriv perdida'), 'deriv'));
-        this.pending.delete(id);
-      }
-      for (const s of this.streams.values()) s.subId = undefined;
-      this.setStatus('connecting');
+      this.dropSocket(ws);
       if (this.streams.size) this.scheduleReconnect();
       else this.setStatus('idle');
     };
@@ -184,11 +175,80 @@ export class DerivClient {
       /* onclose trata da reconexão */
     };
     if (this.pingTimer) clearInterval(this.pingTimer);
-    this.pingTimer = setInterval(() => {
-      this.send({ ping: 1 }, 10000).catch(() => undefined);
-    }, 30000);
+    // ping sem resposta = ligação morta (ex.: depois de o telemóvel adormecer): refaz já, sem esperar que o sistema a feche
+    this.pingTimer = setInterval(() => void this.checkHealth(10000), 30000);
     // volta a subscrever streams depois de uma reconexão
     for (const [id, entry] of this.streams) this.sendStream(id, entry);
+  }
+
+  /** Larga o socket atual (morto ou fechado): os pedidos pendentes falham e as streams ficam à espera de voltar a subscrever. */
+  private dropSocket(ws: WebSocket) {
+    if (this.ws === ws) this.ws = null;
+    ws.onclose = null;
+    ws.onmessage = null;
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      try {
+        ws.close();
+      } catch {
+        /* nada */
+      }
+    }
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = null;
+    for (const [id, p] of this.pending) {
+      clearTimeout(p.timer);
+      p.reject(new ProviderError(tr('Ligação à Deriv perdida'), 'deriv'));
+      this.pending.delete(id);
+    }
+    for (const s of this.streams.values()) s.subId = undefined;
+    this.setStatus('connecting');
+  }
+
+  /** Verificação em curso: os pedidos novos esperam por ela, para não irem para um socket morto. */
+  private checking: Promise<void> | null = null;
+
+  /**
+   * Confirma que a ligação responde (um ping). Se não responder em `timeoutMs`, fecha-a e liga outra vez;
+   * a reconexão volta a subscrever as streams (tempo real). Usado ao voltar do segundo plano e ao voltar a rede.
+   */
+  checkHealth(timeoutMs = 4000): Promise<void> {
+    if (this.checking) return this.checking;
+    const ws = this.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      if (!ws && this.streams.size && !this.connecting) return this.connect().then(() => undefined, () => this.scheduleReconnect());
+      return Promise.resolve();
+    }
+    this.checking = this.pingOn(ws, timeoutMs)
+      .catch(() => {
+        if (this.ws !== ws) return;
+        this.dropSocket(ws);
+        return this.connect().then(
+          () => undefined,
+          () => this.scheduleReconnect(),
+        );
+      })
+      .finally(() => {
+        this.checking = null;
+      });
+    return this.checking;
+  }
+
+  private pingOn(ws: WebSocket, timeoutMs: number): Promise<void> {
+    const id = this.reqId++;
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error('ping timeout'));
+      }, timeoutMs);
+      this.pending.set(id, { resolve: () => resolve(), reject, timer });
+      try {
+        ws.send(JSON.stringify({ ping: 1, req_id: id }));
+      } catch (e) {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(e as Error);
+      }
+    });
   }
 
   private scheduleReconnect() {
@@ -274,6 +334,7 @@ export class DerivClient {
   }
 
   private async sendOnce(req: Record<string, unknown>, timeoutMs: number): Promise<DerivMsg> {
+    if (this.checking) await this.checking;
     const ws = await this.connect();
     const id = this.reqId++;
     return new Promise<DerivMsg>((resolve, reject) => {
@@ -324,7 +385,19 @@ export class DerivClient {
 
 let client: DerivClient | null = null;
 export function derivClient(): DerivClient {
-  if (!client) client = new DerivClient();
+  if (!client) {
+    const c = new DerivClient();
+    client = c;
+    // ao voltar do segundo plano (ou do ecrã bloqueado) e quando a rede volta, confirma que a ligação ainda está viva
+    if (typeof document !== 'undefined') {
+      let hiddenAt = 0;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+        else if (hiddenAt && Date.now() - hiddenAt > 3000) void c.checkHealth();
+      });
+      window.addEventListener('online', () => void c.checkHealth());
+    }
+  }
   return client;
 }
 
