@@ -98,4 +98,22 @@ describe('Amora: breakouts com RR', () => {
     const res = def.compute(bars, { rr: 2, sens: 2, side: 'long', minBreak: 0, stopBuf: 0, maxRisk: 0, oneAtATime: true, minSignals: 0 });
     expect(res.draw?.rects?.length).toBe(2);
   });
+
+  it('custos: cada operação paga custo ÷ risco em R e o placar mostra o líquido', () => {
+    const bars = breakoutUp([115, 120, 130]);
+    const r = scanAmora(bars, flatAtr(bars.length), { ...AMORA_DEFAULTS, side: 'long' });
+    const s = r.signals[0];
+    const risk = s.entry - s.stop;
+    expect(amoraR(s, 0.56)).toBeCloseTo(1.5 - 0.56 / risk, 6);
+    const out = drawAmora(bars, r, 1.5, undefined, 0.56);
+    const texts = out.draw.panel!.lines.map((l) => l.text);
+    expect(texts.some((t) => t.startsWith('líquido (com custos): soma +1.5R'))).toBe(true);
+    expect(texts.some((t) => t.startsWith('custo médio: 0.05R'))).toBe(true);
+    // sem custos não aparece a linha do líquido
+    expect(drawAmora(bars, r, 1.5).draw.panel!.lines.some((l) => l.text.startsWith('líquido'))).toBe(false);
+    // pelo indicador: o custo entra em pips, com o pip do símbolo
+    const def = INDICATORS.find((d) => d.id === 'amora')!;
+    const res = def.compute(bars, { rr: 1.5, sens: 2, side: 'long', minBreak: 0, stopBuf: 0, maxRisk: 0, oneAtATime: true, costPips: 5.6, minSignals: 0 }, { historyDone: true, pip: 0.1 });
+    expect(res.draw?.panel?.lines.some((l) => l.text.startsWith('custo médio: 0.05R'))).toBe(true);
+  });
 });

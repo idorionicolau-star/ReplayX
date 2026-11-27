@@ -222,7 +222,8 @@ test('inverter a posição espelha stop e alvo; ordem pendente tem SL e TP arras
       const c = [...(window as unknown as { __rxCharts: Map<string, Ctl> }).__rxCharts.values()][0];
       const r = c.overlay.regions.find((x) => x.kind === 'line' && x.target.type === 'order' && x.target.field === 'sl');
       const box = c.container.getBoundingClientRect();
-      return r ? { x: box.left + r.x + r.w / 2, y: box.top + r.y + r.h / 2 } : null;
+      // na parte direita da linha: se o SL calhar no topo do gráfico, à esquerda fica a legenda e ao meio a barra de favoritos
+      return r ? { x: box.left + r.x + r.w * 0.85, y: box.top + r.y + r.h / 2 } : null;
     });
   const sl0 = await slRegion();
   expect(sl0).not.toBeNull();

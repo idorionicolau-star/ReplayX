@@ -1343,6 +1343,7 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('stopBuf', tr('Folga do stop além da estrutura (ATR)'), AMORA_DEFAULTS.stopBuf, 0.05, 0, 2),
       numInput('maxRisk', tr('Risco máximo até ao stop (ATR; 0 = sem limite)'), AMORA_DEFAULTS.maxRisk, 0.5, 0, 50),
       { key: 'oneAtATime', label: tr('Uma operação de cada vez'), type: 'bool', default: AMORA_DEFAULTS.oneAtATime },
+      numInput('costPips', tr('Custo por operação: spread + comissão (pips; 0 = sem custos)'), 0, 0.1, 0, 1000),
       { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 50, min: 0, max: 2000, step: 10 },
     ],
     outputs: [],
@@ -1360,7 +1361,9 @@ export const INDICATORS: IndicatorDef[] = [
       });
       const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
       const historyDone = ctx?.historyDone ?? true;
-      const out = drawAmora(bars, r, rr, goal ? { target: goal, historyDone } : undefined);
+      const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;
+      const cost = pip > 0 ? Math.max(0, n(p, 'costPips') || 0) * pip : 0;
+      const out = drawAmora(bars, r, rr, goal ? { target: goal, historyDone } : undefined, cost);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },
