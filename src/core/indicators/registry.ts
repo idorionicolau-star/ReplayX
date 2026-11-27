@@ -1327,6 +1327,7 @@ export const INDICATORS: IndicatorDef[] = [
     ),
     inputs: [
       numInput('rr', tr('RR (alvo em múltiplos do risco)'), AMORA_DEFAULTS.rr, 0.1, 0.1, 20),
+      { key: 'trendEma', label: tr('Só a favor da tendência: EMA (0 = sem filtro)'), type: 'int', default: 200, min: 0, max: 1000, step: 10 },
       numInput('sens', tr('Estrutura: oscilação mínima (ATR)'), AMORA_DEFAULTS.sensitivity, 0.25, 0.5, 10),
       {
         key: 'side',
@@ -1346,11 +1347,14 @@ export const INDICATORS: IndicatorDef[] = [
       numInput('costPips', tr('Custo por operação: spread + comissão (pips; 0 = sem custos)'), 0, 0.1, 0, 1000),
       { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 50, min: 0, max: 2000, step: 10 },
     ],
-    outputs: [],
+    outputs: [{ key: 'ema', label: 'EMA', style: 'line', color: '#f5a623', width: 2 }],
     compute(bars, p, ctx) {
       const side = s(p, 'side');
       const rr = n(p, 'rr') > 0 ? n(p, 'rr') : AMORA_DEFAULTS.rr;
+      const trendLen = Math.max(0, Math.round(n(p, 'trendEma')) || 0);
+      const ema = trendLen > 0 ? ta.ema(ta.source(bars, 'close'), trendLen) : null;
       const r = scanAmora(bars, atrFilled(bars, 14), {
+        trend: ema ?? undefined,
         rr,
         sensitivity: n(p, 'sens') || AMORA_DEFAULTS.sensitivity,
         minBreak: n(p, 'minBreak') || 0,
@@ -1363,8 +1367,8 @@ export const INDICATORS: IndicatorDef[] = [
       const historyDone = ctx?.historyDone ?? true;
       const pip = ctx?.pip && ctx.pip > 0 ? ctx.pip : 0;
       const cost = pip > 0 ? Math.max(0, n(p, 'costPips') || 0) * pip : 0;
-      const out = drawAmora(bars, r, rr, goal ? { target: goal, historyDone } : undefined, cost);
-      return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
+      const out = drawAmora(bars, r, rr, goal ? { target: goal, historyDone } : undefined, cost, trendLen);
+      return { values: { ema: ema ?? bars.map(() => NaN) }, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },
   {

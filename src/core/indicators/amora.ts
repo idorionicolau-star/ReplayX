@@ -28,6 +28,11 @@ export interface AmoraOptions {
   side: 'both' | 'long' | 'short';
   /** Uma operação de cada vez (enquanto há uma aberta, não entra outra). */
   oneAtATime: boolean;
+  /**
+   * Filtro de tendência: só compras com o fecho acima desta média e só vendas abaixo (ex.: EMA 200).
+   * Sem média (ou ainda sem valor nas primeiras velas), não há filtro.
+   */
+  trend?: readonly number[];
 }
 
 export const AMORA_DEFAULTS: AmoraOptions = { sensitivity: 2, rr: 1.5, minBreak: 0, stopBuf: 0, maxRisk: 0, side: 'both', oneAtATime: true };
@@ -98,10 +103,17 @@ export function scanAmora(bars: readonly Bar[], atr: readonly number[], o: Amora
     if (!(a > 0)) continue;
     const busy = o.oneAtATime && open.length > 0;
 
+    // tendência na vela do rompimento: com filtro, sem valor da média ainda não há sinais
+    const m = o.trend ? o.trend[t] : NaN;
+    const filtered = !!o.trend;
+    const longOk = !filtered || (Number.isFinite(m) && b.close > m);
+    const shortOk = !filtered || (Number.isFinite(m) && b.close < m);
+
     // 3) compra: primeira vela a fechar acima do último topo; stop no último fundo
+    // (o nível fica gasto mesmo que o filtro recuse: só a primeira vela que fecha fora conta)
     if (lastH && usedH !== lastH.idx && t > lastH.idx && b.close > lastH.price + o.minBreak * a) {
       usedH = lastH.idx;
-      if (!busy && o.side !== 'short' && lastL) {
+      if (!busy && o.side !== 'short' && longOk && lastL) {
         const entry = b.close;
         const stop = lastL.price - o.stopBuf * a;
         const risk = entry - stop;
@@ -116,7 +128,7 @@ export function scanAmora(bars: readonly Bar[], atr: readonly number[], o: Amora
     // 4) venda: primeira vela a fechar abaixo do último fundo; stop no último topo
     if (lastL && usedL !== lastL.idx && t > lastL.idx && b.close < lastL.price - o.minBreak * a) {
       usedL = lastL.idx;
-      if (!(o.oneAtATime && open.length > 0) && o.side !== 'long' && lastH) {
+      if (!(o.oneAtATime && open.length > 0) && o.side !== 'long' && shortOk && lastH) {
         const entry = b.close;
         const stop = lastH.price + o.stopBuf * a;
         const risk = stop - entry;
@@ -142,7 +154,7 @@ export interface AmoraOutput {
   markers: IndicatorMarker[];
 }
 
-export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal?: { target: number; historyDone: boolean }, cost = 0): AmoraOutput {
+export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal?: { target: number; historyDone: boolean }, cost = 0, trendLen = 0): AmoraOutput {
   const last = bars.length - 1;
   const rects: DrawRect[] = [];
   const lines: DrawLine[] = [];
@@ -171,6 +183,7 @@ export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal
   const rate = closed.length ? Math.round((wins / closed.length) * 100) : 0;
   const panel: { text: string; color?: string }[] = [
     { text: tr('Amora (breakouts 1:{0}): {1} sinais', rr.toFixed(1), r.signals.length), color: LEVEL },
+    ...(trendLen > 0 ? [{ text: tr('só a favor da tendência (EMA {0})', trendLen), color: LEVEL }] : []),
     { text: tr('{0} alvos · {1} stops ({2}%) · soma {3}{4}R', wins, closed.length - wins, rate, sum >= 0 ? '+' : '', sum.toFixed(1)), color: cost > 0 ? LEVEL : sum >= 0 ? TARGET : STOP },
   ];
   if (cost > 0 && closed.length) {
