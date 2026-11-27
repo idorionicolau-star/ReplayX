@@ -237,4 +237,7 @@ export const EN_5: Record<string, string> = {
   'Uma operação de cada vez': 'One trade at a time',
   'Amora (breakouts 1:{0}): {1} sinais': 'Amora (breakouts 1:{0}): {1} signals',
   '{0} alvos · {1} stops ({2}%) · soma {3}{4}R': '{0} targets · {1} stops ({2}%) · sum {3}{4}R',
+  'Custo por operação: spread + comissão (pips; 0 = sem custos)': 'Cost per trade: spread + commission (pips; 0 = no costs)',
+  'líquido (com custos): soma {0}{1}R · {2}{3}R por operação': 'net (with costs): sum {0}{1}R · {2}{3}R per trade',
+  'custo médio: {0}R por operação': 'average cost: {0}R per trade',
 };

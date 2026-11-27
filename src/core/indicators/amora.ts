@@ -50,12 +50,16 @@ export interface AmoraResult {
   signals: AmoraSignal[];
 }
 
-/** R ganho ou perdido num sinal fechado. */
-export function amoraR(s: AmoraSignal): number | null {
+/**
+ * R ganho ou perdido num sinal fechado. `cost` (em preço: spread + comissão de ida e volta) desconta-se em R:
+ * custo ÷ risco. Com stops curtos o mesmo custo pesa muito mais.
+ */
+export function amoraR(s: AmoraSignal, cost = 0): number | null {
   if (!s.exit) return null;
   const risk = Math.abs(s.entry - s.stop);
   if (!(risk > 0)) return null;
-  return s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
+  const gross = s.exit.result === 'stop' ? -1 : Math.abs(s.target - s.entry) / risk;
+  return gross - Math.max(0, cost) / risk;
 }
 
 export function scanAmora(bars: readonly Bar[], atr: readonly number[], o: AmoraOptions = AMORA_DEFAULTS): AmoraResult {
@@ -138,7 +142,7 @@ export interface AmoraOutput {
   markers: IndicatorMarker[];
 }
 
-export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal?: { target: number; historyDone: boolean }): AmoraOutput {
+export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal?: { target: number; historyDone: boolean }, cost = 0): AmoraOutput {
   const last = bars.length - 1;
   const rects: DrawRect[] = [];
   const lines: DrawLine[] = [];
@@ -167,8 +171,15 @@ export function drawAmora(bars: readonly Bar[], r: AmoraResult, rr: number, goal
   const rate = closed.length ? Math.round((wins / closed.length) * 100) : 0;
   const panel: { text: string; color?: string }[] = [
     { text: tr('Amora (breakouts 1:{0}): {1} sinais', rr.toFixed(1), r.signals.length), color: LEVEL },
-    { text: tr('{0} alvos · {1} stops ({2}%) · soma {3}{4}R', wins, closed.length - wins, rate, sum >= 0 ? '+' : '', sum.toFixed(1)), color: sum >= 0 ? TARGET : STOP },
+    { text: tr('{0} alvos · {1} stops ({2}%) · soma {3}{4}R', wins, closed.length - wins, rate, sum >= 0 ? '+' : '', sum.toFixed(1)), color: cost > 0 ? LEVEL : sum >= 0 ? TARGET : STOP },
   ];
+  if (cost > 0 && closed.length) {
+    // resultado líquido: cada operação paga o custo, que em R é custo ÷ risco
+    const net = closed.reduce((acc, s) => acc + (amoraR(s, cost) ?? 0), 0);
+    const avgCost = (sum - net) / closed.length;
+    panel.push({ text: tr('líquido (com custos): soma {0}{1}R · {2}{3}R por operação', net >= 0 ? '+' : '', net.toFixed(1), net >= 0 ? '+' : '', (net / closed.length).toFixed(2)), color: net >= 0 ? TARGET : STOP });
+    panel.push({ text: tr('custo médio: {0}R por operação', avgCost.toFixed(2)), color: LEVEL });
+  }
   const openOne = r.signals.find((s) => !s.exit);
   if (openOne) panel.push({ text: tr('{0} em curso', openOne.dir === 1 ? tr('compra') : tr('venda')), color: openOne.dir === 1 ? BUY : SELL });
   if (goal && r.signals.length < goal.target) {
