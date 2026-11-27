@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, X } from 'lucide-react';
 import type { ChartController } from '@/chart/controller';
-import { computeBacktest, type BtStats } from '@/core/backtest';
+import { computeBacktest, whatIfRR, type BtStats, type WhatIfRow } from '@/core/backtest';
 import { useDrawings } from '@/store/drawings';
 import { useSettings } from '@/store/settings';
 import { fmtDateTime } from '@/lib/format';
@@ -11,6 +11,8 @@ import { tr } from '@/i18n';
 
 const signed = (v: number, d = 2) => `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 const EMPTY: never[] = [];
+const WHAT_IF_RR = [1, 1.5, 2, 3];
+const rrLabel = (rr: number) => `1:${String(rr).replace('.', ',')}`;
 
 /** Curva do R acumulado (SVG simples), com a linha do zero. */
 function Curve({ curve }: { curve: number[] }) {
@@ -28,6 +30,48 @@ function Curve({ curve }: { curve: number[] }) {
       <line x1="0" x2={W} y1={y(0)} y2={y(0)} stroke="currentColor" strokeOpacity=".25" strokeDasharray="3 3" />
       {curve.length > 1 && <polyline points={pts} fill="none" stroke={up ? '#089981' : '#f23645'} strokeWidth="1.6" strokeLinejoin="round" />}
     </svg>
+  );
+}
+
+/**
+ * "E se o alvo fosse…?": as mesmas entradas e stops das caixas com outro RR. Só mexe no alvo, por isso mostra quanto
+ * ganharias (ou perderias) com outro RR, sem refazer os trades.
+ */
+function WhatIf({ rows }: { rows: WhatIfRow[] }) {
+  const best = rows.reduce<WhatIfRow | null>((b, r) => (r.trades && (!b || r.totalR > b.totalR) ? r : b), null);
+  const n = rows[0]?.trades ?? 0;
+  const open = Math.max(...rows.map((r) => r.open));
+  return (
+    <div className="mt-2 rounded-md border border-line p-2" data-testid="bt-whatif">
+      <div className="mb-1 text-[11px] font-semibold">{tr('E se o alvo fosse…?')}</div>
+      <table className="w-full text-[11px] tnum">
+        <thead className="text-muted">
+          <tr className="text-right">
+            <th className="text-left font-normal">{tr('Alvo')}</th>
+            <th className="font-normal">{tr('Acerto')}</th>
+            <th className="font-normal" title={tr('Acerto mínimo para não perder com este alvo')}>{tr('Mín.')}</th>
+            <th className="font-normal">{tr('R total')}</th>
+            <th className="font-normal">{tr('R médio')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.rr} className={cn('text-right', best === r && 'font-semibold')} data-testid={`bt-whatif-${r.rr}`}>
+              <td className="text-left">{rrLabel(r.rr)}</td>
+              <td>{r.hitRate === null ? '—' : `${Math.round(r.hitRate * 100)}%`}</td>
+              <td className="text-muted">{Math.round(r.breakEven * 100)}%</td>
+              <td className={r.totalR > 0 ? 'text-up' : r.totalR < 0 ? 'text-down' : undefined}>{r.trades ? `${signed(r.totalR, 1)}R` : '—'}</td>
+              <td className={r.avgR === null ? undefined : r.avgR > 0 ? 'text-up' : 'text-down'}>{r.avgR === null ? '—' : `${signed(r.avgR)}R`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1.5 text-[10px] leading-snug text-faint">
+        {tr('Mesmas entradas, stops e velas ({0} trades); só muda o alvo, e a vela que toca no alvo e no stop conta o stop. Um alvo mais longo pode demorar mais do que a caixa.', n)}
+        {open > 0 && ` ${tr('{0} ainda sem alvo nem stop nas velas que há.', open)}`}
+        {n < 30 && ` ${tr('Com menos de 30 trades, a diferença entre linhas pode ser só sorte.')}`}
+      </p>
+    </div>
   );
 }
 
@@ -49,6 +93,7 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
   const tz = useSettings((s) => s.timezone);
   const drawings = useDrawings((s) => s.bySymbol[symbolId] ?? EMPTY);
   const [open, setOpen] = useState(false);
+  const [whatIf, setWhatIf] = useState(false);
   const [key, setKey] = useState('');
   useEffect(() => {
     const id = setInterval(() => {
@@ -60,6 +105,7 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
     return () => clearInterval(id);
   }, [ctrl]);
   const stats: BtStats = useMemo(() => computeBacktest(drawings, ctrl.bars), [drawings, ctrl, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rows = useMemo(() => (open && whatIf ? whatIfRR(drawings, ctrl.bars, WHAT_IF_RR) : null), [open, whatIf, drawings, ctrl, key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!enabled || stats.boxes === 0) return null;
   const closed = stats.trades.length;
   const tone = stats.totalR > 0 ? 'text-up' : stats.totalR < 0 ? 'text-down' : 'text-muted';
@@ -122,6 +168,13 @@ export function BacktestChip({ symbolId, ctrl }: { symbolId: string; ctrl: Chart
               </ul>
             </>
           )}
+          {closed + stats.open > 0 && (
+            <button type="button" aria-expanded={whatIf} onClick={() => setWhatIf((w) => !w)} className="mt-2 w-full rounded-md border border-line px-2 py-1 text-left text-[12px] font-medium hover:bg-hover" data-testid="bt-whatif-toggle">
+              {whatIf ? '▲ ' : '▼ '}
+              {tr('E se o alvo fosse…?')}
+            </button>
+          )}
+          {rows && <WhatIf rows={rows} />}
           <p className="mt-2 text-[10px] leading-snug text-faint">{tr('Conta só as caixas em que o preço tocou na entrada e depois chegou ao alvo (+RR) ou ao stop (−1R); se a mesma vela toca nos dois, conta o stop. Vale para este símbolo e para as velas até à margem direita de cada caixa.')}</p>
         </div>
       )}

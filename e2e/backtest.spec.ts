@@ -29,3 +29,30 @@ test('backtest: desligado nas definições, o selo não aparece', async ({ page 
   await page.waitForTimeout(800);
   await expect(page.getByTestId('backtest')).toHaveCount(0);
 });
+
+test('backtest: "E se o alvo fosse…?" compara 1:1, 1:1,5, 1:2 e 1:3 com as mesmas entradas', async ({ page }) => {
+  await enterAsGuest(page);
+  await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
+  await waitBars(page, 300);
+  await page.click('[data-testid=fav-tool-long]');
+  const canvas = (await page.locator('canvas').first().boundingBox())!;
+  // caixa longa numa vela do passado, com a entrada no fecho dessa vela: o preço toca-lhe de certeza
+  const pt = await page.evaluate(() => {
+    const c = [...(window as unknown as { __rxCharts: Map<string, { bars: { time: number; close: number }[]; timeToX(t: number): number; priceToY(p: number): number }> }).__rxCharts.values()][0];
+    const b = c.bars[c.bars.length - 60];
+    return { x: c.timeToX(b.time), y: c.priceToY(b.close) };
+  });
+  await page.mouse.click(canvas.x + pt.x, canvas.y + pt.y);
+  await page.waitForTimeout(500);
+  await page.getByTestId('backtest-chip').click();
+  const toggle = page.getByTestId('bt-whatif-toggle');
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(page.getByTestId('bt-whatif')).toBeVisible();
+  for (const rr of ['1', '1.5', '2', '3']) await expect(page.getByTestId(`bt-whatif-${rr}`)).toBeVisible();
+  await expect(page.getByTestId('bt-whatif')).toContainText('E se o alvo fosse');
+  await expect(page.getByTestId('bt-whatif')).toContainText('1:1,5');
+  await expect(page.getByTestId('bt-whatif')).toContainText('1 trades');
+  await toggle.click();
+  await expect(page.getByTestId('bt-whatif')).toHaveCount(0);
+});
