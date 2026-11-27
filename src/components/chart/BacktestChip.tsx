@@ -11,7 +11,8 @@ import { tr } from '@/i18n';
 
 const signed = (v: number, d = 2) => `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 const EMPTY: never[] = [];
-const WHAT_IF_RR = [1, 1.5, 2, 3];
+// do alvo curto ao "movimento grande" (escalonamento): 1:10 e 1:20 mostram quantas entradas chegariam tão longe antes do stop
+const WHAT_IF_RR = [1, 1.5, 2, 3, 5, 10, 20];
 const rrLabel = (rr: number) => `1:${String(rr).replace('.', ',')}`;
 
 /** Curva do R acumulado (SVG simples), com a linha do zero. */

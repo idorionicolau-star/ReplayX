@@ -30,7 +30,7 @@ test('backtest: desligado nas definições, o selo não aparece', async ({ page 
   await expect(page.getByTestId('backtest')).toHaveCount(0);
 });
 
-test('backtest: "E se o alvo fosse…?" compara 1:1, 1:1,5, 1:2 e 1:3 com as mesmas entradas', async ({ page }) => {
+test('backtest: "E se o alvo fosse…?" compara de 1:1 a 1:20 com as mesmas entradas', async ({ page }) => {
   await enterAsGuest(page);
   await chooseSymbol(page, 'SIM-FX', 'DEMO:SIMFX');
   await waitBars(page, 300);
@@ -49,7 +49,7 @@ test('backtest: "E se o alvo fosse…?" compara 1:1, 1:1,5, 1:2 e 1:3 com as mes
   await expect(toggle).toBeVisible();
   await toggle.click();
   await expect(page.getByTestId('bt-whatif')).toBeVisible();
-  for (const rr of ['1', '1.5', '2', '3']) await expect(page.getByTestId(`bt-whatif-${rr}`)).toBeVisible();
+  for (const rr of ['1', '1.5', '2', '3', '5', '10', '20']) await expect(page.getByTestId(`bt-whatif-${rr}`)).toBeVisible();
   await expect(page.getByTestId('bt-whatif')).toContainText('E se o alvo fosse');
   await expect(page.getByTestId('bt-whatif')).toContainText('1:1,5');
   await expect(page.getByTestId('bt-whatif')).toContainText('1 trades');

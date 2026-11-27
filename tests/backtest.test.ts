@@ -115,4 +115,13 @@ describe('e se o alvo fosse… (mesmas entradas e stops, outro RR)', () => {
     const rows = whatIfRR([box('S', 'short', 1, 2, 100, 105, 95)], b, [1, 2, 3]);
     expect(rows.map((r) => r.wins)).toEqual([1, 1, 0]);
   });
+  it('alvos grandes (1:5, 1:10, 1:20): quantas entradas chegam longe antes do stop', () => {
+    // entrada 100, stop 95 (risco 5): o preço sobe a 165 (13R) sem nunca tocar no stop
+    const run = [bar(1, 99, 101), bar(2, 100, 130), bar(3, 120, 165)];
+    const rows = whatIfRR([box('R', 'long', 1, 3, 100, 95, 105)], run, [5, 10, 20]);
+    expect(rows.map((r) => r.wins)).toEqual([1, 1, 0]);
+    expect(rows.map((r) => r.open)).toEqual([0, 0, 1]); // 1:20 (alvo 200): ainda sem alvo nem stop
+    expect(rows[1].totalR).toBeCloseTo(10);
+    expect(rows[2].breakEven).toBeCloseTo(1 / 21);
+  });
 });
