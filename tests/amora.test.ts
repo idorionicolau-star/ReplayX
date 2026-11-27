@@ -116,4 +116,34 @@ describe('Amora: breakouts com RR', () => {
     const res = def.compute(bars, { rr: 1.5, sens: 2, side: 'long', minBreak: 0, stopBuf: 0, maxRisk: 0, oneAtATime: true, costPips: 5.6, minSignals: 0 }, { historyDone: true, pip: 0.1 });
     expect(res.draw?.panel?.lines.some((l) => l.text.startsWith('custo médio: 0.05R'))).toBe(true);
   });
+
+  it('filtro de tendência: só compra com o fecho acima da média e só vende abaixo; sem valor da média não entra', () => {
+    const bars = breakoutUp([112, 113]);
+    const N = bars.length;
+    const below = Array.from({ length: N }, () => 120); // média acima do preço: tendência de baixa
+    const above = Array.from({ length: N }, () => 90); // média abaixo: tendência de alta
+    expect(scanAmora(bars, flatAtr(N), { ...AMORA_DEFAULTS, side: 'long', trend: below }).signals).toHaveLength(0);
+    expect(scanAmora(bars, flatAtr(N), { ...AMORA_DEFAULTS, side: 'long', trend: above }).signals).toHaveLength(1);
+    expect(scanAmora(bars, flatAtr(N), { ...AMORA_DEFAULTS, side: 'long', trend: Array.from({ length: N }, () => NaN) }).signals).toHaveLength(0);
+    // vendas ao contrário
+    const sell = series([110, 108, 106, 104, 102, 100, 102, 104, 106, 108, 110, 108, 106, 104, 102, 100.5, 99, 98]);
+    const M = sell.length;
+    expect(scanAmora(sell, flatAtr(M), { ...AMORA_DEFAULTS, side: 'short', trend: Array.from({ length: M }, () => 90) }).signals).toHaveLength(0);
+    expect(scanAmora(sell, flatAtr(M), { ...AMORA_DEFAULTS, side: 'short', trend: Array.from({ length: M }, () => 120) }).signals).toHaveLength(1);
+  });
+
+  it('no indicador a EMA 200 vem ligada, aparece no gráfico e no cartão; 0 desliga', () => {
+    const def = INDICATORS.find((d) => d.id === 'amora')!;
+    expect(def.inputs.find((i) => i.key === 'trendEma')?.default).toBe(200);
+    const bars = Array.from({ length: 400 }, (_, i) => {
+      const c = 100 + i * 0.05 + 3 * Math.sin(i / 6);
+      return { time: 1_700_000_000 + i * 60, open: c - 0.1, high: c + 0.5, low: c - 0.5, close: c };
+    });
+    const on = def.compute(bars, { rr: 1.5, trendEma: 200, sens: 2, side: 'both', minBreak: 0, stopBuf: 0, maxRisk: 0, oneAtATime: true, costPips: 0, minSignals: 0 });
+    expect(Number.isFinite(on.values.ema[399])).toBe(true);
+    expect(on.draw?.panel?.lines.some((l) => l.text.includes('EMA 200'))).toBe(true);
+    const off = def.compute(bars, { rr: 1.5, trendEma: 0, sens: 2, side: 'both', minBreak: 0, stopBuf: 0, maxRisk: 0, oneAtATime: true, costPips: 0, minSignals: 0 });
+    expect(off.values.ema.every((v) => Number.isNaN(v))).toBe(true);
+    expect(off.draw?.panel?.lines.some((l) => l.text.includes('EMA'))).toBe(false);
+  });
 });

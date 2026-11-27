@@ -240,4 +240,6 @@ export const EN_5: Record<string, string> = {
   'Custo por operação: spread + comissão (pips; 0 = sem custos)': 'Cost per trade: spread + commission (pips; 0 = no costs)',
   'líquido (com custos): soma {0}{1}R · {2}{3}R por operação': 'net (with costs): sum {0}{1}R · {2}{3}R per trade',
   'custo médio: {0}R por operação': 'average cost: {0}R per trade',
+  'Só a favor da tendência: EMA (0 = sem filtro)': 'Only with the trend: EMA (0 = no filter)',
+  'só a favor da tendência (EMA {0})': 'only with the trend (EMA {0})',
 };
