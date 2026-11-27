@@ -166,6 +166,8 @@ test('o botão Ordem cria a ferramenta de posição: arrastar a entrada abaixo d
 });
 
 test('posição: lote pelo risco recalcula ao afastar o stop, e Lote manual usa a escada do ativo', async ({ page }) => {
+  // a barra do replay vai para o topo: por baixo (a posição por omissão) pode tapar a pega do stop quando este cai no fundo do gráfico
+  await page.addInitScript(() => localStorage.setItem('rx-settings', JSON.stringify({ state: { replayBarPos: { x: 8, y: 8 } }, version: 3 })));
   await startReplay(page);
   await page.getByTestId('replay-order').click();
   const info = page.getByTestId('position-info');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeBacktest } from '@/core/backtest';
+import { computeBacktest, whatIfRR } from '@/core/backtest';
 import type { Bar } from '@/core/types';
 import type { Drawing } from '@/chart/drawings/types';
 
@@ -68,5 +68,51 @@ describe('backtest pelas caixas de posição', () => {
     expect(s.maxLossStreak).toBe(3);
     expect(s.maxDrawdownR).toBeCloseTo(3);
     expect(s.totalR).toBeCloseTo(-1);
+  });
+});
+
+describe('e se o alvo fosse… (mesmas entradas e stops, outro RR)', () => {
+  // longas com entrada 100 e stop 95 (risco 5): o RR muda o alvo para 105, 107.5, 110, 115
+  const bars: Bar[] = [
+    bar(1, 99, 101), bar(2, 100, 106), // A: entra, sobe a 106 (1,2R) e depois cai ao stop → ganha só a 1:1
+    bar(3, 105, 106), bar(4, 94, 100), // (stop de A: ver abaixo)
+    bar(5, 99, 101), bar(6, 100, 111), // B: entra e vai a 111 (2,2R) → ganha a 1, 1.5 e 2, não a 3
+    bar(7, 99, 101), bar(8, 93, 100), // C: entra e vai ao stop → perde em todos
+    bar(9, 99, 101), bar(10, 100, 103), // D: entra e fica aberta sem alvo nem stop para os RR maiores
+  ];
+  const drawings = [
+    box('A', 'long', 1, 2, 100, 95, 105),
+    box('B', 'long', 5, 6, 100, 95, 105),
+    box('C', 'long', 7, 8, 100, 95, 105),
+    box('D', 'long', 9, 10, 100, 95, 105),
+    box('E', 'long', 20, 21, 100, 95, 105), // sem velas: à espera, não entra na comparação
+  ];
+  it('o mesmo conjunto de trades em todas as linhas; o R muda com o alvo', () => {
+    const rows = whatIfRR(drawings, bars, [1, 1.5, 2, 3]);
+    const by = Object.fromEntries(rows.map((r) => [r.rr, r]));
+    // 1:1 (alvo 105): A ganha (106), B ganha, C perde, D fica aberta (103 < 105)
+    expect(by[1].trades).toBe(3);
+    expect(by[1].wins).toBe(2);
+    expect(by[1].open).toBe(1);
+    expect(by[1].totalR).toBeCloseTo(1); // +1 +1 −1
+    // 1:2 (alvo 110): A ganha? 106 < 110 e depois o stop em 94 → perde; B ganha (111)
+    expect(by[2].wins).toBe(1);
+    expect(by[2].totalR).toBeCloseTo(2 - 1 - 1); // B +2, A −1, C −1
+    // 1:3 (alvo 115): B só chega a 111 → sem alvo nem stop depois? as velas acabam → aberta
+    expect(by[3].open).toBeGreaterThanOrEqual(1);
+    expect(by[1].breakEven).toBeCloseTo(0.5);
+    expect(by[2].breakEven).toBeCloseTo(1 / 3);
+  });
+  it('na mesma vela alvo e stop contam o stop; sem caixas fechadas não há acerto', () => {
+    const b = [bar(1, 99, 101), bar(2, 94, 112)]; // entra e na vela 2 toca no stop e no alvo
+    const rows = whatIfRR([box('X', 'long', 1, 2, 100, 95, 105)], b, [1]);
+    expect(rows[0].wins).toBe(0);
+    expect(rows[0].totalR).toBeCloseTo(-1);
+    expect(whatIfRR([], b, [1.5])[0].hitRate).toBeNull();
+  });
+  it('curtas: o alvo é para baixo', () => {
+    const b = [bar(1, 99, 101), bar(2, 89, 100)]; // entra em 100; cai a 89 (2,2R para o stop 105)
+    const rows = whatIfRR([box('S', 'short', 1, 2, 100, 105, 95)], b, [1, 2, 3]);
+    expect(rows.map((r) => r.wins)).toEqual([1, 1, 0]);
   });
 });

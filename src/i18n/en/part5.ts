@@ -242,4 +242,11 @@ export const EN_5: Record<string, string> = {
   'custo médio: {0}R por operação': 'average cost: {0}R per trade',
   'Só a favor da tendência: EMA (0 = sem filtro)': 'Only with the trend: EMA (0 = no filter)',
   'só a favor da tendência (EMA {0})': 'only with the trend (EMA {0})',
+  // E se o alvo fosse…
+  'E se o alvo fosse…?': 'What if the target were…?',
+  'Mín.': 'Min.',
+  'Acerto mínimo para não perder com este alvo': 'Minimum win rate to break even with this target',
+  'Mesmas entradas, stops e velas ({0} trades); só muda o alvo, e a vela que toca no alvo e no stop conta o stop. Um alvo mais longo pode demorar mais do que a caixa.': 'Same entries, stops and candles ({0} trades); only the target changes, and a candle touching both target and stop counts the stop. A farther target can take longer than the box.',
+  '{0} ainda sem alvo nem stop nas velas que há.': '{0} still without target or stop in the available candles.',
+  'Com menos de 30 trades, a diferença entre linhas pode ser só sorte.': 'With fewer than 30 trades, the difference between rows can be just luck.',
 };
