@@ -5,6 +5,7 @@ import { drawFootprint, scanFootprint } from './footprint';
 import { drawDoubleTops, scanDoubleTops, type DtOptions } from './doubletop';
 import { equityCurve } from './equity';
 import { drawPatterns, scanPatterns, PAT_DEFAULTS } from './patterns';
+import { AMORA_DEFAULTS, drawAmora, scanAmora } from './amora';
 import { drawVolumeProfile, VP_DEFAULTS } from './volprofile';
 import { topDown } from './structure';
 import type { DrawData } from '../../chart/layer';
@@ -1311,6 +1312,55 @@ export const INDICATORS: IndicatorDef[] = [
       const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
       const historyDone = ctx?.historyDone ?? true;
       const out = drawPatterns(bars, r, goal ? { target: goal, historyDone } : undefined);
+      return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
+    },
+  },
+  {
+    id: 'amora',
+    name: tr('Amora (breakouts com RR)'),
+    short: 'Amora',
+    category: 'Tendência',
+    overlay: true,
+    layer: true,
+    description: tr(
+      'Rompimentos da estrutura com caixa de RR. A estrutura são os topos e fundos confirmados do próprio intervalo do gráfico. O sinal é a primeira vela que fecha acima do último topo (compra) ou abaixo do último fundo (venda); a entrada é no fecho dessa vela, o stop fica na estrutura anterior (último fundo nas compras, último topo nas vendas) e o alvo a RR vezes o risco (1:1,5 por omissão, ajustável). Cada sinal mostra a caixa de RR e o resultado (alvo ou stop; se a mesma vela toca nos dois, conta o stop) e o cartão faz o placar. Só usa velas fechadas e oscilações já confirmadas: não repinta e serve no replay.',
+    ),
+    inputs: [
+      numInput('rr', tr('RR (alvo em múltiplos do risco)'), AMORA_DEFAULTS.rr, 0.1, 0.1, 20),
+      numInput('sens', tr('Estrutura: oscilação mínima (ATR)'), AMORA_DEFAULTS.sensitivity, 0.25, 0.5, 10),
+      {
+        key: 'side',
+        label: tr('Lados'),
+        type: 'select',
+        default: 'both',
+        options: [
+          { value: 'both', label: tr('Compras e vendas') },
+          { value: 'long', label: tr('Só compras') },
+          { value: 'short', label: tr('Só vendas') },
+        ],
+      },
+      numInput('minBreak', tr('Fecho além do nível, no mínimo (ATR; 0 = basta fechar fora)'), AMORA_DEFAULTS.minBreak, 0.05, 0, 3),
+      numInput('stopBuf', tr('Folga do stop além da estrutura (ATR)'), AMORA_DEFAULTS.stopBuf, 0.05, 0, 2),
+      numInput('maxRisk', tr('Risco máximo até ao stop (ATR; 0 = sem limite)'), AMORA_DEFAULTS.maxRisk, 0.5, 0, 50),
+      { key: 'oneAtATime', label: tr('Uma operação de cada vez'), type: 'bool', default: AMORA_DEFAULTS.oneAtATime },
+      { key: 'minSignals', label: tr('Sinais a procurar no passado (0 = não procura)'), type: 'int', default: 50, min: 0, max: 2000, step: 10 },
+    ],
+    outputs: [],
+    compute(bars, p, ctx) {
+      const side = s(p, 'side');
+      const rr = n(p, 'rr') > 0 ? n(p, 'rr') : AMORA_DEFAULTS.rr;
+      const r = scanAmora(bars, atrFilled(bars, 14), {
+        rr,
+        sensitivity: n(p, 'sens') || AMORA_DEFAULTS.sensitivity,
+        minBreak: n(p, 'minBreak') || 0,
+        stopBuf: n(p, 'stopBuf') || 0,
+        maxRisk: n(p, 'maxRisk') || 0,
+        side: side === 'long' || side === 'short' ? side : 'both',
+        oneAtATime: p.oneAtATime !== false,
+      });
+      const goal = Math.max(0, Math.round(n(p, 'minSignals')) || 0);
+      const historyDone = ctx?.historyDone ?? true;
+      const out = drawAmora(bars, r, rr, goal ? { target: goal, historyDone } : undefined);
       return { values: {}, draw: out.draw, markers: out.markers, wantHistory: goal > 0 && r.signals.length < goal && !historyDone };
     },
   },
